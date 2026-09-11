@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="th">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SMB Chatbot · API Console</title><link rel="stylesheet" href="/docs.css"></head>
+<body>
+<main>
+  <header><span class="badge">DEVELOPER WORKSPACE · v0.1.0</span><h1>SMB Chatbot API</h1><p>พื้นที่ทดสอบ API สำหรับทีม · ข้อมูลแยกตามร้าน · บันทึกข้อความในฐานข้อมูลท้องถิ่น</p><a href="/openapi.json">ดาวน์โหลด OpenAPI 3.1</a></header>
+  <section><h2>1. เข้าสู่ระบบ</h2><p>รัน seed ก่อนใช้บัญชีตัวอย่าง รหัสผ่านทั้งสองบัญชี: <code>DemoPass!2026</code></p>
+    <form id="login"><label>อีเมล<select id="email"><option>coffee@example.test</option><option>flower@example.test</option></select></label><label>รหัสผ่าน<input id="password" type="password" value="DemoPass!2026" autocomplete="current-password"></label><button>เข้าสู่ระบบ</button><button id="logout" type="button">ออกจากระบบ</button></form>
+    <p id="auth-state" role="status">ยังไม่ได้เข้าสู่ระบบ</p>
+  </section>
+  <section><h2>2. เรียก API</h2><p>เข้าสู่ระบบแล้วลอง <code>GET /api/v1/shops</code> เพื่อหา shopId จากนั้นเลือก endpoint และใส่ ID ใน path</p>
+    <form id="request"><label>Endpoint<select id="endpoint"></select></label><label>Path<input id="path" value="/api/v1/shops" spellcheck="false"></label><label>JSON body<textarea id="body" rows="7" spellcheck="false">{}</textarea></label><button>ส่งคำขอ</button></form>
+    <p id="request-state" role="status"></p><pre id="response">ผลลัพธ์จะปรากฏที่นี่</pre>
+  </section>
+  <footer>Console นี้ใช้ทดลอง API ภายในเครื่อง ยังไม่มีการส่งข้อความ LINE หรือสร้างคำตอบด้วย AI</footer>
+</main><script type="module" src="/docs.js"></script>
+</body></html>
