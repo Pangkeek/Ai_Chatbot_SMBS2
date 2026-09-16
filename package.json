@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "description": "Multi-tenant chatbot foundation and API contract",
-  "engines": { "node": ">=24.19.0 <25" },
+  "engines": {
+    "node": ">=24.19.0 <25"
+  },
   "scripts": {
     "start": "node --env-file-if-exists=.env src/server.mjs",
     "dev": "node --watch --env-file-if-exists=.env src/server.mjs",
@@ -13,5 +15,9 @@
     "test": "node --test",
     "api:generate": "node scripts/openapi.mjs",
     "api:check": "node scripts/openapi.mjs --check"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.3.3",
+    "tailwindcss": "^4.3.3"
   }
 }

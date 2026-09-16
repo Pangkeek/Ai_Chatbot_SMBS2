@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SMB Chatbot</title>
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <main>
+    <h1>SMB Chatbot</h1>
+
+    <p id="status" role="status"></p>
+
+    <section id="auth-section">
+      <h2>สมัครสมาชิก</h2>
+
+      <form id="register-form">
+        <p>
+          <label>
+            ชื่อ
+            <input name="name" required maxlength="100">
+          </label>
+        </p>
+
+        <p>
+          <label>
+            อีเมล
+            <input name="email" type="email" required maxlength="254">
+          </label>
+        </p>
+
+        <p>
+          <label>
+            รหัสผ่าน
+            <input
+              name="password"
+              type="password"
+              required
+              minlength="10"
+              maxlength="128"
+            >
+          </label>
+        </p>
+
+        <button type="submit">สมัครสมาชิก</button>
+      </form>
+
+      <hr>
+
+      <h2>เข้าสู่ระบบ</h2>
+
+      <form id="login-form">
+        <p>
+          <label>
+            อีเมล
+            <input name="email" type="email" required>
+          </label>
+        </p>
+
+        <p>
+          <label>
+            รหัสผ่าน
+            <input
+              name="password"
+              type="password"
+              required
+              minlength="10"
+              maxlength="128"
+            >
+          </label>
+        </p>
+
+        <button type="submit">เข้าสู่ระบบ</button>
+      </form>
+    </section>
+
+    <section id="dashboard-section" hidden>
+      <h2>บัญชีของฉัน</h2>
+      <p id="current-user"></p>
+      <button id="logout-button" type="button">ออกจากระบบ</button>
+
+      <hr>
+
+      <h2>สร้างร้านค้า</h2>
+
+      <form id="shop-form">
+        <label>
+          ชื่อร้าน
+          <input name="name" required maxlength="120">
+        </label>
+
+        <button type="submit">สร้างร้าน</button>
+      </form>
+
+      <h2>ร้านที่คุณมีสิทธิ์เข้าถึง</h2>
+      <ul id="shop-list"></ul>
+
+      <h3>ข้อมูลร้านที่เลือก</h3>
+      <pre id="shop-detail">ยังไม่ได้เลือกร้าน</pre>
+    </section>
+  </main>
+</body>
+</html>
