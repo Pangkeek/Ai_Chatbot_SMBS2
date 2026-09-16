@@ -321,8 +321,9 @@ elements.registerTab.addEventListener('click', () => {
 elements.loginForm.addEventListener('submit', async event => {
   event.preventDefault();
 
-  const form = new FormData(event.currentTarget);
-  const button = event.currentTarget.querySelector(
+  const formElement = event.currentTarget;
+  const form = new FormData(formElement);
+  const button = formElement.querySelector(
     'button[type="submit"]'
   );
 
@@ -338,7 +339,7 @@ elements.loginForm.addEventListener('submit', async event => {
     });
 
     saveSession(authData);
-    event.currentTarget.reset();
+    formElement.reset();
 
     await loadDashboard();
 
@@ -361,8 +362,9 @@ elements.loginForm.addEventListener('submit', async event => {
 elements.registerForm.addEventListener('submit', async event => {
   event.preventDefault();
 
-  const form = new FormData(event.currentTarget);
-  const button = event.currentTarget.querySelector(
+  const formElement = event.currentTarget;
+  const form = new FormData(formElement);
+  const button = formElement.querySelector(
     'button[type="submit"]'
   );
 
@@ -379,7 +381,7 @@ elements.registerForm.addEventListener('submit', async event => {
     });
 
     saveSession(authData);
-    event.currentTarget.reset();
+    formElement.reset();
 
     await loadDashboard();
 
@@ -402,8 +404,9 @@ elements.registerForm.addEventListener('submit', async event => {
 elements.shopForm.addEventListener('submit', async event => {
   event.preventDefault();
 
-  const form = new FormData(event.currentTarget);
-  const button = event.currentTarget.querySelector(
+  const formElement = event.currentTarget;
+  const form = new FormData(formElement);
+  const button = formElement.querySelector(
     'button[type="submit"]'
   );
 
@@ -418,7 +421,7 @@ elements.shopForm.addEventListener('submit', async event => {
       },
     });
 
-    event.currentTarget.reset();
+    formElement.reset();
 
     await loadDashboard();
     await openShop(shop.id);
