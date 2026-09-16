@@ -37,6 +37,10 @@ const assets = new Map([
     'text/css; charset=utf-8',
     readFileSync(new URL('../public/app.css', import.meta.url)),
   ]],
+  ['/assets/auth/Background_image.jpeg', [
+    'image/jpeg',
+    readFileSync(new URL('../public/assets/auth/Background_image.jpeg', import.meta.url)),
+  ]],
 ]);
 
 function readBody(req) {

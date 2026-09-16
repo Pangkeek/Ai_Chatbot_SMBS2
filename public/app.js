@@ -46,6 +46,13 @@ const errorMessages = {
   NOT_FOUND: 'ไม่พบข้อมูล หรือคุณไม่มีสิทธิ์เข้าถึงข้อมูลนี้',
 };
 
+const icons = {
+  alert: `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="size-5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8.25v4.5m0 3h.01M10.33 4.63 3.96 16.1a1.5 1.5 0 0 0 1.31 2.23h13.46a1.5 1.5 0 0 0 1.31-2.23L13.67 4.63a.96.96 0 0 0-1.68 0Z" /></svg>`,
+  check: `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="size-5"><path stroke-linecap="round" stroke-linejoin="round" d="m5.25 12.75 4.5 4.5 9-9" /></svg>`,
+  arrow: `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="size-5"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 12h13.5m-5.25-5.25L18.75 12l-5.25 5.25" /></svg>`,
+  store: `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="size-7"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 9.25h16.5l-1.25-4.5H5l-1.25 4.5Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 9.25v9.5h13.5v-9.5M9 18.75V14h6v4.75" /></svg>`,
+};
+
 async function apiRequest(path, { method = 'GET', body } = {}) {
   const headers = {};
 
@@ -108,7 +115,9 @@ function showNotification(type, title, message) {
       : 'bg-red-100 text-red-700',
   ].join(' ');
 
-  elements.notificationIcon.textContent = isSuccess ? '✓' : '!';
+  elements.notificationIcon.innerHTML = isSuccess
+    ? icons.check
+    : icons.alert;
   elements.notificationTitle.textContent = title;
   elements.notificationMessage.textContent = message;
 
@@ -187,14 +196,14 @@ function createShopCard(shop) {
     'flex size-12 items-center justify-center rounded-2xl',
     'bg-gradient-to-br from-blue-100 to-cyan-100 text-2xl',
   ].join(' ');
-  icon.textContent = '🏪';
+  icon.innerHTML = icons.store;
 
   const arrow = document.createElement('span');
   arrow.className = [
     'text-lg text-slate-300 transition',
     'group-hover:translate-x-1 group-hover:text-blue-600',
   ].join(' ');
-  arrow.textContent = '→';
+  arrow.innerHTML = icons.arrow;
 
   top.append(icon, arrow);
 
