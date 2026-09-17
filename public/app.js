@@ -4,6 +4,9 @@ const TOKEN_KEY = "smb_access_token";
 let accessToken = sessionStorage.getItem(TOKEN_KEY) || "";
 let notificationTimer;
 
+// เก็บรหัสร้านที่กำลังแก้ไขเพื่อส่งคำขอไปยังร้านที่ถูกต้อง
+let selectedShopId = "";
+
 const elements = {
   authView: document.querySelector("#auth-view"),
   dashboardView: document.querySelector("#dashboard-view"),
@@ -12,6 +15,12 @@ const elements = {
   dashboardHomeView: document.querySelector("#dashboard-home-view"),
   businessSettingsView: document.querySelector("#business-settings-view"),
   settingsBackButton: document.querySelector("#settings-back-button"),
+  businessSettingsForm: document.querySelector("#business-settings-form"),
+  settingsName: document.querySelector("#settings-name"),
+  settingsDescription: document.querySelector("#settings-description"),
+  settingsOpeningHours: document.querySelector("#settings-opening-hours"),
+  settingsPersona: document.querySelector("#settings-persona"),
+  settingsShopId: document.querySelector("#settings-shop-id"),
 
   loginTab: document.querySelector("#login-tab"),
   registerTab: document.querySelector("#register-tab"),
@@ -46,6 +55,7 @@ const errorMessages = {
   UNAUTHORIZED: "Session หมดอายุ กรุณาเข้าสู่ระบบใหม่",
   VALIDATION_ERROR: "กรุณาตรวจสอบข้อมูลที่กรอกอีกครั้ง",
   RATE_LIMITED: "ลองเข้าสู่ระบบหลายครั้งเกินไป กรุณารอประมาณ 1 นาที",
+  FORBIDDEN: "บัญชีนี้ไม่มีสิทธิ์แก้ไขข้อมูลร้าน",
   NOT_FOUND: "ไม่พบข้อมูล หรือคุณไม่มีสิทธิ์เข้าถึงข้อมูลนี้",
 };
 
@@ -163,6 +173,23 @@ function showBusinessSettingsView() {
   });
 }
 
+// เก็บรหัสร้านและนำข้อมูลเดิมมาแสดงในแบบฟอร์ม
+function fillBusinessSettingsForm(shop) {
+  selectedShopId = shop.id;
+  elements.settingsName.value = shop.name;
+  elements.settingsDescription.value = shop.description || "";
+  elements.settingsOpeningHours.value = shop.opening_hours || "";
+  elements.settingsPersona.value = shop.persona || "";
+  elements.settingsShopId.textContent = `รหัสร้าน: ${shop.id}`;
+
+  // อัปเดตข้อมูลส่วนสรุปเดิมให้ตรงกับค่าล่าสุดด้วย
+  elements.selectedShopName.textContent = shop.name;
+  elements.selectedShopDescription.textContent =
+    shop.description || "ยังไม่ได้เพิ่มรายละเอียดร้าน";
+  elements.selectedShopHours.textContent =
+    shop.opening_hours || "ยังไม่ได้กำหนดเวลาเปิดให้บริการ";
+}
+
 function saveSession(authData) {
   accessToken = authData.access_token;
   sessionStorage.setItem(TOKEN_KEY, accessToken);
@@ -170,10 +197,13 @@ function saveSession(authData) {
 
 function clearSession() {
   accessToken = "";
+  selectedShopId = "";
   sessionStorage.removeItem(TOKEN_KEY);
 
   elements.shopList.replaceChildren();
   elements.shopDetail.classList.add("hidden");
+  elements.businessSettingsForm.reset();
+  elements.settingsShopId.textContent = "";
 
   showAuthView();
 }
@@ -273,12 +303,8 @@ async function openShop(shopId) {
   try {
     const shop = await apiRequest(`/shops/${encodeURIComponent(shopId)}`);
 
-    elements.selectedShopName.textContent = shop.name;
-    elements.selectedShopDescription.textContent =
-      shop.description || "ยังไม่ได้เพิ่มรายละเอียดร้าน";
-
-    elements.selectedShopHours.textContent =
-      shop.opening_hours || "ยังไม่ได้กำหนดเวลาเปิดให้บริการ";
+    // ใช้ข้อมูลจาก API โดยตรงเพื่อป้องกันการแสดงข้อมูลเก่า
+    fillBusinessSettingsForm(shop);
 
     // เมื่อโหลดข้อมูลสำเร็จให้เปิดหน้าตั้งค่าธุรกิจ
     showBusinessSettingsView();
@@ -315,6 +341,65 @@ async function loadDashboard() {
 // ปุ่มย้อนกลับจากหน้าตั้งค่าไปยังหน้ารวมร้านค้า
 elements.settingsBackButton.addEventListener("click", () => {
   showDashboardHomeView();
+});
+
+// ส่งข้อมูลที่แก้ไขไปบันทึกด้วย PATCH เฉพาะร้านที่กำลังเลือก
+elements.businessSettingsForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+
+  if (!selectedShopId) {
+    showNotification(
+      "error",
+      "ไม่สามารถบันทึกได้",
+      "กรุณาเลือกร้านที่ต้องการแก้ไขก่อน",
+    );
+    return;
+  }
+
+  const formElement = event.currentTarget;
+  const form = new FormData(formElement);
+  const button = formElement.querySelector('button[type="submit"]');
+
+  // ตัดช่องว่างหัวท้ายก่อนส่งข้อมูลไปยัง API
+  const readField = (name) => String(form.get(name) || "").trim();
+
+  setButtonLoading(button, true, "กำลังบันทึก...");
+
+  try {
+    const shop = await apiRequest(
+      `/shops/${encodeURIComponent(selectedShopId)}`,
+      {
+        method: "PATCH",
+        body: {
+          name: readField("name"),
+          description: readField("description"),
+          opening_hours: readField("opening_hours"),
+          persona: readField("persona"),
+        },
+      },
+    );
+
+    // ใช้ข้อมูลที่ server ตอบกลับเป็นค่าจริงหลังบันทึก
+    fillBusinessSettingsForm(shop);
+
+    // โหลดรายการใหม่เพื่อให้ชื่อและรายละเอียดบนการ์ดเป็นปัจจุบัน
+    const shops = await apiRequest("/shops");
+    renderShops(shops);
+
+    showNotification(
+      "success",
+      "บันทึกสำเร็จ",
+      `อัปเดตข้อมูลร้าน “${shop.name}” เรียบร้อยแล้ว`,
+    );
+  } catch (error) {
+    showNotification(
+      "error",
+      "บันทึกการตั้งค่าไม่สำเร็จ",
+      error.message,
+    );
+  } finally {
+    setButtonLoading(button, false);
+  }
 });
 
 elements.loginTab.addEventListener("click", () => {

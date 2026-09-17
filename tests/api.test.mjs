@@ -93,9 +93,23 @@ test('shops can be created and updated with an atomic owner membership', async (
   assert.equal(created.status, 201);
   const id = created.payload.data.id;
   assert.equal(db.prepare('SELECT role FROM shop_memberships WHERE shop_id = ? AND user_id = ?').get(id, 'user-coffee').role, 'owner');
-  const updated = await request('PATCH', `/api/v1/shops/${id}`, { opening_hours: '10:00-17:00' }, coffee);
-  assert.equal(updated.payload.data.opening_hours, '10:00-17:00');
-  assert.equal((await request('GET', `/api/v1/shops/${id}`, undefined, coffee)).status, 200);
+  // ตรวจว่าข้อมูลตั้งค่าทั้ง 4 ช่องถูกบันทึกและอ่านกลับได้จริง
+  const settings = {
+    name: 'New shop updated',
+    description: 'Updated business description',
+    opening_hours: '10:00-17:00',
+    persona: 'ตอบสุภาพและกระชับ',
+  };
+  const updated = await request('PATCH', `/api/v1/shops/${id}`, settings, coffee);
+  assert.deepEqual(
+    Object.fromEntries(Object.keys(settings).map(key => [key, updated.payload.data[key]])),
+    settings,
+  );
+  const loaded = await request('GET', `/api/v1/shops/${id}`, undefined, coffee);
+  assert.deepEqual(
+    Object.fromEntries(Object.keys(settings).map(key => [key, loaded.payload.data[key]])),
+    settings,
+  );
   const listed = await request('GET', '/api/v1/shops?limit=1&offset=0', undefined, coffee);
   assert.equal(listed.payload.data.length, 1);
   assert.equal(listed.payload.meta.total, 2);
