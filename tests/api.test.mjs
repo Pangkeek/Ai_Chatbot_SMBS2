@@ -53,6 +53,12 @@ test('health, served contract and developer console are available', async () => 
   assert.match(docs.headers.get('content-security-policy'), /frame-ancestors 'none'/);
   assert.equal((await fetch(url + '/docs.js')).status, 200);
   assert.equal((await fetch(url + '/docs.css')).status, 200);
+  assert.equal((await fetch(url + '/app')).status, 200);
+  assert.equal((await fetch(url + '/app.js')).status, 200);
+  assert.equal((await fetch(url + '/app.css')).status, 200);
+  const background = await fetch(url + '/assets/auth/Background_image.jpeg');
+  assert.equal(background.status, 200);
+  assert.match(background.headers.get('content-type'), /^image\/jpeg/);
 });
 
 test('seed is repeatable and preserves edited content and row counts', async () => {

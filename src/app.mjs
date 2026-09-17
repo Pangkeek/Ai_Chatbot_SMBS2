@@ -13,9 +13,34 @@ const compiled = routes.map(route => ({
   regex: new RegExp(`^${route.path.replace(/\{\w+\}/g, '([^/]+)')}$`),
 }));
 const assets = new Map([
-  ['/docs', ['text/html; charset=utf-8', readFileSync(new URL('../public/index.html', import.meta.url))]],
-  ['/docs.js', ['text/javascript; charset=utf-8', readFileSync(new URL('../public/docs.js', import.meta.url))]],
-  ['/docs.css', ['text/css; charset=utf-8', readFileSync(new URL('../public/docs.css', import.meta.url))]],
+  ['/docs', [
+    'text/html; charset=utf-8',
+    readFileSync(new URL('../public/index.html', import.meta.url)),
+  ]],
+  ['/docs.js', [
+    'text/javascript; charset=utf-8',
+    readFileSync(new URL('../public/docs.js', import.meta.url)),
+  ]],
+  ['/docs.css', [
+    'text/css; charset=utf-8',
+    readFileSync(new URL('../public/docs.css', import.meta.url)),
+  ]],
+  ['/app', [
+    'text/html; charset=utf-8',
+    readFileSync(new URL('../public/app.html', import.meta.url)),
+  ]],
+  ['/app.js', [
+    'text/javascript; charset=utf-8',
+    readFileSync(new URL('../public/app.js', import.meta.url)),
+  ]],
+  ['/app.css', [
+    'text/css; charset=utf-8',
+    readFileSync(new URL('../public/app.css', import.meta.url)),
+  ]],
+  ['/assets/auth/Background_image.jpeg', [
+    'image/jpeg',
+    readFileSync(new URL('../public/assets/auth/Background_image.jpeg', import.meta.url)),
+  ]],
 ]);
 
 function readBody(req) {
