@@ -1,6 +1,7 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
+import { createHmac } from 'node:crypto';
 import { openDatabase } from '../src/db.mjs';
 import { seedDemo, demoPassword } from '../src/seed.mjs';
 import { createApp } from '../src/app.mjs';
@@ -166,6 +167,51 @@ test('conversation lifecycle, message persistence and handover guard', async () 
   assert.equal((await request('POST', `${path}/messages`, { role: 'customer', content: 'Again' }, coffee)).payload.error.code, 'CONVERSATION_CLOSED');
   await request('PATCH', path, { status: 'open', bot_mode: 'active' }, coffee);
   assert.equal((await request('GET', base, undefined, coffee)).payload.meta.total, 2);
+});
+
+test('LINE channel configuration, webhook verification, deduplication and message simulation', async () => {
+  const configPath = '/api/v1/shops/shop-coffee/line/config';
+  const initial = await request('GET', configPath, undefined, coffee);
+  assert.equal(initial.status, 200);
+  assert.equal(initial.payload.data.configured, false);
+
+  const secret = 'test-secret-123456';
+  const token = 'test-token-1234567890';
+  const updated = await request('PUT', configPath, { channel_secret: secret, channel_access_token: token, channel_id: 'coffee-line' }, coffee);
+  assert.equal(updated.status, 200);
+  assert.equal(updated.payload.data.configured, true);
+  assert.equal(updated.payload.data.channel_id, 'coffee-line');
+  assert.match(updated.payload.data.channel_secret_masked, /\*+3456/);
+
+  const webhookPath = '/api/v1/shops/shop-coffee/line/webhook';
+  const webhookBody = {
+    destination: 'U_COFFEE_BOT',
+    events: [{
+      type: 'message',
+      webhookEventId: 'test-event-1',
+      source: { type: 'user', userId: 'line-user-99' },
+      message: { type: 'text', id: 'msg-1', text: 'สวัสดี มีกาแฟอะไรบ้าง' },
+      replyToken: 'dummy-reply-token',
+      timestamp: Date.now(),
+    }],
+  };
+  const rawBody = JSON.stringify(webhookBody);
+  const signature = createHmac('sha256', secret).update(rawBody).digest('base64');
+  const whRes = await request('POST', webhookPath, webhookBody, null, { headers: { 'x-line-signature': signature } });
+  assert.equal(whRes.status, 200);
+  assert.equal(whRes.payload.data.status, 'ok');
+  assert.equal(whRes.payload.data.processed_count, 1);
+
+  const whDup = await request('POST', webhookPath, webhookBody, null, { headers: { 'x-line-signature': signature } });
+  assert.equal(whDup.status, 200);
+  assert.equal(whDup.payload.data.processed_count, 0);
+
+  const simPath = '/api/v1/shops/shop-coffee/line/simulate';
+  const simRes = await request('POST', simPath, { user_id: 'line-user-99', text: 'ขอเมนูหน่อยครับ' }, coffee);
+  assert.equal(simRes.status, 200);
+  assert.equal(simRes.payload.data.status, 'processed');
+  assert.equal(simRes.payload.data.replied, true);
+  assert.ok(simRes.payload.data.conversation_id);
 });
 
 test('database constraints reject cross-shop references even outside the API', () => {

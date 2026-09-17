@@ -696,108 +696,279 @@
   </div>
 
   <div class="mt-8 grid gap-8 lg:grid-cols-[1fr_280px]">
-    <section
-      class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8"
-    >
-      <form id="business-settings-form" class="space-y-6">
-        <div>
-          <label
-            for="settings-name"
-            class="mb-2 block text-sm font-semibold text-slate-700"
-          >
-            ชื่อธุรกิจ
-            <span class="text-red-500">*</span>
-          </label>
+    <div class="space-y-8">
+      <section
+        class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8"
+      >
+        <form id="business-settings-form" class="space-y-6">
+          <div>
+            <label
+              for="settings-name"
+              class="mb-2 block text-sm font-semibold text-slate-700"
+            >
+              ชื่อธุรกิจ
+              <span class="text-red-500">*</span>
+            </label>
 
-          <input
-            id="settings-name"
-            name="name"
-            maxlength="120"
-            required
-            placeholder="เช่น บ้านกาแฟ"
-            class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+            <input
+              id="settings-name"
+              name="name"
+              maxlength="120"
+              required
+              placeholder="เช่น บ้านกาแฟ"
+              class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+            >
+          </div>
+
+          <div>
+            <label
+              for="settings-description"
+              class="mb-2 block text-sm font-semibold text-slate-700"
+            >
+              รายละเอียดธุรกิจ
+            </label>
+
+            <textarea
+              id="settings-description"
+              name="description"
+              rows="5"
+              maxlength="5000"
+              placeholder="อธิบายว่าร้านขายสินค้าหรือให้บริการอะไร"
+              class="w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-sm leading-6 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+            ></textarea>
+
+            <p class="mt-2 text-xs text-slate-400">
+              ตัวอย่าง: ร้านกาแฟและเบเกอรี มีบริการนั่งที่ร้านและซื้อกลับบ้าน
+            </p>
+          </div>
+
+          <div>
+            <label
+              for="settings-opening-hours"
+              class="mb-2 block text-sm font-semibold text-slate-700"
+            >
+              เวลาเปิดให้บริการ
+            </label>
+
+            <textarea
+              id="settings-opening-hours"
+              name="opening_hours"
+              rows="3"
+              maxlength="1000"
+              placeholder="เช่น จันทร์-อาทิตย์ 08:00-18:00"
+              class="w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-sm leading-6 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+            ></textarea>
+          </div>
+
+          <div>
+            <label
+              for="settings-persona"
+              class="mb-2 block text-sm font-semibold text-slate-700"
+            >
+              บุคลิกของ Chatbot
+            </label>
+
+            <textarea
+              id="settings-persona"
+              name="persona"
+              rows="4"
+              maxlength="5000"
+              placeholder="เช่น ตอบสุภาพ กระชับ เป็นกันเอง และไม่เดาข้อมูลที่ไม่มีในระบบ"
+              class="w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-sm leading-6 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+            ></textarea>
+
+            <p class="mt-2 text-xs text-slate-400">
+              ระบุโทนภาษา วิธีเรียกลูกค้า และสิ่งที่บอทไม่ควรทำ
+            </p>
+          </div>
+
+          <div
+            class="flex flex-col-reverse gap-3 border-t border-slate-100 pt-6 sm:flex-row sm:items-center sm:justify-between"
           >
+            <p
+              id="settings-shop-id"
+              class="text-xs text-slate-400"
+            ></p>
+
+            <button
+              type="submit"
+              class="rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 disabled:opacity-60"
+            >
+              บันทึกการตั้งค่า
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <!-- LINE Messaging API Card -->
+      <section
+        id="line-integration-section"
+        class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8"
+      >
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div class="flex items-center gap-3">
+            <div class="flex size-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+              <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="size-6">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a.75.75 0 0 1-.974-.94 4.542 4.542 0 0 0 .584-2.02A7.838 7.838 0 0 1 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z" />
+              </svg>
+            </div>
+            <div>
+              <h2 class="text-xl font-bold text-slate-900">เชื่อมต่อ LINE Official Account</h2>
+              <p class="text-xs text-slate-500">LINE Messaging API Webhook & Auto-reply</p>
+            </div>
+          </div>
+          <span id="line-status-badge" class="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+            ยังไม่ได้ตั้งค่า
+          </span>
         </div>
 
-        <div>
-          <label
-            for="settings-description"
-            class="mb-2 block text-sm font-semibold text-slate-700"
-          >
-            รายละเอียดธุรกิจ
-          </label>
+        <div class="mt-6 space-y-6">
+          <!-- Webhook URL Box -->
+          <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+            <label class="mb-1.5 block text-xs font-semibold text-slate-700">
+              Webhook URL (นำไปใส่ใน LINE Developers Console)
+            </label>
+            <div class="flex gap-2">
+              <input
+                id="line-webhook-url"
+                type="text"
+                readonly
+                class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 font-mono text-xs text-slate-700 outline-none"
+                placeholder="กำลังโหลด Webhook URL..."
+              />
+              <button
+                id="copy-webhook-btn"
+                type="button"
+                class="shrink-0 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
+              >
+                คัดลอก
+              </button>
+            </div>
+            <p class="mt-2 text-xs text-slate-400 leading-5">
+              นำ URL นี้ไปใส่ที่ LINE Developers Console &gt; Messaging API &gt; Webhook settings และเปิด "Use webhook"
+            </p>
+          </div>
 
-          <textarea
-            id="settings-description"
-            name="description"
-            rows="5"
-            maxlength="5000"
-            placeholder="อธิบายว่าร้านขายสินค้าหรือให้บริการอะไร"
-            class="w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-sm leading-6 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-          ></textarea>
+          <!-- Channel Credentials Form -->
+          <form id="line-settings-form" class="space-y-4">
+            <div>
+              <label for="line-channel-id" class="mb-1.5 block text-xs font-semibold text-slate-700">
+                Channel ID (ทางเลือก)
+              </label>
+              <input
+                id="line-channel-id"
+                name="channel_id"
+                type="text"
+                placeholder="เช่น 2001234567"
+                class="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+              />
+            </div>
 
-          <p class="mt-2 text-xs text-slate-400">
-            ตัวอย่าง: ร้านกาแฟและเบเกอรี มีบริการนั่งที่ร้านและซื้อกลับบ้าน
-          </p>
+            <div>
+              <label for="line-channel-secret" class="mb-1.5 block text-xs font-semibold text-slate-700">
+                Channel Secret <span class="text-red-500">*</span>
+              </label>
+              <input
+                id="line-channel-secret"
+                name="channel_secret"
+                type="password"
+                placeholder="Channel Secret จาก LINE Developers Console"
+                class="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+              />
+            </div>
+
+            <div>
+              <label for="line-channel-token" class="mb-1.5 block text-xs font-semibold text-slate-700">
+                Channel Access Token (Long-lived) <span class="text-red-500">*</span>
+              </label>
+              <textarea
+                id="line-channel-token"
+                name="channel_access_token"
+                rows="3"
+                placeholder="Channel Access Token (long-lived) จาก LINE Developers Console"
+                class="w-full resize-y rounded-xl border border-slate-200 px-4 py-2.5 text-sm leading-6 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+              ></textarea>
+            </div>
+
+            <div class="flex justify-end pt-2">
+              <button
+                id="save-line-btn"
+                type="submit"
+                class="rounded-xl bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 disabled:opacity-60"
+              >
+                บันทึกการเชื่อมต่อ LINE
+              </button>
+            </div>
+          </form>
+
+          <!-- Simulator Section -->
+          <div class="border-t border-slate-100 pt-6">
+            <div class="mb-4">
+              <h3 class="text-base font-bold text-slate-900">ทดสอบส่งข้อความ (LINE Simulator)</h3>
+              <p class="mt-1 text-xs text-slate-500 leading-5">
+                จำลองข้อความที่ลูกค้าพิมพ์ส่งเข้ามาใน LINE OA เพื่อทดสอบการรับข้อความและการตอบกลับอัตโนมัติ
+              </p>
+            </div>
+
+            <div class="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/50 p-4">
+              <div class="grid gap-3 sm:grid-cols-[1fr_2fr]">
+                <div>
+                  <label class="mb-1 block text-xs font-semibold text-slate-600">รหัสลูกค้า LINE</label>
+                  <input
+                    id="line-sim-user"
+                    type="text"
+                    value="line-user-demo-1"
+                    class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs outline-none focus:border-blue-500"
+                  />
+                </div>
+                <div>
+                  <label class="mb-1 block text-xs font-semibold text-slate-600">ข้อความจากลูกค้า</label>
+                  <input
+                    id="line-sim-text"
+                    type="text"
+                    placeholder="เช่น สวัสดี มีสินค้าหรือบริการอะไรบ้าง"
+                    value="สวัสดีครับ มีเมนูอะไรแนะนำบ้างครับ"
+                    class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div class="flex justify-end">
+                <button
+                  id="line-sim-btn"
+                  type="button"
+                  class="rounded-xl bg-slate-900 px-5 py-2 text-xs font-semibold text-white transition hover:bg-slate-800 disabled:opacity-60"
+                >
+                  จำลองการส่งข้อความ
+                </button>
+              </div>
+
+              <!-- Simulation Chat Preview -->
+              <div id="line-sim-result" class="mt-4 hidden space-y-3 rounded-xl border border-slate-200 bg-white p-4">
+                <div class="flex items-center justify-between text-xs text-slate-400">
+                  <span>ผลการทดสอบการรับ-ตอบ</span>
+                  <span id="line-sim-time" class="font-mono"></span>
+                </div>
+                <!-- Customer message bubble -->
+                <div class="flex justify-end">
+                  <div class="max-w-[80%] rounded-2xl rounded-tr-none bg-blue-600 px-4 py-2.5 text-xs text-white">
+                    <p class="font-semibold text-blue-200 text-[10px]">ลูกค้า (LINE):</p>
+                    <p id="line-sim-customer-msg" class="mt-0.5"></p>
+                  </div>
+                </div>
+                <!-- Assistant reply bubble -->
+                <div class="flex justify-start">
+                  <div class="max-w-[80%] rounded-2xl rounded-tl-none bg-slate-100 px-4 py-2.5 text-xs text-slate-800">
+                    <p class="font-semibold text-blue-600 text-[10px]">บอทร้านค้า (อัตโนมัติ):</p>
+                    <p id="line-sim-bot-msg" class="mt-0.5 whitespace-pre-wrap"></p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-
-        <div>
-          <label
-            for="settings-opening-hours"
-            class="mb-2 block text-sm font-semibold text-slate-700"
-          >
-            เวลาเปิดให้บริการ
-          </label>
-
-          <textarea
-            id="settings-opening-hours"
-            name="opening_hours"
-            rows="3"
-            maxlength="1000"
-            placeholder="เช่น จันทร์-อาทิตย์ 08:00-18:00"
-            class="w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-sm leading-6 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-          ></textarea>
-        </div>
-
-        <div>
-          <label
-            for="settings-persona"
-            class="mb-2 block text-sm font-semibold text-slate-700"
-          >
-            บุคลิกของ Chatbot
-          </label>
-
-          <textarea
-            id="settings-persona"
-            name="persona"
-            rows="4"
-            maxlength="5000"
-            placeholder="เช่น ตอบสุภาพ กระชับ เป็นกันเอง และไม่เดาข้อมูลที่ไม่มีในระบบ"
-            class="w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-sm leading-6 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-          ></textarea>
-
-          <p class="mt-2 text-xs text-slate-400">
-            ระบุโทนภาษา วิธีเรียกลูกค้า และสิ่งที่บอทไม่ควรทำ
-          </p>
-        </div>
-
-        <div
-          class="flex flex-col-reverse gap-3 border-t border-slate-100 pt-6 sm:flex-row sm:items-center sm:justify-between"
-        >
-          <p
-            id="settings-shop-id"
-            class="text-xs text-slate-400"
-          ></p>
-
-          <button
-            type="submit"
-            class="rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 disabled:opacity-60"
-          >
-            บันทึกการตั้งค่า
-          </button>
-        </div>
-      </form>
-    </section>
+      </section>
+    </div>
 
     <aside class="space-y-4">
       <div class="rounded-3xl border border-blue-100 bg-blue-50 p-5">

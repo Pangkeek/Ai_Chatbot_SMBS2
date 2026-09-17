@@ -29,6 +29,8 @@ export function validate(value, schema, path = 'body') {
   } else if (schema.type === 'array') {
     if (!Array.isArray(value)) fail('Must be an array');
     else value.forEach((item, index) => errors.push(...validate(item, schema.items, `${path}[${index}]`)));
+  } else if (schema.type === 'boolean') {
+    if (typeof value !== 'boolean') fail('Must be a boolean');
   } else if (schema.type === 'null' && value !== null) fail('Must be null');
   if (schema.anyOf && !schema.anyOf.some(option => validate(value, option, path).length === 0)) fail('Value does not match an allowed type');
   return errors;

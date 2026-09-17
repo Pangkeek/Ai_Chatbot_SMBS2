@@ -61,7 +61,8 @@ function readBody(req) {
     });
     req.on('end', () => {
       if (tooLarge) return;
-      try { resolve(JSON.parse(Buffer.concat(chunks).toString('utf8'))); }
+      const raw = Buffer.concat(chunks).toString('utf8');
+      try { resolve({ json: JSON.parse(raw), raw }); }
       catch { reject(new ApiError(400, 'INVALID_JSON', 'Request body must be valid JSON')); }
     });
     req.on('error', reject);
@@ -84,8 +85,8 @@ function getPagination(url, paginated) {
   return query;
 }
 
-export function createApp(db, { logErrors = true } = {}) {
-  const service = createService(db);
+export function createApp(db, { logErrors = true, worker, serviceOptions } = {}) {
+  const service = createService(db, { worker, ...serviceOptions });
   const authAttempts = new Map();
   return createServer({ requestTimeout: 15000, headersTimeout: 10000 }, async (req, res) => {
     const requestId = randomUUID();
@@ -102,6 +103,9 @@ export function createApp(db, { logErrors = true } = {}) {
       const url = new URL(req.url, 'http://localhost');
       if (req.method === 'GET' && url.pathname === '/') {
         res.writeHead(302, { Location: '/docs' }); return res.end();
+      }
+      if (req.method === 'GET' && (url.pathname === '/app.html' || url.pathname === '/app/')) {
+        res.writeHead(302, { Location: '/app' }); return res.end();
       }
       if (req.method === 'GET' && assets.has(url.pathname)) {
         const [type, content] = assets.get(url.pathname);
@@ -122,7 +126,7 @@ export function createApp(db, { logErrors = true } = {}) {
       let params;
       try { params = Object.fromEntries(route.names.map((key, i) => [key, decodeURIComponent(rawParams[i])])); }
       catch { throw new ApiError(400, 'INVALID_PATH', 'Invalid path encoding'); }
-      const context = { params, query: getPagination(url, route.paginated) };
+      const context = { params, query: getPagination(url, route.paginated), headers: req.headers };
       if (['login', 'register'].includes(route.operationId)) {
         const time = Date.now(), address = req.socket.remoteAddress;
         for (const [key, record] of authAttempts) if (record.until <= time) authAttempts.delete(key);
@@ -134,7 +138,7 @@ export function createApp(db, { logErrors = true } = {}) {
         record.count++;
         authAttempts.set(address, record);
       }
-      if (route.auth) {
+      if (route.auth || (req.headers.authorization && params.shopId)) {
         const match = /^Bearer ([A-Za-z0-9_-]{43})$/.exec(req.headers.authorization || '');
         if (!match) throw new ApiError(401, 'UNAUTHORIZED', 'A valid bearer token is required');
         context.sessionHash = tokenHash(match[1]);
@@ -148,7 +152,9 @@ export function createApp(db, { logErrors = true } = {}) {
         }
       }
       if (route.body) {
-        context.body = await readBody(req);
+        const { json, raw } = await readBody(req);
+        context.body = json;
+        context.rawBody = raw;
         const errors = validate(context.body, route.body);
         if (errors.length) throw new ApiError(422, 'VALIDATION_ERROR', 'Request body failed validation', errors);
       } else req.resume();

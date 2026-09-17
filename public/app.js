@@ -47,6 +47,23 @@ const elements = {
   selectedShopName: document.querySelector("#selected-shop-name"),
   selectedShopDescription: document.querySelector("#selected-shop-description"),
   selectedShopHours: document.querySelector("#selected-shop-hours"),
+
+  lineIntegrationSection: document.querySelector("#line-integration-section"),
+  lineStatusBadge: document.querySelector("#line-status-badge"),
+  lineWebhookUrl: document.querySelector("#line-webhook-url"),
+  copyWebhookBtn: document.querySelector("#copy-webhook-btn"),
+  lineSettingsForm: document.querySelector("#line-settings-form"),
+  lineChannelId: document.querySelector("#line-channel-id"),
+  lineChannelSecret: document.querySelector("#line-channel-secret"),
+  lineChannelToken: document.querySelector("#line-channel-token"),
+  saveLineBtn: document.querySelector("#save-line-btn"),
+  lineSimUser: document.querySelector("#line-sim-user"),
+  lineSimText: document.querySelector("#line-sim-text"),
+  lineSimBtn: document.querySelector("#line-sim-btn"),
+  lineSimResult: document.querySelector("#line-sim-result"),
+  lineSimTime: document.querySelector("#line-sim-time"),
+  lineSimCustomerMsg: document.querySelector("#line-sim-customer-msg"),
+  lineSimBotMsg: document.querySelector("#line-sim-bot-msg"),
 };
 
 const errorMessages = {
@@ -299,12 +316,52 @@ function renderShops(shops) {
   }
 }
 
+async function loadLineConfig(shopId) {
+  try {
+    const origin = window.location.origin;
+    elements.lineWebhookUrl.value = `${origin}/api/v1/shops/${encodeURIComponent(shopId)}/line/webhook`;
+    elements.lineSimResult.classList.add("hidden");
+
+    const config = await apiRequest(`/shops/${encodeURIComponent(shopId)}/line/config`);
+    if (config.configured) {
+      elements.lineStatusBadge.textContent = "เชื่อมต่อแล้ว";
+      elements.lineStatusBadge.className =
+        "inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700";
+      elements.lineChannelId.value = config.channel_id || "";
+      elements.lineChannelSecret.value = "";
+      elements.lineChannelSecret.placeholder =
+        config.channel_secret_masked || "ตั้งค่าแล้ว (เว้นว่างไว้หากไม่ต้องการเปลี่ยน)";
+      elements.lineChannelSecret.required = false;
+      elements.lineChannelToken.value = "";
+      elements.lineChannelToken.placeholder =
+        config.channel_access_token_masked || "ตั้งค่าแล้ว (เว้นว่างไว้หากไม่ต้องการเปลี่ยน)";
+      elements.lineChannelToken.required = false;
+    } else {
+      elements.lineStatusBadge.textContent = "ยังไม่ได้ตั้งค่า";
+      elements.lineStatusBadge.className =
+        "inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600";
+      elements.lineChannelId.value = "";
+      elements.lineChannelSecret.value = "";
+      elements.lineChannelSecret.placeholder = "Channel Secret จาก LINE Developers Console";
+      elements.lineChannelSecret.required = true;
+      elements.lineChannelToken.value = "";
+      elements.lineChannelToken.placeholder = "Channel Access Token (long-lived) จาก LINE Developers Console";
+      elements.lineChannelToken.required = true;
+    }
+  } catch (error) {
+    console.error("Failed to load LINE config:", error);
+  }
+}
+
 async function openShop(shopId) {
   try {
     const shop = await apiRequest(`/shops/${encodeURIComponent(shopId)}`);
 
     // ใช้ข้อมูลจาก API โดยตรงเพื่อป้องกันการแสดงข้อมูลเก่า
     fillBusinessSettingsForm(shop);
+
+    // โหลดการตั้งค่า LINE สำหรับร้านนี้
+    await loadLineConfig(shopId);
 
     // เมื่อโหลดข้อมูลสำเร็จให้เปิดหน้าตั้งค่าธุรกิจ
     showBusinessSettingsView();
@@ -401,6 +458,101 @@ elements.businessSettingsForm.addEventListener("submit", async (event) => {
     setButtonLoading(button, false);
   }
 });
+
+if (elements.copyWebhookBtn) {
+  elements.copyWebhookBtn.addEventListener("click", async () => {
+    if (!elements.lineWebhookUrl.value) return;
+    try {
+      await navigator.clipboard.writeText(elements.lineWebhookUrl.value);
+      const originalText = elements.copyWebhookBtn.textContent;
+      elements.copyWebhookBtn.textContent = "คัดลอกแล้ว!";
+      setTimeout(() => {
+        elements.copyWebhookBtn.textContent = originalText;
+      }, 2000);
+    } catch {
+      elements.lineWebhookUrl.select();
+      document.execCommand("copy");
+    }
+  });
+}
+
+if (elements.lineSettingsForm) {
+  elements.lineSettingsForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (!selectedShopId) return;
+
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
+    const button = elements.saveLineBtn;
+
+    const channelId = String(form.get("channel_id") || "").trim();
+    const channelSecret = String(form.get("channel_secret") || "").trim();
+    const channelAccessToken = String(form.get("channel_access_token") || "").trim();
+
+    const body = {};
+    if (channelId) body.channel_id = channelId;
+    if (channelSecret) body.channel_secret = channelSecret;
+    if (channelAccessToken) body.channel_access_token = channelAccessToken;
+
+    if (!channelSecret && elements.lineChannelSecret.required) {
+      showNotification("error", "ข้อมูลไม่ครบ", "กรุณาระบุ Channel Secret");
+      return;
+    }
+    if (!channelAccessToken && elements.lineChannelToken.required) {
+      showNotification("error", "ข้อมูลไม่ครบ", "กรุณาระบุ Channel Access Token");
+      return;
+    }
+
+    setButtonLoading(button, true, "กำลังบันทึก...");
+    try {
+      await apiRequest(`/shops/${encodeURIComponent(selectedShopId)}/line/config`, {
+        method: "PUT",
+        body,
+      });
+      await loadLineConfig(selectedShopId);
+      showNotification("success", "บันทึกสำเร็จ", "เชื่อมต่อ LINE Messaging API เรียบร้อยแล้ว");
+    } catch (error) {
+      showNotification("error", "บันทึกไม่สำเร็จ", error.message);
+    } finally {
+      setButtonLoading(button, false);
+    }
+  });
+}
+
+if (elements.lineSimBtn) {
+  elements.lineSimBtn.addEventListener("click", async () => {
+    if (!selectedShopId) return;
+    const userId = elements.lineSimUser.value.trim() || "line-user-demo-1";
+    const text = elements.lineSimText.value.trim();
+    if (!text) {
+      showNotification("error", "ข้อความว่าง", "กรุณาระบุข้อความที่ต้องการทดสอบ");
+      return;
+    }
+
+    setButtonLoading(elements.lineSimBtn, true, "กำลังส่ง...");
+    try {
+      const result = await apiRequest(`/shops/${encodeURIComponent(selectedShopId)}/line/simulate`, {
+        method: "POST",
+        body: { user_id: userId, text },
+      });
+
+      elements.lineSimResult.classList.remove("hidden");
+      elements.lineSimTime.textContent = new Date().toLocaleTimeString("th-TH");
+      elements.lineSimCustomerMsg.textContent = text;
+      if (result.replied && result.reply_text) {
+        elements.lineSimBotMsg.textContent = result.reply_text;
+      } else {
+        elements.lineSimBotMsg.textContent =
+          "(บอทไม่ได้ตอบกลับอัตโนมัติ เนื่องจากอยู่นอกเวลาทำการ หรือถูกปรับเป็นโหมดส่งต่อเจ้าหน้าที่)";
+      }
+      showNotification("success", "จำลองสำเร็จ", "ระบบบันทึกข้อความและตอบกลับเรียบร้อยแล้ว");
+    } catch (error) {
+      showNotification("error", "จำลองข้อความไม่สำเร็จ", error.message);
+    } finally {
+      setButtonLoading(elements.lineSimBtn, false);
+    }
+  });
+}
 
 elements.loginTab.addEventListener("click", () => {
   switchAuthTab("login");

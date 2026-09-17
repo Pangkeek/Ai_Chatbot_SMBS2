@@ -26,6 +26,12 @@ export const schemas = {
   ConversationCreate: object(conversationFields),
   ConversationPatch: { ...object({ status: choice('open', 'closed'), bot_mode: choice('active', 'paused', 'human') }, []), minProperties: 1 },
   MessageCreate: object({ role: choice('customer', 'agent'), content: str(10000) }),
+  LineConfig: object({ configured: { type: 'boolean' }, channel_id: { anyOf: [id, { type: 'null' }] }, channel_secret_masked: { anyOf: [str(100), { type: 'null' }] }, channel_access_token_masked: { anyOf: [str(500), { type: 'null' }] }, destination_user_id: { anyOf: [str(100), { type: 'null' }] }, webhook_url: str(500), updated_at: { anyOf: [date, { type: 'null' }] } }),
+  LineConfigUpdate: object({ channel_secret: str(100, 1), channel_access_token: str(500, 1), channel_id: { anyOf: [id, { type: 'null' }] }, destination_user_id: { anyOf: [str(100), { type: 'null' }] } }, ['channel_secret', 'channel_access_token']),
+  LineWebhook: { type: 'object', properties: { destination: { anyOf: [str(100), { type: 'null' }] }, events: { type: 'array', items: { type: 'object', properties: { type: str(50), timestamp: integer(), webhookEventId: str(100), replyToken: { anyOf: [str(100), { type: 'null' }] }, source: { type: 'object', properties: { type: str(20), userId: { anyOf: [str(100), { type: 'null' }] } } }, message: { type: 'object', properties: { type: str(20), id: { anyOf: [str(100), { type: 'null' }] }, text: { anyOf: [str(10000, 0), { type: 'null' }] } } } }, required: ['type'] } } }, required: ['events'] },
+  LineWebhookResult: object({ status: str(50), processed_count: integer() }),
+  LineSimulate: object({ user_id: str(100, 1), user_name: { anyOf: [str(100), { type: 'null' }] }, text: str(10000, 1), event_id: { anyOf: [str(100), { type: 'null' }] } }, ['user_id', 'text']),
+  LineSimulateResult: object({ status: str(50), conversation_id: id, customer_message_id: id, replied: { type: 'boolean' }, reply_message_id: { anyOf: [id, { type: 'null' }] }, reply_text: { anyOf: [str(10000), { type: 'null' }] } }),
   Error: object({ error: object({ code: str(), message: str(1000), details: { type: 'array', items: object({ field: str(), message: str(1000) }) } }), request_id: id }),
 };
 schemas.Auth = object({ user: schemas.User, access_token: str(), token_type: choice('Bearer'), expires_at: date });
@@ -57,6 +63,10 @@ export const routes = [
   route('PATCH', `${base}/conversations/{conversationId}`, 'updateConversation', 'Change status or bot mode', data(schemas.Conversation), { body: schemas.ConversationPatch }),
   route('GET', `${base}/conversations/{conversationId}/messages`, 'listMessages', 'List messages oldest first', list(schemas.Message), { paginated: true }),
   route('POST', `${base}/conversations/{conversationId}/messages`, 'createMessage', 'Store a simulated customer message or an agent reply; no external delivery', data(schemas.Message), { body: schemas.MessageCreate, status: 201 }),
+  route('GET', `${base}/line/config`, 'getLineConfig', 'Read LINE channel configuration for a shop (owner)', data(schemas.LineConfig), { owner: true }),
+  route('PUT', `${base}/line/config`, 'updateLineConfig', 'Update LINE channel credentials (owner)', data(schemas.LineConfig), { body: schemas.LineConfigUpdate, owner: true }),
+  route('POST', `${base}/line/webhook`, 'lineWebhook', 'Receive LINE Messaging API webhook events', data(schemas.LineWebhookResult), { auth: false, body: schemas.LineWebhook }),
+  route('POST', `${base}/line/simulate`, 'simulateLineMessage', 'Simulate an incoming LINE message event for testing (owner)', data(schemas.LineSimulateResult), { body: schemas.LineSimulate, owner: true }),
 ];
 
 const errorDescriptions = { 400: 'Invalid JSON or query', 401: 'Authentication required or invalid credentials', 403: 'Owner role required', 404: 'Resource missing or inaccessible', 405: 'Method not allowed', 409: 'Duplicate email or conversation state conflict', 413: 'Body exceeds 128 KiB', 415: 'Expected application/json', 422: 'Schema validation failed', 429: 'Authentication rate limit exceeded', 500: 'Internal error' };
