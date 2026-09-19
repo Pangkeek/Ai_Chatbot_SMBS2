@@ -902,124 +902,41 @@
           </form>
 
           <!-- Simulator Section -->
-          <div class="border-t border-slate-100 pt-6">
-            <div class="mb-4">
-              <h3 class="text-base font-bold text-slate-900">ทดสอบส่งข้อความ (LINE Simulator)</h3>
-              <p class="mt-1 text-xs text-slate-500 leading-5">
-                จำลองข้อความที่ลูกค้าพิมพ์ส่งเข้ามาใน LINE OA เพื่อทดสอบการรับข้อความและการตอบกลับอัตโนมัติ
-              </p>
+          <section class="line-simulator" aria-labelledby="line-sim-title">
+            <div class="sim-heading">
+              <div><p class="sim-eyebrow">CHAT PLAYGROUND</p><h3 id="line-sim-title">LINE Simulator</h3>
+              <p class="sim-description">ลองเป็นลูกค้า แล้วดูว่าบอทของร้านตอบอย่างไร</p></div>
+              <span class="sim-mode"><span></span>โหมดทดสอบ</span>
             </div>
-
-            <div class="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/50 p-4">
-              <div class="grid gap-3 sm:grid-cols-[1fr_2fr]">
-                <div>
-                  <label class="mb-1 block text-xs font-semibold text-slate-600">รหัสลูกค้า LINE</label>
-                  <input
-                    id="line-sim-user"
-                    type="text"
-                    value="line-user-demo-1"
-                    class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs outline-none focus:border-blue-500"
-                  />
+            <div class="sim-workspace">
+              <aside class="sim-controls">
+                <div class="sim-section-label">01 <span>ตั้งค่าผู้ทดสอบ</span></div>
+                <label for="line-sim-user">รหัสลูกค้า LINE</label>
+                <input id="line-sim-user" type="text" value="line-user-demo-1" maxlength="100" autocomplete="off" />
+                <p class="sim-hint">ใช้รหัสเดิมเพื่อทดสอบบทสนทนาต่อเนื่อง หรือเปลี่ยนรหัสเพื่อจำลองลูกค้าคนอื่น</p>
+                <div class="sim-section-label sim-scenarios-title">02 <span>เลือกคำถามเริ่มต้น</span></div>
+                <div class="sim-presets">
+                  <button type="button" data-sim-prompt="สวัสดีครับ มีสินค้าหรือบริการอะไรแนะนำบ้างครับ"><span aria-hidden="true">✦</span><span>สินค้าและบริการ<small>ลองถามสิ่งที่ร้านมีให้บริการ</small></span><span aria-hidden="true">↗</span></button>
+                  <button type="button" data-sim-prompt="ร้านเปิดปิดกี่โมงครับ"><span aria-hidden="true">◷</span><span>เวลาเปิดทำการ<small>เช็กข้อมูลพื้นฐานของร้าน</small></span><span aria-hidden="true">↗</span></button>
+                  <button type="button" data-sim-prompt="ขอคุยกับเจ้าหน้าที่ได้ไหมครับ"><span aria-hidden="true">☏</span><span>ติดต่อเจ้าหน้าที่<small>ลองทดสอบการส่งต่อแชต</small></span><span aria-hidden="true">↗</span></button>
                 </div>
-                <div>
-                  <label class="mb-1 block text-xs font-semibold text-slate-600">ข้อความจากลูกค้า</label>
-                  <input
-                    id="line-sim-text"
-                    type="text"
-                    placeholder="เช่น สวัสดี มีสินค้าหรือบริการอะไรบ้าง"
-                    value="สวัสดีครับ มีเมนูอะไรแนะนำบ้างครับ"
-                    class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs outline-none focus:border-blue-500"
-                  />
+                <div class="sim-note"><strong>พื้นที่ทดลองของร้านคุณ</strong><p>ข้อความจะถูกบันทึกในระบบ แต่จะไม่ส่งไปยัง LINE ของลูกค้าจริง</p></div>
+              </aside>
+              <div class="sim-chat">
+                <header class="sim-chat-header">
+                  <span class="sim-avatar" aria-hidden="true">✦</span>
+                  <div><strong id="line-sim-shop-name">บอทร้านค้า</strong><p>ตัวอย่างบทสนทนา · LINE OA</p></div>
+                  <span class="sim-chat-tag">PREVIEW</span>
+                </header>
+                <div id="line-sim-result" class="sim-messages" role="log" aria-label="บทสนทนาทดสอบ" aria-live="polite" aria-relevant="additions text">
+                  <div class="sim-empty"><span class="sim-empty-icon" aria-hidden="true">•••</span><strong>บทสนทนาดี ๆ เริ่มตรงนี้</strong><p>เลือกคำถามตัวอย่าง หรือพิมพ์ข้อความด้านล่าง<br />เพื่อเริ่มทดสอบบอทของคุณ</p><span class="sim-empty-tag">ลูกค้าถาม → บอทตอบ → ดูผลลัพธ์</span></div>
                 </div>
-              </div>
-
-              <div class="flex justify-end">
-                <button
-                  id="line-sim-btn"
-                  type="button"
-                  class="rounded-xl bg-slate-900 px-5 py-2 text-xs font-semibold text-white transition hover:bg-slate-800 disabled:opacity-60"
-                >
-                  จำลองการส่งข้อความ
-                </button>
-              </div>
-
-              <!-- Simulation Chat Preview -->
-              <div id="line-sim-result" class="mt-4 hidden space-y-3 rounded-xl border border-slate-200 bg-white p-4">
-                <div class="flex items-center justify-between text-xs text-slate-400">
-                  <span>ผลการทดสอบการรับ-ตอบ</span>
-                  <span id="line-sim-time" class="font-mono"></span>
-                </div>
-                <!-- Customer message bubble -->
-                <div class="flex justify-end">
-                  <div class="max-w-[80%] rounded-2xl rounded-tr-none bg-blue-600 px-4 py-2.5 text-xs text-white">
-                    <p class="font-semibold text-blue-200 text-[10px]">ลูกค้า (LINE):</p>
-                    <p id="line-sim-customer-msg" class="mt-0.5"></p>
-                  </div>
-                </div>
-                <!-- Assistant reply bubble -->
-                <div class="flex justify-start">
-                  <div class="max-w-[80%] rounded-2xl rounded-tl-none bg-slate-100 px-4 py-2.5 text-xs text-slate-800">
-                    <p class="font-semibold text-blue-600 text-[10px]">บอทร้านค้า (อัตโนมัติ):</p>
-                    <p id="line-sim-bot-msg" class="mt-0.5 whitespace-pre-wrap"></p>
-                  </div>
-                </div>
+                <form id="line-sim-form" class="sim-composer">
+                  <label for="line-sim-text">ข้อความจากลูกค้า</label>
+                  <div class="sim-input-row"><input id="line-sim-text" type="text" placeholder="พิมพ์ข้อความที่อยากลองถาม…" maxlength="10000" required autocomplete="off" /><button id="line-sim-btn" type="submit">ส่งข้อความ ↗</button></div>
+                  <p class="sim-hint">กด Enter เพื่อส่งข้อความ</p>
+                </form>
+                <footer class="sim-footer"><span id="line-sim-status" role="status">พร้อมทดสอบ</span><button id="line-sim-clear" type="button" title="ล้างเฉพาะข้อความที่แสดง ไม่ลบประวัติในระบบ">ล้างหน้าจอ</button></footer>
               </div>
             </div>
-          </div>
-        </div>
-      </section>
-    </div>
-
-    <aside class="space-y-4">
-      <div class="rounded-3xl border border-blue-100 bg-blue-50 p-5">
-        <div
-          class="flex size-11 items-center justify-center rounded-2xl bg-blue-600 text-white"
-        >
-          <svg
-            aria-hidden="true"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.8"
-            class="size-6"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M12 8.25v4.5m0 3h.01"
-            />
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M12 3.75a8.25 8.25 0 1 0 0 16.5 8.25 8.25 0 0 0 0-16.5Z"
-            />
-          </svg>
-        </div>
-
-        <h2 class="mt-4 font-bold text-blue-950">
-          ข้อมูลนี้นำไปใช้อย่างไร
-        </h2>
-
-        <p class="mt-2 text-sm leading-6 text-blue-800">
-          Chatbot จะใช้ข้อมูลธุรกิจและ Persona เพื่อปรับคำตอบให้เหมาะกับร้าน
-          ส่วนคำถามพบบ่อยและข้อมูลสินค้าจะจัดการใน Knowledge Base
-        </p>
-      </div>
-
-      <div class="rounded-3xl border border-slate-200 bg-white p-5">
-        <h2 class="font-bold text-slate-900">
-          คำแนะนำ
-        </h2>
-
-        <ul class="mt-3 space-y-3 text-sm leading-6 text-slate-500">
-          <li>• เขียนรายละเอียดให้ชัดเจนและไม่ยาวเกินไป</li>
-          <li>• ระบุวันหยุดหรือเวลาพิเศษให้ครบ</li>
-          <li>• กำหนด Persona ด้วยภาษาที่เข้าใจง่าย</li>
-        </ul>
-      </div>
-    </aside>
-  </div>
-</main>
-    </div>
-  </body>
-</html>
+          </section>
