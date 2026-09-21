@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { generateDefaultReply, sendLineReply } from './line.mjs';
+import { generateDefaultReply, sendLineReply } from './line.js';
 
 const now = () => new Date().toISOString();
 

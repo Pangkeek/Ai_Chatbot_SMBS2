@@ -2,7 +2,7 @@
 
 Base URL: `http://127.0.0.1:3000/api/v1` ใช้ JSON UTF-8 และชื่อ field แบบ `snake_case` ส่วน path parameter ใช้ `shopId`, `knowledgeId`, `conversationId` ตาม OpenAPI
 
-Contract ที่อ่านด้วยเครื่อง: [openapi.json](openapi.json) หรือ `GET /openapi.json` จาก server; API Console: `/docs` โดย runtime route และ request validation ใช้ source เดียวกันใน `src/contracts.mjs`
+Contract ที่อ่านด้วยเครื่อง: [openapi.json](openapi.json) หรือ `GET /openapi.json` จาก server; API Console: `/docs` โดย runtime route และ request validation ใช้ source เดียวกันใน `src/lib/contracts.js`
 
 ## รูปแบบกลาง
 
@@ -135,4 +135,4 @@ Invoke-RestMethod -Method Patch -Uri $conversationUrl -Headers $apiHeaders -Cont
 
 ## การเปลี่ยน contract ของทีม
 
-v0.1.0 เป็น baseline ที่เตรียมให้ทีมใช้ร่วมกัน ไม่ได้หมายถึงมีผู้ร่วมทีมลงนามรับรองแล้ว เมื่อเปลี่ยน field, status หรือ semantics ให้แก้ `src/contracts.mjs`, implementation, test และเอกสารใน PR เดียวกัน พร้อมสร้าง `docs/openapi.json` ใหม่ จุดที่ทำให้ client เดิมใช้ไม่ได้ต้องหารือทีมก่อน merge และพิจารณา prefix v2
+v0.1.0 เป็น baseline ที่เตรียมให้ทีมใช้ร่วมกัน ไม่ได้หมายถึงมีผู้ร่วมทีมลงนามรับรองแล้ว เมื่อเปลี่ยน field, status หรือ semantics ให้แก้ `src/lib/contracts.js`, implementation, test และเอกสารใน PR เดียวกัน พร้อมสร้าง `docs/openapi.json` ใหม่ จุดที่ทำให้ client เดิมใช้ไม่ได้ต้องหารือทีมก่อน merge และพิจารณา prefix v2

@@ -2,12 +2,12 @@ import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import { createHmac } from 'node:crypto';
-import { openDatabase } from '../src/db.mjs';
-import { seedDemo, demoPassword } from '../src/seed.mjs';
-import { createApp } from '../src/app.mjs';
-import { routes, schemas, openapi } from '../src/contracts.mjs';
-import { validate } from '../src/validation.mjs';
-import { tokenHash } from '../src/auth.mjs';
+import { openDatabase } from '../src/lib/db.js';
+import { seedDemo, demoPassword } from '../src/lib/seed.js';
+import { createApp } from '../src/lib/app.js';
+import { routes, schemas, openapi } from '../src/lib/contracts.js';
+import { validate } from '../src/utils/validation.js';
+import { tokenHash } from '../src/lib/auth.js';
 
 let db, server, url, coffee, flower;
 const exercised = new Set();
@@ -45,21 +45,10 @@ before(async () => {
 });
 after(async () => { await new Promise(resolve => server.close(resolve)); db.close(); });
 
-test('health, served contract and developer console are available', async () => {
+test('health and OpenAPI contract are available', async () => {
   assert.equal((await request('GET', '/health')).payload.data.database, 'ok');
   const contract = await (await fetch(url + '/openapi.json')).json();
   assert.deepEqual(contract, openapi);
-  const docs = await fetch(url + '/docs');
-  assert.match(await docs.text(), /SMB Chatbot API/);
-  assert.match(docs.headers.get('content-security-policy'), /frame-ancestors 'none'/);
-  assert.equal((await fetch(url + '/docs.js')).status, 200);
-  assert.equal((await fetch(url + '/docs.css')).status, 200);
-  assert.equal((await fetch(url + '/app')).status, 200);
-  assert.equal((await fetch(url + '/app.js')).status, 200);
-  assert.equal((await fetch(url + '/app.css')).status, 200);
-  const background = await fetch(url + '/assets/auth/Background_image.jpeg');
-  assert.equal(background.status, 200);
-  assert.match(background.headers.get('content-type'), /^image\/jpeg/);
 });
 
 test('seed is repeatable and preserves edited content and row counts', async () => {

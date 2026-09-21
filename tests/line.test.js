@@ -1,11 +1,11 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHmac } from 'node:crypto';
-import { openDatabase } from '../src/db.mjs';
-import { seedDemo } from '../src/seed.mjs';
-import { verifyLineSignature, sendLineReply, generateDefaultReply } from '../src/line.mjs';
-import { createLineWorker } from '../src/worker.mjs';
-import { createService } from '../src/service.mjs';
+import { openDatabase } from '../src/lib/db.js';
+import { seedDemo } from '../src/lib/seed.js';
+import { verifyLineSignature, sendLineReply, generateDefaultReply } from '../src/services/line.js';
+import { createLineWorker } from '../src/services/worker.js';
+import { createService } from '../src/services/service.js';
 
 let db;
 

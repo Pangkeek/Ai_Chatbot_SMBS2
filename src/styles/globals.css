@@ -1,0 +1,9 @@
+@import "tailwindcss";
+
+@source "../components";
+@source "../services";
+@source "../pages";
+
+@theme {
+  --font-sans: "Noto Sans Thai", "Leelawadee UI", Tahoma, Arial, ui-sans-serif, system-ui, sans-serif;
+}

@@ -36,16 +36,16 @@
 | ไฟล์ | หน้าที่ |
 |---|---|
 | `migrations/002_line_integration.sql` | สร้างตาราง `line_channels` และ `line_events` พร้อม index |
-| `src/line.mjs` | ฟังก์ชัน HMAC SHA256 signature verification, ส่งคำตอบ LINE Reply/Push API, และ default reply template |
-| `src/worker.mjs` | In-memory asynchronous queue, worker handler, Handover guard, และ message persistence |
-| `src/contracts.mjs` | สกีมาและ routes: `getLineConfig`, `updateLineConfig`, `lineWebhook`, `simulateLineMessage` |
-| `src/validation.mjs` | รองรับ schema type `boolean` |
-| `src/app.mjs` | เก็บ `rawBody` สำหรับ signature check, redirect `/app.html` -> `/app` |
-| `src/service.mjs` | ตรรกะ service layer สำหรับ LINE config, webhook idempotency, และ message simulation |
+| `src/services/line.js` | ฟังก์ชัน HMAC SHA256 signature verification, ส่งคำตอบ LINE Reply/Push API, และ default reply template |
+| `src/services/worker.js` | In-memory asynchronous queue, worker handler, Handover guard, และ message persistence |
+| `src/lib/contracts.js` | สกีมาและ routes: `getLineConfig`, `updateLineConfig`, `lineWebhook`, `simulateLineMessage` |
+| `src/utils/validation.js` | รองรับ schema type `boolean` |
+| `src/lib/app.js` | เก็บ `rawBody` สำหรับ signature check และให้บริการ API |
+| `src/services/service.js` | ตรรกะ service layer สำหรับ LINE config, webhook idempotency, และ message simulation |
 | `docs/openapi.json` | อัปเดต OpenAPI specification |
-| `public/app.html` & `public/app.js` | UI การตั้งค่า LINE Official Account และเครื่องมือจำลองข้อความ LINE |
-| `tests/line.test.mjs` | Automated test suite สำหรับ signature, worker, deduplication, และ handover guard |
-| `tests/api.test.mjs` & `database.test.mjs` | ตรวจสอบ contract coverage และ migration compatibility |
+| `src/components/Dashboard.jsx` & `src/services/dashboardController.js` | UI การตั้งค่า LINE Official Account และเครื่องมือจำลองข้อความ LINE |
+| `tests/line.test.js` | Automated test suite สำหรับ signature, worker, deduplication, และ handover guard |
+| `tests/api.test.js` & `database.test.js` | ตรวจสอบ contract coverage และ migration compatibility |
 
 ---
 
@@ -83,6 +83,6 @@ node --experimental-sqlite --test
 
 ตรวจสอบความสอดคล้องของ OpenAPI artifact:
 ```bash
-node scripts/openapi.mjs --check
+node scripts/openapi.js --check
 # OpenAPI artifact matches the running API contract.
 ```

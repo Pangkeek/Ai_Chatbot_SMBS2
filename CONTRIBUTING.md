@@ -6,7 +6,7 @@
 2. ใช้ SQLite คนละไฟล์ภายในเครื่อง ไม่ commit `data/` หรือ `.env`
 3. แบ่ง branch ตามงาน เช่น `feature/dashboard`, `feature/line-webhook`, `feature/rag`
 4. ใช้ OpenAPI v0.1.0 เป็น baseline; ทบทวน semantics กับทีมก่อนเปลี่ยน contract ที่ frontend ใช้แล้ว
-5. ก่อนส่ง PR รัน `node --test` และ `node scripts/openapi.mjs --check`
+5. ก่อนส่ง PR รัน `node --test` และ `node scripts/openapi.js --check`
 
 ## กฎสำหรับการแก้ไข
 
@@ -15,7 +15,7 @@
 - การสร้างร้านกับ owner membership และการเพิ่มข้อความกับการอัปเดต conversation ต้องเป็น transaction
 - ห้ามเพิ่ม role `assistant/system` ให้ client เขียนได้โดยตรง สร้างผ่าน internal worker ที่ตรวจ scope และ bot state
 - ใช้ bound SQL parameters สำหรับข้อมูลภายนอก และ whitelist ชื่อ column ผ่าน contract
-- แก้ contract/implementation/test/docs ใน PR เดียวกัน จากนั้นรัน `node scripts/openapi.mjs`
+- แก้ contract/implementation/test/docs ใน PR เดียวกัน จากนั้นรัน `node scripts/openapi.js`
 - เพิ่มการทดสอบพฤติกรรมที่เสี่ยงเสียหาย เช่น ข้อมูลข้ามร้าน, retry ซ้ำ, สถานะ handover และ authorization
 
 ## เกณฑ์รับงาน foundation

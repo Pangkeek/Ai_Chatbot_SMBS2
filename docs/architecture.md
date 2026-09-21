@@ -25,14 +25,14 @@ flowchart LR
 
 | เรื่อง | การเลือกและเหตุผล | ข้อจำกัด/แผนต่อยอด |
 |---|---|---|
-| Runtime | Node.js 24.19.x แบบ ESM; ใช้ HTTP/SQLite/test จาก runtime | ไม่มี dependency ภายนอก; schema validator รองรับเฉพาะ subset ที่ใช้ใน contract นี้ |
+| Runtime | Node.js 24.19.x แบบ ESM, Next.js Pages Router และ API Routes พร้อม SQLite/test จาก Node.js | schema validator รองรับเฉพาะ subset ที่ใช้ใน contract นี้ |
 | Database | SQLite แบบ WAL, STRICT tables, foreign_keys เปิดทุก connection | เหมาะกับทีมเริ่มต้นและหนึ่ง server process; ยังไม่ใช่ shared database หลาย instance |
 | API | REST JSON, `/api/v1`, OpenAPI 3.1 จาก route registry | เพิ่ม contract ก่อนให้ frontend ใช้ endpoint ใหม่ |
 | Tenant boundary | membership check + shop-scoped query + composite foreign key | SQLite ไม่มี RLS; ต้องตรวจ scope ในทุก service ใหม่ |
 | Authentication | salted scrypt; opaque bearer token; เก็บเฉพาะ token hash | ยังไม่มี email verification, reset password, MFA และ refresh session |
 | Test | integration ผ่าน HTTP จริงและฐานข้อมูลแยกจากข้อมูลพัฒนา | มี CI config พร้อมใช้ แต่ต้องนำขึ้น remote จึงจะรัน CI บนบริการได้ |
 
-เปิด localhost เป็นค่าเริ่มต้นและไม่มี CORS สำหรับ origin อื่น API Console ให้บริการจาก origin เดียวกับ API ถ้า Dashboard ใช้ dev server คนละพอร์ตให้ proxy `/api` ไป backend เพื่อใช้ path เดิม
+เปิด localhost เป็นค่าเริ่มต้นและไม่มี CORS สำหรับ origin อื่น Next.js, API Console และ API ทำงานจากเซิร์ฟเวอร์และ origin เดียวกัน
 
 ## ขอบเขตโมดูลสำหรับทีม
 

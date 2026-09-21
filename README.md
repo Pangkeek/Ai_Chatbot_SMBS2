@@ -1,23 +1,23 @@
-# SMB Chatbot Platform — โครงสร้างเริ่มต้น
+# SMB Chatbot Platform — Next.js
 
-Backend สำหรับทีมพัฒนาแพลตฟอร์ม Chatbot หลายร้าน มีฐานข้อมูลจริง, REST API, ERD, OpenAPI และข้อมูลทดสอบ 2 ร้าน รันได้โดยไม่ต้องใช้ API key หรือบริการภายนอก
+เว็บแอป Next.js สำหรับจัดการ Chatbot หลายร้าน พร้อม REST API, SQLite, OpenAPI และข้อมูลทดสอบ 2 ร้าน รันได้โดยไม่ต้องใช้ API key หรือบริการภายนอก
 
 ## รันครั้งแรก
 
-ต้องมี **Node.js 24.19.0 ขึ้นไปในสาย 24.x** และ Git ระบบใช้ `node:http`, `node:sqlite` และ `node:test` ที่มากับ Node จึงไม่มี package ภายนอกให้ติดตั้ง
+ต้องมี **Node.js 24.19.0 ขึ้นไปในสาย 24.x** และ **pnpm 11.19.0** ติดตั้งแพ็กเกจด้วยคำสั่ง:
 
 เปิด terminal ในโฟลเดอร์โครงการแล้วรัน:
 
 ```powershell
-node --version
-node --env-file-if-exists=.env scripts/migrate.mjs
-node --env-file-if-exists=.env scripts/seed.mjs
-node --env-file-if-exists=.env src/server.mjs
+pnpm install
+pnpm run db:migrate
+pnpm run db:seed
+pnpm dev
 ```
 
-เปิด **http://127.0.0.1:3000/docs** เพื่อใช้ API Console และ **http://127.0.0.1:3000/health** เพื่อตรวจการเชื่อมต่อฐานข้อมูล หยุด server ด้วย `Ctrl+C`
+เปิด **http://127.0.0.1:3000/app** เพื่อใช้แดชบอร์ด, **http://127.0.0.1:3000/docs** เพื่อใช้ API Console และ **http://127.0.0.1:3000/health** เพื่อตรวจการเชื่อมต่อฐานข้อมูล หยุด server ด้วย `Ctrl+C`
 
-ใช้คำสั่งเดียวกันได้บน Windows, macOS และ Linux ถ้าติดตั้ง Node แบบที่มี npm สามารถใช้ `npm run db:migrate`, `npm run db:seed`, `npm start`, `npm run dev` และ `npm test` ได้ด้วย
+สำหรับ production ให้รัน `pnpm run build` แล้วจึง `pnpm start` Next.js จะสร้างหน้าเว็บและ Tailwind CSS ในขั้น build หน้าเว็บและ REST API ให้บริการจาก origin เดียวกัน สไตล์ของหน้าเว็บอยู่ใน utility classes ของ JSX โดย `src/styles/globals.css` มีเพียงการนำเข้า Tailwind และตั้งค่าฟอนต์
 
 | ร้านทดสอบ | อีเมล | รหัสผ่าน | shopId |
 |---|---|---|---|
@@ -54,7 +54,7 @@ Invoke-RestMethod -Uri "$apiBase/shops/shop-coffee/conversations/shop-coffee-con
 - [สถาปัตยกรรม ขอบเขต และจุดเชื่อมต่อระยะถัดไป](docs/architecture.md)
 - [วิธีทำงานร่วมกันและเกณฑ์รับงาน](CONTRIBUTING.md)
 
-`src/contracts.mjs` เป็นแหล่งกำหนด contract v0.1.0 ทั้ง routing, การตรวจ request และ OpenAPI ที่ server ให้บริการ ส่วน `docs/openapi.json` คือสำเนาที่สร้างจากแหล่งเดียวกัน ทีมสามารถใช้เป็น baseline ในการพัฒนาและทบทวนร่วมกันก่อนเปลี่ยน contract
+`src/lib/contracts.js` เป็นแหล่งกำหนด contract v0.1.0 ทั้ง routing, การตรวจ request และ OpenAPI ที่ server ให้บริการ ส่วน `docs/openapi.json` คือสำเนาที่สร้างจากแหล่งเดียวกัน ทีมสามารถใช้เป็น baseline ในการพัฒนาและทบทวนร่วมกันก่อนเปลี่ยน contract
 
 ## โครงสร้าง repository
 
@@ -62,16 +62,20 @@ Invoke-RestMethod -Uri "$apiBase/shops/shop-coffee/conversations/shop-coffee-con
 .github/workflows/ci.yml  ตรวจ test และความตรงกันของ OpenAPI
 migrations/              SQL migrations ตามลำดับ พร้อม checksum
 src/
-  server.mjs             อ่าน config และเปิด HTTP server
-  app.mjs                routing, auth, tenant scope, validation, error envelope
-  contracts.mjs          request/response schemas และ endpoint registry
-  service.mjs            business rules และคำสั่งฐานข้อมูล
-  db.mjs                 เปิด SQLite และใช้ migration
-  auth.mjs               password hashing และ session token
-  seed.mjs               ข้อมูลสมมติ 2 ร้าน
-  validation.mjs         schema validator และ API errors
+  components/            หน้าแดชบอร์ดและ API Console
+  hooks/                 ผูกการทำงานของหน้าเว็บฝั่ง browser
+  layouts/               layout ร่วมของหน้าเว็บ
+  lib/                   routing, auth, database, contract และข้อมูลตัวอย่าง
+  pages/                 Pages Router: /, /app, /docs และ API routes
+    api/v1/              REST API เดิมบน Next.js API Routes
+  services/              business rules, LINE worker และตัวควบคุม UI
+  styles/                Tailwind entry และการตั้งค่าฟอนต์
+  utils/                 schema validation
 scripts/                 migrate, seed, สร้าง OpenAPI
-public/                  API Console สำหรับนักพัฒนา
+next.config.js          rewrite /health และ /openapi.json
+jsconfig.json            alias @/ สำหรับโค้ดใน src
+postcss.config.js       ตั้งค่า Tailwind CSS สำหรับ Next.js
+public/assets/           รูปภาพที่หน้าเว็บใช้งาน
 tests/                   HTTP integration และ database tests
 docs/                    ERD, API, architecture, OpenAPI
 data/                    ฐานข้อมูล local (ไม่เก็บใน Git)
@@ -83,7 +87,6 @@ data/                    ฐานข้อมูล local (ไม่เก็�
 
 | ตัวแปร | ค่าเริ่มต้น | ความหมาย |
 |---|---|---|
-| HOST | 127.0.0.1 | รับการเชื่อมต่อภายในเครื่อง |
 | PORT | 3000 | พอร์ต HTTP |
 | DATABASE_PATH | ./data/chatbot.sqlite | พาธฐานข้อมูล คิดจากโฟลเดอร์ที่รันคำสั่ง |
 
@@ -92,13 +95,14 @@ data/                    ฐานข้อมูล local (ไม่เก็�
 ## ตรวจงาน
 
 ```powershell
-node --test
-node scripts/openapi.mjs --check
+pnpm test
+pnpm run build
+node scripts/openapi.js --check
 ```
 
 Test ตรวจทุก endpoint ที่ประกาศไว้ รวมถึง tenant isolation, สิทธิ์ owner/agent, session หมดอายุและ logout, input validation, การส่งต่อเจ้าหน้าที่, foreign keys, seed ซ้ำ และข้อมูลคงอยู่หลังเปิดฐานข้อมูลใหม่ ใช้ฐานข้อมูลในหน่วยความจำหรือโฟลเดอร์ชั่วคราว ไม่แตะฐานข้อมูลพัฒนา
 
-เมื่อแก้ contract ให้รัน `node scripts/openapi.mjs` และ commit ไฟล์ที่สร้างใหม่ไปด้วย CI ถูกเตรียมไว้สำหรับ push/PR หลังนำ repository ขึ้น GitHub
+เมื่อแก้ contract ให้รัน `node scripts/openapi.js` และ commit ไฟล์ที่สร้างใหม่ไปด้วย CI ถูกเตรียมไว้สำหรับ push/PR หลังนำ repository ขึ้น GitHub
 
 ## สิ่งที่พร้อมและงานระยะถัดไป
 

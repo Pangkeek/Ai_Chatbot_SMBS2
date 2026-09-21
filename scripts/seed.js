@@ -1,5 +1,5 @@
-import { openDatabase } from '../src/db.mjs';
-import { seedDemo, demoShops, demoPassword } from '../src/seed.mjs';
+import { openDatabase } from '../src/lib/db.js';
+import { seedDemo, demoShops, demoPassword } from '../src/lib/seed.js';
 if (process.env.NODE_ENV === 'production') throw new Error('Demo seed is for local development only.');
 const db = openDatabase();
 try {

@@ -1,10 +1,9 @@
 import { createServer } from 'node:http';
 import { randomUUID } from 'node:crypto';
-import { readFileSync } from 'node:fs';
-import { routes, openapi } from './contracts.mjs';
-import { tokenHash } from './auth.mjs';
-import { ApiError, validate } from './validation.mjs';
-import { createService } from './service.mjs';
+import { routes, openapi } from './contracts.js';
+import { tokenHash } from './auth.js';
+import { ApiError, validate } from '../utils/validation.js';
+import { createService } from '../services/service.js';
 
 const bodyLimit = 128 * 1024;
 const compiled = routes.map(route => ({
@@ -12,37 +11,6 @@ const compiled = routes.map(route => ({
   names: [...route.path.matchAll(/\{(\w+)\}/g)].map(match => match[1]),
   regex: new RegExp(`^${route.path.replace(/\{\w+\}/g, '([^/]+)')}$`),
 }));
-const assets = new Map([
-  ['/docs', [
-    'text/html; charset=utf-8',
-    readFileSync(new URL('../public/index.html', import.meta.url)),
-  ]],
-  ['/docs.js', [
-    'text/javascript; charset=utf-8',
-    readFileSync(new URL('../public/docs.js', import.meta.url)),
-  ]],
-  ['/docs.css', [
-    'text/css; charset=utf-8',
-    readFileSync(new URL('../public/docs.css', import.meta.url)),
-  ]],
-  ['/app', [
-    'text/html; charset=utf-8',
-    readFileSync(new URL('../public/app.html', import.meta.url)),
-  ]],
-  ['/app.js', [
-    'text/javascript; charset=utf-8',
-    readFileSync(new URL('../public/app.js', import.meta.url)),
-  ]],
-  ['/app.css', [
-    'text/css; charset=utf-8',
-    readFileSync(new URL('../public/app.css', import.meta.url)),
-  ]],
-  ['/assets/auth/Background_image.jpeg', [
-    'image/jpeg',
-    readFileSync(new URL('../public/assets/auth/Background_image.jpeg', import.meta.url)),
-  ]],
-]);
-
 function readBody(req) {
   if (req.headers['content-type']?.split(';')[0].trim().toLowerCase() !== 'application/json') {
     req.resume();
@@ -85,10 +53,10 @@ function getPagination(url, paginated) {
   return query;
 }
 
-export function createApp(db, { logErrors = true, worker, serviceOptions } = {}) {
+export function createRequestHandler(db, { logErrors = true, worker, serviceOptions } = {}) {
   const service = createService(db, { worker, ...serviceOptions });
   const authAttempts = new Map();
-  return createServer({ requestTimeout: 15000, headersTimeout: 10000 }, async (req, res) => {
+  return async (req, res) => {
     const requestId = randomUUID();
     res.setHeader('X-Request-Id', requestId);
     res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -101,17 +69,6 @@ export function createApp(db, { logErrors = true, worker, serviceOptions } = {})
     }
     try {
       const url = new URL(req.url, 'http://localhost');
-      if (req.method === 'GET' && url.pathname === '/') {
-        res.writeHead(302, { Location: '/docs' }); return res.end();
-      }
-      if (req.method === 'GET' && (url.pathname === '/app.html' || url.pathname === '/app/')) {
-        res.writeHead(302, { Location: '/app' }); return res.end();
-      }
-      if (req.method === 'GET' && assets.has(url.pathname)) {
-        const [type, content] = assets.get(url.pathname);
-        res.setHeader('Content-Security-Policy', "default-src 'self'; style-src 'self'; script-src 'self'; frame-ancestors 'none'");
-        res.setHeader('Content-Type', type); return res.end(content);
-      }
       if (req.method === 'GET' && url.pathname === '/openapi.json') return send(200, openapi);
       const matches = compiled.filter(route => route.regex.test(url.pathname));
       const route = matches.find(route => route.method === req.method);
@@ -168,5 +125,9 @@ export function createApp(db, { logErrors = true, worker, serviceOptions } = {})
         request_id: requestId,
       });
     }
-  });
+  };
+}
+
+export function createApp(db, options) {
+  return createServer({ requestTimeout: 15000, headersTimeout: 10000 }, createRequestHandler(db, options));
 }

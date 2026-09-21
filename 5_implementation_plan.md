@@ -63,7 +63,7 @@ flowchart TD
 
 ---
 
-### 2.2 โมดูลจัดการ LINE (`src/line.mjs`)
+### 2.2 โมดูลจัดการ LINE (`src/services/line.js`)
 
 สร้างโมดูลเฉพาะสำหรับ LINE โดยใช้เฉพาะฟังก์ชันมาตรฐานของ Node.js (`node:crypto`, `fetch`):
 
@@ -74,7 +74,7 @@ flowchart TD
 
 ---
 
-### 2.3 โมดูล Worker และคิวประมวลผล (`src/worker.mjs`)
+### 2.3 โมดูล Worker และคิวประมวลผล (`src/services/worker.js`)
 
 - ทำ In-memory Async Job Queue จัดการงานประมวลผลข้อความเบื้องหลัง
 - รับงานจาก webhook แล้วทำงานแบบ asynchronous เพื่อให้ webhook สามารถส่ง HTTP 200 ตอบ LINE ได้ทันทีภายในระดับมิลลิวินาที (ป้องกัน LINE Timeout & Retry)
@@ -85,7 +85,7 @@ flowchart TD
 
 ---
 
-### 2.4 API Endpoints และ Contract (`src/contracts.mjs`, `src/app.mjs`, `src/service.mjs`)
+### 2.4 API Endpoints และ Contract (`src/lib/contracts.js`, `src/lib/app.js`, `src/services/service.js`)
 
 เพิ่ม API endpoints ตามสเปก REST + OpenAPI:
 
@@ -105,7 +105,7 @@ flowchart TD
 
 ---
 
-### 2.5 หน้าจอตั้งค่า LINE ใน Web UI (`public/app.html`, `public/app.js`)
+### 2.5 หน้าจอตั้งค่า LINE ใน Web UI (`src/components/Dashboard.jsx`, `src/services/dashboardController.js`)
 
 - เพิ่มแท็บ / ส่วน **"การเชื่อมต่อ LINE Official Account"** ในหน้าตั้งค่าธุรกิจ (`#business-settings-view`):
   - แสดง Webhook URL พร้อมปุ่มคัดลอก (Copy)
@@ -117,7 +117,7 @@ flowchart TD
 
 ## 3. แผนการตรวจสอบและทดสอบ (Verification Plan)
 
-### Automated Tests (`tests/line.test.mjs` & `tests/api.test.mjs`):
+### Automated Tests (`tests/line.test.js` & `tests/api.test.js`):
 
 1. **Signature Verification Test**:
    - ยิง webhook ด้วย signature ที่ถูกต้อง -> ตอบรับ 200
@@ -131,7 +131,7 @@ flowchart TD
 4. **Bot Mode Guard Test**:
    - เมื่อตั้งค่า `bot_mode = 'human'` หรือ `'paused'` -> ข้อความลูกค้าถูกบันทึก แต่ระบบไม่สร้างข้อความตอบกลับของ assistant
 5. **Contract Check**:
-   - รัน `node scripts/openapi.mjs --check` เพื่อยืนยันว่า OpenAPI spec สอดคล้องกับ API จริง 100%
+   - รัน `node scripts/openapi.js --check` เพื่อยืนยันว่า OpenAPI spec สอดคล้องกับ API จริง 100%
    - รัน `node --experimental-sqlite --test` ต้องผ่านครบทุกกรณี
 
 ---

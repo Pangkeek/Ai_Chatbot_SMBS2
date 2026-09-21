@@ -536,12 +536,18 @@ function resetSimulator() {
 function appendSimulatorMessage(role, text) {
   elements.lineSimResult.querySelector(".sim-empty")?.remove();
   const row = document.createElement("div");
-  row.className = "sim-message sim-message-" + role;
+  row.className = role === "customer"
+    ? "mb-[18px] flex flex-col items-end"
+    : "mb-[18px] flex flex-col items-start";
   const label = document.createElement("span");
-  label.className = "sim-message-label";
+  label.className = "mb-[5px] text-[9px] text-[#526b64]";
   label.textContent = (role === "customer" ? "คุณ · ลูกค้าทดสอบ" : role === "bot" ? "บอทร้านค้า" : "สถานะการทดสอบ") + " · " + new Date().toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" });
   const bubble = document.createElement("p");
-  bubble.className = "sim-bubble";
+  bubble.className = role === "customer"
+    ? "max-w-[90%] rounded-[15px_3px_15px_15px] bg-[#b5f38e] px-[14px] py-[11px] text-xs leading-[1.8] text-[#203b24] whitespace-pre-wrap shadow-[0_2px_3px_#33415508] [overflow-wrap:anywhere]"
+    : role === "system"
+      ? "max-w-[90%] rounded-[3px_15px_15px] bg-white/70 px-[14px] py-[11px] text-[11px] leading-[1.8] text-[#526b64] whitespace-pre-wrap [overflow-wrap:anywhere]"
+      : "max-w-[90%] rounded-[3px_15px_15px] bg-white px-[14px] py-[11px] text-xs leading-[1.8] whitespace-pre-wrap shadow-[0_2px_3px_#33415508] [overflow-wrap:anywhere]";
   bubble.textContent = text;
   row.append(label, bubble);
   elements.lineSimResult.append(row);

@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { openDatabase } from '../src/db.mjs';
-import { seedDemo } from '../src/seed.mjs';
+import { openDatabase } from '../src/lib/db.js';
+import { seedDemo } from '../src/lib/seed.js';
 
 test('disk database survives restart; migrations are tracked and reject edits', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'smb-chatbot-test-'));

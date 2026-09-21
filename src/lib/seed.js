@@ -1,5 +1,5 @@
-import { hashPassword } from './auth.mjs';
-import { transaction } from './db.mjs';
+import { hashPassword } from './auth.js';
+import { transaction } from './db.js';
 
 export const demoPassword = 'DemoPass!2026';
 export const demoShops = [
