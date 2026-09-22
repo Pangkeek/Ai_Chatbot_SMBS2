@@ -3,5 +3,5 @@ export default function Home() {
 }
 
 export async function getServerSideProps() {
-  return { redirect: { destination: '/docs', permanent: false } };
+  return { redirect: { destination: '/app', permanent: false } };
 }
