@@ -4,20 +4,20 @@
 
 ## รันครั้งแรก
 
-ต้องมี **Node.js 24.19.0 ขึ้นไปในสาย 24.x** และ **pnpm 11.19.0** ติดตั้งแพ็กเกจด้วยคำสั่ง:
+ต้องมี **Node.js 24.19.0 ขึ้นไปในสาย 24.x** และ **npm 11.19.0** ติดตั้งแพ็กเกจด้วยคำสั่ง:
 
 เปิด terminal ในโฟลเดอร์โครงการแล้วรัน:
 
 ```powershell
-pnpm install
-pnpm run db:migrate
-pnpm run db:seed
-pnpm dev
+npm install
+npm run db:migrate
+npm run db:seed
+npm run dev
 ```
 
 เปิด **http://127.0.0.1:3000/app** เพื่อใช้แดชบอร์ด, **http://127.0.0.1:3000/docs** เพื่อใช้ API Console และ **http://127.0.0.1:3000/health** เพื่อตรวจการเชื่อมต่อฐานข้อมูล หยุด server ด้วย `Ctrl+C`
 
-สำหรับ production ให้รัน `pnpm run build` แล้วจึง `pnpm start` Next.js จะสร้างหน้าเว็บและ Tailwind CSS ในขั้น build หน้าเว็บและ REST API ให้บริการจาก origin เดียวกัน สไตล์ของหน้าเว็บอยู่ใน utility classes ของ JSX โดย `src/styles/globals.css` มีเพียงการนำเข้า Tailwind และตั้งค่าฟอนต์
+สำหรับ production ให้รัน `npm run build` แล้วจึง `npm start` Next.js จะสร้างหน้าเว็บและ Tailwind CSS ในขั้น build หน้าเว็บและ REST API ให้บริการจาก origin เดียวกัน สไตล์ของหน้าเว็บอยู่ใน utility classes ของ JSX โดย `src/styles/globals.css` มีเพียงการนำเข้า Tailwind และตั้งค่าฟอนต์
 
 | ร้านทดสอบ | อีเมล | รหัสผ่าน | shopId |
 |---|---|---|---|
@@ -95,8 +95,8 @@ data/                    ฐานข้อมูล local (ไม่เก็�
 ## ตรวจงาน
 
 ```powershell
-pnpm test
-pnpm run build
+npm test
+npm run build
 node scripts/openapi.js --check
 ```
 

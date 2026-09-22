@@ -265,7 +265,7 @@ export default function AppPage() {
                 type="password"
                 autoComplete="current-password"
                 placeholder="กรอกรหัสผ่าน"
-                minlength="10"
+                minLength="10"
                 maxLength="128"
                 required={true}
                 className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
@@ -344,7 +344,7 @@ export default function AppPage() {
                 type="password"
                 autoComplete="new-password"
                 placeholder="อย่างน้อย 10 ตัวอักษร"
-                minlength="10"
+                minLength="10"
                 maxLength="128"
                 required={true}
                 className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
