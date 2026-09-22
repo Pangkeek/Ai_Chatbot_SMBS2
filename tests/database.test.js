@@ -16,7 +16,7 @@ test('disk database survives restart; migrations are tracked and reject edits', 
     db.prepare("UPDATE shops SET name = 'Persisted name' WHERE id = 'shop-coffee'").run();
     db.close();
     db = openDatabase(path);
-    assert.equal(db.prepare('SELECT count(*) AS n FROM schema_migrations').get().n, 2);
+    assert.equal(db.prepare('SELECT count(*) AS n FROM schema_migrations').get().n, 3);
     assert.equal(db.prepare("SELECT name FROM shops WHERE id = 'shop-coffee'").get().name, 'Persisted name');
     assert.equal(db.prepare('PRAGMA integrity_check').get().integrity_check, 'ok');
     db.prepare("UPDATE schema_migrations SET checksum = 'changed'").run();
