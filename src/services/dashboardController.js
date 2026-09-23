@@ -323,9 +323,13 @@ function renderShops(shops) {
 async function loadLineConfig(shopId) {
   try {
     const origin = window.location.origin;
-    elements.lineWebhookUrl.value = `${origin}/api/v1/shops/${encodeURIComponent(shopId)}/line/webhook`;
+    elements.lineWebhookUrl.value = `${origin}/api/v1/shops/${encodeURIComponent(
+      shopId
+    )}/line/webhook`;
 
-    const config = await apiRequest(`/shops/${encodeURIComponent(shopId)}/line/config`);
+    const config = await apiRequest(
+      `/shops/${encodeURIComponent(shopId)}/line/config`
+    );
     if (config.configured) {
       elements.lineStatusBadge.textContent = "เชื่อมต่อแล้ว";
       elements.lineStatusBadge.className =
@@ -333,11 +337,13 @@ async function loadLineConfig(shopId) {
       elements.lineChannelId.value = config.channel_id || "";
       elements.lineChannelSecret.value = "";
       elements.lineChannelSecret.placeholder =
-        config.channel_secret_masked || "ตั้งค่าแล้ว (เว้นว่างไว้หากไม่ต้องการเปลี่ยน)";
+        config.channel_secret_masked ||
+        "ตั้งค่าแล้ว (เว้นว่างไว้หากไม่ต้องการเปลี่ยน)";
       elements.lineChannelSecret.required = false;
       elements.lineChannelToken.value = "";
       elements.lineChannelToken.placeholder =
-        config.channel_access_token_masked || "ตั้งค่าแล้ว (เว้นว่างไว้หากไม่ต้องการเปลี่ยน)";
+        config.channel_access_token_masked ||
+        "ตั้งค่าแล้ว (เว้นว่างไว้หากไม่ต้องการเปลี่ยน)";
       elements.lineChannelToken.required = false;
     } else {
       elements.lineStatusBadge.textContent = "ยังไม่ได้ตั้งค่า";
@@ -345,10 +351,12 @@ async function loadLineConfig(shopId) {
         "inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600";
       elements.lineChannelId.value = "";
       elements.lineChannelSecret.value = "";
-      elements.lineChannelSecret.placeholder = "Channel Secret จาก LINE Developers Console";
+      elements.lineChannelSecret.placeholder =
+        "Channel Secret จาก LINE Developers Console";
       elements.lineChannelSecret.required = true;
       elements.lineChannelToken.value = "";
-      elements.lineChannelToken.placeholder = "Channel Access Token (long-lived) จาก LINE Developers Console";
+      elements.lineChannelToken.placeholder =
+        "Channel Access Token (long-lived) จาก LINE Developers Console";
       elements.lineChannelToken.required = true;
     }
   } catch (error) {
@@ -411,7 +419,7 @@ elements.businessSettingsForm.addEventListener("submit", async (event) => {
     showNotification(
       "error",
       "ไม่สามารถบันทึกได้",
-      "กรุณาเลือกร้านที่ต้องการแก้ไขก่อน",
+      "กรุณาเลือกร้านที่ต้องการแก้ไขก่อน"
     );
     return;
   }
@@ -436,7 +444,7 @@ elements.businessSettingsForm.addEventListener("submit", async (event) => {
           opening_hours: readField("opening_hours"),
           persona: readField("persona"),
         },
-      },
+      }
     );
 
     // ใช้ข้อมูลที่ server ตอบกลับเป็นค่าจริงหลังบันทึก
@@ -449,14 +457,10 @@ elements.businessSettingsForm.addEventListener("submit", async (event) => {
     showNotification(
       "success",
       "บันทึกสำเร็จ",
-      `อัปเดตข้อมูลร้าน “${shop.name}” เรียบร้อยแล้ว`,
+      `อัปเดตข้อมูลร้าน “${shop.name}” เรียบร้อยแล้ว`
     );
   } catch (error) {
-    showNotification(
-      "error",
-      "บันทึกการตั้งค่าไม่สำเร็จ",
-      error.message,
-    );
+    showNotification("error", "บันทึกการตั้งค่าไม่สำเร็จ", error.message);
   } finally {
     setButtonLoading(button, false);
   }
@@ -490,7 +494,9 @@ if (elements.lineSettingsForm) {
 
     const channelId = String(form.get("channel_id") || "").trim();
     const channelSecret = String(form.get("channel_secret") || "").trim();
-    const channelAccessToken = String(form.get("channel_access_token") || "").trim();
+    const channelAccessToken = String(
+      form.get("channel_access_token") || ""
+    ).trim();
 
     const body = {};
     if (channelId) body.channel_id = channelId;
@@ -502,18 +508,29 @@ if (elements.lineSettingsForm) {
       return;
     }
     if (!channelAccessToken && elements.lineChannelToken.required) {
-      showNotification("error", "ข้อมูลไม่ครบ", "กรุณาระบุ Channel Access Token");
+      showNotification(
+        "error",
+        "ข้อมูลไม่ครบ",
+        "กรุณาระบุ Channel Access Token"
+      );
       return;
     }
 
     setButtonLoading(button, true, "กำลังบันทึก...");
     try {
-      await apiRequest(`/shops/${encodeURIComponent(selectedShopId)}/line/config`, {
-        method: "PUT",
-        body,
-      });
+      await apiRequest(
+        `/shops/${encodeURIComponent(selectedShopId)}/line/config`,
+        {
+          method: "PUT",
+          body,
+        }
+      );
       await loadLineConfig(selectedShopId);
-      showNotification("success", "บันทึกสำเร็จ", "เชื่อมต่อ LINE Messaging API เรียบร้อยแล้ว");
+      showNotification(
+        "success",
+        "บันทึกสำเร็จ",
+        "เชื่อมต่อ LINE Messaging API เรียบร้อยแล้ว"
+      );
     } catch (error) {
       showNotification("error", "บันทึกไม่สำเร็จ", error.message);
     } finally {
@@ -536,16 +553,28 @@ function resetSimulator() {
 function appendSimulatorMessage(role, text) {
   elements.lineSimResult.querySelector(".sim-empty")?.remove();
   const row = document.createElement("div");
-  row.className = role === "customer"
-    ? "mb-[18px] flex flex-col items-end"
-    : "mb-[18px] flex flex-col items-start";
+  row.className =
+    role === "customer"
+      ? "mb-[18px] flex flex-col items-end"
+      : "mb-[18px] flex flex-col items-start";
   const label = document.createElement("span");
   label.className = "mb-[5px] text-[9px] text-[#526b64]";
-  label.textContent = (role === "customer" ? "คุณ · ลูกค้าทดสอบ" : role === "bot" ? "บอทร้านค้า" : "สถานะการทดสอบ") + " · " + new Date().toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" });
+  label.textContent =
+    (role === "customer"
+      ? "คุณ · ลูกค้าทดสอบ"
+      : role === "bot"
+      ? "บอทร้านค้า"
+      : "สถานะการทดสอบ") +
+    " · " +
+    new Date().toLocaleTimeString("th-TH", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   const bubble = document.createElement("p");
-  bubble.className = role === "customer"
-    ? "max-w-[90%] rounded-[15px_3px_15px_15px] bg-[#b5f38e] px-[14px] py-[11px] text-xs leading-[1.8] text-[#203b24] whitespace-pre-wrap shadow-[0_2px_3px_#33415508] [overflow-wrap:anywhere]"
-    : role === "system"
+  bubble.className =
+    role === "customer"
+      ? "max-w-[90%] rounded-[15px_3px_15px_15px] bg-[#b5f38e] px-[14px] py-[11px] text-xs leading-[1.8] text-[#203b24] whitespace-pre-wrap shadow-[0_2px_3px_#33415508] [overflow-wrap:anywhere]"
+      : role === "system"
       ? "max-w-[90%] rounded-[3px_15px_15px] bg-white/70 px-[14px] py-[11px] text-[11px] leading-[1.8] text-[#526b64] whitespace-pre-wrap [overflow-wrap:anywhere]"
       : "max-w-[90%] rounded-[3px_15px_15px] bg-white px-[14px] py-[11px] text-xs leading-[1.8] whitespace-pre-wrap shadow-[0_2px_3px_#33415508] [overflow-wrap:anywhere]";
   bubble.textContent = text;
@@ -568,7 +597,10 @@ elements.lineSimForm.addEventListener("submit", async (event) => {
   if (!selectedShopId || simulatorBusy) return;
   const userId = elements.lineSimUser.value.trim() || "line-user-demo-1";
   const text = elements.lineSimText.value.trim();
-  if (!text) { elements.lineSimText.focus(); return; }
+  if (!text) {
+    elements.lineSimText.focus();
+    return;
+  }
   const shopId = selectedShopId;
   const version = simulatorVersion;
   simulatorBusy = true;
@@ -579,24 +611,33 @@ elements.lineSimForm.addEventListener("submit", async (event) => {
   const pending = appendSimulatorMessage("system", "กำลังรอคำตอบจากบอท…");
   elements.lineSimStatus.textContent = "กำลังประมวลผล…";
   try {
-    const result = await apiRequest("/shops/" + encodeURIComponent(shopId) + "/line/simulate", {
-      method: "POST", body: { user_id: userId, text },
-    });
+    const result = await apiRequest(
+      "/shops/" + encodeURIComponent(shopId) + "/line/simulate",
+      {
+        method: "POST",
+        body: { user_id: userId, text },
+      }
+    );
     if (version !== simulatorVersion || shopId !== selectedShopId) return;
     pending.remove();
     if (result.replied && result.reply_text) {
       appendSimulatorMessage("bot", result.reply_text);
       elements.lineSimStatus.textContent = "ตอบกลับสำเร็จ";
     } else {
-      appendSimulatorMessage("system", "บันทึกข้อความแล้ว · บอทไม่ได้ตอบกลับอัตโนมัติในครั้งนี้");
+      appendSimulatorMessage(
+        "system",
+        "บันทึกข้อความแล้ว · บอทไม่ได้ตอบกลับอัตโนมัติในครั้งนี้"
+      );
       elements.lineSimStatus.textContent = "ไม่มีคำตอบอัตโนมัติ";
     }
-    if (elements.lineSimText.value.trim() === text) elements.lineSimText.value = "";
+    if (elements.lineSimText.value.trim() === text)
+      elements.lineSimText.value = "";
   } catch (error) {
     if (version !== simulatorVersion || shopId !== selectedShopId) return;
     pending.remove();
     appendSimulatorMessage("system", "ทดสอบไม่สำเร็จ: " + error.message);
-    elements.lineSimStatus.textContent = "เกิดข้อผิดพลาด · ตรวจสอบก่อนลองอีกครั้ง";
+    elements.lineSimStatus.textContent =
+      "เกิดข้อผิดพลาด · ตรวจสอบก่อนลองอีกครั้ง";
   } finally {
     simulatorBusy = false;
     setButtonLoading(elements.lineSimBtn, false);
@@ -640,7 +681,7 @@ elements.loginForm.addEventListener("submit", async (event) => {
     showNotification(
       "success",
       "เข้าสู่ระบบสำเร็จ",
-      "ยินดีต้อนรับกลับเข้าสู่ระบบ",
+      "ยินดีต้อนรับกลับเข้าสู่ระบบ"
     );
   } catch (error) {
     showNotification("error", "เข้าสู่ระบบไม่สำเร็จ", error.message);
@@ -676,7 +717,7 @@ elements.registerForm.addEventListener("submit", async (event) => {
     showNotification(
       "success",
       "สมัครสมาชิกสำเร็จ",
-      "สร้างบัญชีเรียบร้อยแล้ว คุณสามารถสร้างร้านแรกได้เลย",
+      "สร้างบัญชีเรียบร้อยแล้ว คุณสามารถสร้างร้านแรกได้เลย"
     );
   } catch (error) {
     showNotification("error", "สมัครสมาชิกไม่สำเร็จ", error.message);
@@ -711,7 +752,7 @@ elements.shopForm.addEventListener("submit", async (event) => {
     showNotification(
       "success",
       "สร้างร้านสำเร็จ",
-      `สร้างร้าน “${shop.name}” เรียบร้อยแล้ว`,
+      `สร้างร้าน “${shop.name}” เรียบร้อยแล้ว`
     );
   } catch (error) {
     showNotification("error", "สร้างร้านไม่สำเร็จ", error.message);
@@ -736,7 +777,7 @@ elements.logoutButton.addEventListener("click", async () => {
     showNotification(
       "success",
       "ออกจากระบบแล้ว",
-      "Session บนเครื่องนี้ถูกลบเรียบร้อยแล้ว",
+      "Session บนเครื่องนี้ถูกลบเรียบร้อยแล้ว"
     );
   }
 });
