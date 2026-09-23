@@ -50,6 +50,8 @@ Invoke-RestMethod -Uri "$apiBase/shops/shop-coffee/conversations/shop-coffee-con
 
 - [ERD และพจนานุกรมข้อมูล](docs/erd.md)
 - [Class diagram ของ core domain](docs/class-diagram.md)
+- [ข้อมูล SQL ตัวอย่างสำหรับ migration 001](docs/sample-data-001.sql)
+- [ฐานข้อมูล SQLite ตัวอย่างสำหรับ migration 001](docs/sample-data-001.sqlite)
 - [สัญญา API และตัวอย่าง workflow](docs/api.md)
 - [OpenAPI 3.1 สำหรับนำเข้า Postman / Swagger Editor](docs/openapi.json)
 - [สถาปัตยกรรม ขอบเขต และจุดเชื่อมต่อระยะถัดไป](docs/architecture.md)
