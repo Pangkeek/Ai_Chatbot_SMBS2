@@ -1,0 +1,1 @@
+แก้ datatype ใน /migrations/001_initial.sql ให้เหมาะสม แล้วสร้าง class diagram ลงใน /docs

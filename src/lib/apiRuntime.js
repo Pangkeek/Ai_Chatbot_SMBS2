@@ -1,5 +1,5 @@
-import { createRequestHandler } from './app.js';
-import { openDatabase } from './db.js';
+import { createRequestHandler } from "./app.js";
+import { openDatabase } from "./db.js";
 
 let handler;
 

@@ -49,6 +49,7 @@ Invoke-RestMethod -Uri "$apiBase/shops/shop-coffee/conversations/shop-coffee-con
 ## เอกสารที่ทีมใช้ร่วมกัน
 
 - [ERD และพจนานุกรมข้อมูล](docs/erd.md)
+- [Class diagram ของ core domain](docs/class-diagram.md)
 - [สัญญา API และตัวอย่าง workflow](docs/api.md)
 - [OpenAPI 3.1 สำหรับนำเข้า Postman / Swagger Editor](docs/openapi.json)
 - [สถาปัตยกรรม ขอบเขต และจุดเชื่อมต่อระยะถัดไป](docs/architecture.md)
