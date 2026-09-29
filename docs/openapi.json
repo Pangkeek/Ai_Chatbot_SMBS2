@@ -73,6 +73,13 @@
             "minLength": 0,
             "maxLength": 5000
           },
+          "member_role": {
+            "type": "string",
+            "enum": [
+              "owner",
+              "agent"
+            ]
+          },
           "created_at": {
             "type": "string",
             "format": "date-time"
@@ -88,6 +95,7 @@
           "description",
           "opening_hours",
           "persona",
+          "member_role",
           "created_at",
           "updated_at"
         ]

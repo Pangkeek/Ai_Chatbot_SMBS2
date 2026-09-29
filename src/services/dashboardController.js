@@ -1,3 +1,5 @@
+import { createKnowledgeManager } from "./knowledgeManager.js";
+
 const API_BASE = "/api/v1";
 const TOKEN_KEY = "smb_access_token";
 
@@ -6,6 +8,8 @@ let notificationTimer;
 
 // เก็บรหัสร้านที่กำลังแก้ไขเพื่อส่งคำขอไปยังร้านที่ถูกต้อง
 let selectedShopId = "";
+let selectedShopRole = "agent";
+let openShopVersion = 0;
 
 const elements = {
   authView: document.querySelector("#auth-view"),
@@ -21,6 +25,14 @@ const elements = {
   settingsOpeningHours: document.querySelector("#settings-opening-hours"),
   settingsPersona: document.querySelector("#settings-persona"),
   settingsShopId: document.querySelector("#settings-shop-id"),
+  settingsEyebrow: document.querySelector("#settings-eyebrow"),
+  settingsTitle: document.querySelector("#settings-title"),
+  settingsDescriptionText: document.querySelector("#settings-description-text"),
+  settingsBusinessTab: document.querySelector("#settings-business-tab"),
+  settingsKnowledgeTab: document.querySelector("#settings-knowledge-tab"),
+  settingsLineTab: document.querySelector("#settings-line-tab"),
+  businessSettingsSection: document.querySelector("#business-settings-section"),
+  knowledgeManagementSection: document.querySelector("#knowledge-management-section"),
 
   loginTab: document.querySelector("#login-tab"),
   registerTab: document.querySelector("#register-tab"),
@@ -84,7 +96,10 @@ const icons = {
   store: `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="size-7"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 9.25h16.5l-1.25-4.5H5l-1.25 4.5Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 9.25v9.5h13.5v-9.5M9 18.75V14h6v4.75" /></svg>`,
 };
 
-async function apiRequest(path, { method = "GET", body } = {}) {
+async function apiRequest(
+  path,
+  { method = "GET", body, signal, withMeta = false } = {}
+) {
   const headers = {};
 
   if (body !== undefined) {
@@ -98,6 +113,7 @@ async function apiRequest(path, { method = "GET", body } = {}) {
   const response = await fetch(`${API_BASE}${path}`, {
     method,
     headers,
+    signal,
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
 
@@ -117,11 +133,12 @@ async function apiRequest(path, { method = "GET", body } = {}) {
     const error = new Error(message);
     error.code = code;
     error.status = response.status;
+    error.details = payload.error?.details || [];
 
     throw error;
   }
 
-  return payload.data;
+  return withMeta ? payload : payload.data;
 }
 
 function showNotification(type, title, message) {
@@ -162,6 +179,7 @@ function setButtonLoading(button, loading, loadingText) {
 function showAuthView() {
   elements.authView.classList.remove("hidden");
   elements.dashboardView.classList.add("hidden");
+  elements.businessSettingsView.classList.add("hidden");
 }
 
 function showDashboardView() {
@@ -180,6 +198,49 @@ function showDashboardHomeView() {
   });
 }
 
+const settingsContent = {
+  business: {
+    eyebrow: "Business Settings",
+    title: "ตั้งค่าข้อมูลธุรกิจ",
+    description: "ข้อมูลส่วนนี้จะช่วยให้ Chatbot เข้าใจร้านและตอบลูกค้าได้เหมาะสมขึ้น",
+    tab: elements.settingsBusinessTab,
+    section: elements.businessSettingsSection,
+  },
+  knowledge: {
+    eyebrow: "Knowledge Management",
+    title: "จัดการ FAQ และข้อมูลความรู้",
+    description: "ดูแลข้อมูลอ้างอิงของร้าน ค้นหา แก้ไข และกำหนดสถานะก่อนนำไปใช้ตอบลูกค้า",
+    tab: elements.settingsKnowledgeTab,
+    section: elements.knowledgeManagementSection,
+  },
+  line: {
+    eyebrow: "Channel Integration",
+    title: "การเชื่อมต่อ LINE",
+    description: "ตั้งค่า LINE Official Account และทดลองการตอบข้อความของร้าน",
+    tab: elements.settingsLineTab,
+    section: elements.lineIntegrationSection,
+  },
+};
+
+function activateSettingsTab(name) {
+  if (name === "line" && selectedShopRole !== "owner") return;
+  const active = settingsContent[name] || settingsContent.business;
+  for (const item of Object.values(settingsContent)) {
+    const selected = item === active;
+    item.section.classList.toggle("hidden", !selected);
+    item.tab.setAttribute("aria-selected", String(selected));
+    item.tab.className = (selected
+      ? "shrink-0 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm"
+      : "shrink-0 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-100");
+    item.tab.hidden = item === settingsContent.line && selectedShopRole !== "owner";
+  }
+  elements.settingsEyebrow.textContent = active.eyebrow;
+  elements.settingsTitle.textContent = active.title;
+  elements.settingsDescriptionText.textContent = active.description;
+  if (name === "knowledge") knowledgeManager.load();
+  if (name === "line") loadLineConfig(selectedShopId);
+}
+
 // แสดงหน้าตั้งค่าธุรกิจของร้านที่ผู้ใช้เลือก
 function showBusinessSettingsView() {
   elements.dashboardHomeView.classList.add("hidden");
@@ -195,12 +256,20 @@ function showBusinessSettingsView() {
 function fillBusinessSettingsForm(shop) {
   if (selectedShopId !== shop.id) resetSimulator();
   selectedShopId = shop.id;
+  selectedShopRole = shop.member_role;
   elements.lineSimShopName.textContent = shop.name;
   elements.settingsName.value = shop.name;
   elements.settingsDescription.value = shop.description || "";
   elements.settingsOpeningHours.value = shop.opening_hours || "";
   elements.settingsPersona.value = shop.persona || "";
   elements.settingsShopId.textContent = `รหัสร้าน: ${shop.id}`;
+  const owner = shop.member_role === "owner";
+  for (const field of elements.businessSettingsForm.elements) {
+    if (field.type !== "submit") field.disabled = !owner;
+  }
+  elements.businessSettingsForm.querySelector('button[type="submit"]').hidden = !owner;
+  elements.settingsLineTab.hidden = !owner;
+  knowledgeManager.setShop(shop);
 
   // อัปเดตข้อมูลส่วนสรุปเดิมให้ตรงกับค่าล่าสุดด้วย
   elements.selectedShopName.textContent = shop.name;
@@ -217,8 +286,11 @@ function saveSession(authData) {
 
 function clearSession() {
   resetSimulator();
+  knowledgeManager.reset();
+  openShopVersion++;
   accessToken = "";
   selectedShopId = "";
+  selectedShopRole = "agent";
   sessionStorage.removeItem(TOKEN_KEY);
 
   elements.shopList.replaceChildren();
@@ -228,6 +300,15 @@ function clearSession() {
 
   showAuthView();
 }
+
+const knowledgeManager = createKnowledgeManager({
+  apiRequest,
+  showNotification,
+  onUnauthorized(error) {
+    clearSession();
+    showNotification("error", "กรุณาเข้าสู่ระบบใหม่", error.message);
+  },
+});
 
 function switchAuthTab(tab) {
   const loginSelected = tab === "login";
@@ -289,7 +370,7 @@ function createShopCard(shop) {
   const role = document.createElement("span");
   role.className =
     "rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700";
-  role.textContent = "เจ้าของร้าน";
+  role.textContent = shop.member_role === "owner" ? "เจ้าของร้าน" : "เจ้าหน้าที่";
 
   const action = document.createElement("span");
   action.className = "text-xs font-semibold text-slate-400";
@@ -365,18 +446,19 @@ async function loadLineConfig(shopId) {
 }
 
 async function openShop(shopId) {
+  const version = ++openShopVersion;
   try {
     const shop = await apiRequest(`/shops/${encodeURIComponent(shopId)}`);
+    if (version !== openShopVersion) return;
 
     // ใช้ข้อมูลจาก API โดยตรงเพื่อป้องกันการแสดงข้อมูลเก่า
     fillBusinessSettingsForm(shop);
 
-    // โหลดการตั้งค่า LINE สำหรับร้านนี้
-    await loadLineConfig(shopId);
-
     // เมื่อโหลดข้อมูลสำเร็จให้เปิดหน้าตั้งค่าธุรกิจ
+    activateSettingsTab("business");
     showBusinessSettingsView();
   } catch (error) {
+    if (version !== openShopVersion) return;
     showNotification("error", "เปิดข้อมูลร้านไม่สำเร็จ", error.message);
   }
 }
@@ -411,11 +493,23 @@ elements.settingsBackButton.addEventListener("click", () => {
   showDashboardHomeView();
 });
 
+elements.settingsBusinessTab.addEventListener("click", () => {
+  activateSettingsTab("business");
+});
+
+elements.settingsKnowledgeTab.addEventListener("click", () => {
+  activateSettingsTab("knowledge");
+});
+
+elements.settingsLineTab.addEventListener("click", () => {
+  activateSettingsTab("line");
+});
+
 // ส่งข้อมูลที่แก้ไขไปบันทึกด้วย PATCH เฉพาะร้านที่กำลังเลือก
 elements.businessSettingsForm.addEventListener("submit", async (event) => {
   event.preventDefault();
 
-  if (!selectedShopId) {
+  if (!selectedShopId || selectedShopRole !== "owner") {
     showNotification(
       "error",
       "ไม่สามารถบันทึกได้",

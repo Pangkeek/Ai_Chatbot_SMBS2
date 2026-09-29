@@ -82,6 +82,7 @@ test('shops can be created and updated with an atomic owner membership', async (
   const created = await request('POST', '/api/v1/shops', { name: 'New shop' }, coffee);
   assert.equal(created.status, 201);
   const id = created.payload.data.id;
+  assert.equal(created.payload.data.member_role, 'owner');
   assert.equal(db.prepare('SELECT role FROM shop_memberships WHERE shop_id = ? AND user_id = ?').get(id, 'user-coffee').role, 'owner');
   // ตรวจว่าข้อมูลตั้งค่าทั้ง 4 ช่องถูกบันทึกและอ่านกลับได้จริง
   const settings = {
@@ -96,12 +97,14 @@ test('shops can be created and updated with an atomic owner membership', async (
     settings,
   );
   const loaded = await request('GET', `/api/v1/shops/${id}`, undefined, coffee);
+  assert.equal(loaded.payload.data.member_role, 'owner');
   assert.deepEqual(
     Object.fromEntries(Object.keys(settings).map(key => [key, loaded.payload.data[key]])),
     settings,
   );
   const listed = await request('GET', '/api/v1/shops?limit=1&offset=0', undefined, coffee);
   assert.equal(listed.payload.data.length, 1);
+  assert.equal(listed.payload.data[0].member_role, 'owner');
   assert.equal(listed.payload.meta.total, 2);
 });
 
@@ -132,6 +135,9 @@ test('knowledge CRUD and agent role boundaries', async () => {
   assert.equal((await request('GET', path, undefined, coffee)).status, 404);
   db.prepare("INSERT INTO shop_memberships VALUES ('shop-coffee','user-flower','agent',?)").run(new Date().toISOString());
   try {
+    assert.equal((await request('GET', '/api/v1/shops/shop-coffee', undefined, flower)).payload.data.member_role, 'agent');
+    const agentShops = (await request('GET', '/api/v1/shops', undefined, flower)).payload.data;
+    assert.equal(agentShops.find(shop => shop.id === 'shop-coffee').member_role, 'agent');
     assert.equal((await request('GET', base, undefined, flower)).status, 200);
     assert.equal((await request('POST', base, { kind: 'faq', title: 'T', content: 'C', status: 'draft' }, flower)).status, 403);
     assert.equal((await request('PATCH', '/api/v1/shops/shop-coffee', { name: 'Changed' }, flower)).status, 403);

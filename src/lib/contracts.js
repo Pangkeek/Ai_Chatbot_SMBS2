@@ -40,7 +40,13 @@ const conversationFields = {
 
 export const schemas = {
   User: object({ id, email, name: str(100), created_at: date }),
-  Shop: object({ id, ...shopFields, created_at: date, updated_at: date }),
+  Shop: object({
+    id,
+    ...shopFields,
+    member_role: choice("owner", "agent"),
+    created_at: date,
+    updated_at: date,
+  }),
   Knowledge: object({
     id,
     shop_id: id,

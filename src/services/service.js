@@ -29,6 +29,12 @@ export function createService(db, options = {}) {
     const changes = { ...body, updated_at: now() };
     db.prepare(`UPDATE ${table} SET ${Object.keys(changes).map(k => `${k} = ?`).join(', ')} WHERE ${where}`).run(...Object.values(changes), ...values);
   }
+  function shopForUser(shopId, userId) {
+    return db.prepare(`SELECT s.*, m.role AS member_role
+      FROM shops s
+      JOIN shop_memberships m ON m.shop_id = s.id
+      WHERE s.id = ? AND m.user_id = ?`).get(shopId, userId) || missing();
+  }
   return {
     health() { db.prepare('SELECT 1').get(); return wrap({ status: 'ok', database: 'ok' }); },
     async register({ body }) {
@@ -52,20 +58,27 @@ export function createService(db, options = {}) {
     logout({ sessionHash }) { db.prepare('DELETE FROM sessions WHERE token_hash = ?').run(sessionHash); },
     me({ user }) { return wrap(publicUser(user)); },
     listShops({ user, query }) {
-      return page('shops', 'id IN (SELECT shop_id FROM shop_memberships WHERE user_id = ?)', [user.id], query);
+      const { limit, offset } = query;
+      const total = db.prepare('SELECT count(*) AS n FROM shop_memberships WHERE user_id = ?').get(user.id).n;
+      const rows = db.prepare(`SELECT s.*, m.role AS member_role
+        FROM shops s
+        JOIN shop_memberships m ON m.shop_id = s.id
+        WHERE m.user_id = ?
+        ORDER BY s.created_at, s.id LIMIT ? OFFSET ?`).all(user.id, limit, offset);
+      return { data: rows, meta: { limit, offset, total } };
     },
     createShop({ user, body }) {
       return transaction(db, () => {
         const id = randomUUID(), time = now();
         db.prepare('INSERT INTO shops VALUES (?, ?, ?, ?, ?, ?, ?)').run(id, body.name.trim(), body.description || '', body.opening_hours || '', body.persona || '', time, time);
         db.prepare('INSERT INTO shop_memberships VALUES (?, ?, ?, ?)').run(id, user.id, 'owner', time);
-        return wrap(db.prepare('SELECT * FROM shops WHERE id = ?').get(id));
+        return wrap({ ...db.prepare('SELECT * FROM shops WHERE id = ?').get(id), member_role: 'owner' });
       });
     },
-    getShop({ params }) { return wrap(db.prepare('SELECT * FROM shops WHERE id = ?').get(params.shopId) || missing()); },
-    updateShop({ params, body }) {
+    getShop({ params, user }) { return wrap(shopForUser(params.shopId, user.id)); },
+    updateShop({ params, body, user }) {
       patch('shops', body, 'id = ?', [params.shopId]);
-      return this.getShop({ params });
+      return this.getShop({ params, user });
     },
     listKnowledge({ params, query }) { return page('knowledge_entries', 'shop_id = ?', [params.shopId], query); },
     createKnowledge({ params, user, body }) {

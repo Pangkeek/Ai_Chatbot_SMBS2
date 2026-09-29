@@ -58,6 +58,8 @@ Contract ที่อ่านด้วยเครื่อง: [openapi.json](
 
 ผู้ใช้ที่ล็อกอินทุกคนสร้างร้านใหม่ได้และเป็น owner อัตโนมัติ การเชิญสมาชิกและเปลี่ยน role ยังไม่มี API; seed เริ่มต้นด้วย owner แยกร้านกัน
 
+ข้อมูลร้านที่ตอบจาก API มี `member_role` (`owner` หรือ `agent`) ของผู้ใช้ปัจจุบัน เพื่อให้ frontend แสดงปุ่มแก้ไขแบบ read-only ได้ถูกต้อง ค่านี้คำนวณจาก session และ membership ฝั่ง server ไม่รับจาก request body
+
 ## Endpoint ที่ทำงานแล้ว
 
 ทุก path ในตารางต่อท้าย `/api/v1` ยกเว้น health
