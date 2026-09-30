@@ -986,7 +986,7 @@ export default function AppPage() {
                       id="line-webhook-url"
                       type="text"
                       readOnly={true}
-                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 font-mono text-xs text-slate-700 outline-none"
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 outline-none"
                       placeholder="กำลังโหลด Webhook URL..."
                     />
                     <button
@@ -1063,6 +1063,24 @@ export default function AppPage() {
                     </button>
                   </div>
                 </form>
+
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <h3 className="text-sm font-semibold text-slate-800">ตรวจสอบการเชื่อมต่อจริง</h3>
+                      <p className="mt-1 text-xs leading-5 text-slate-500">
+                        ตรวจ Channel Access Token และให้ LINE ทดสอบส่ง webhook มาที่ URL ของร้าน
+                      </p>
+                    </div>
+                    <button id="verify-line-btn" type="button" disabled
+                      className="rounded-xl border border-blue-200 bg-white px-4 py-2 text-xs font-semibold text-blue-700 transition hover:bg-blue-50 disabled:opacity-50">
+                      ตรวจสอบกับ LINE
+                    </button>
+                  </div>
+                  <p id="line-verification-detail" role="status" aria-live="polite" className="mt-3 text-xs leading-5 text-slate-600">
+                    บันทึกข้อมูลก่อน แล้วกดตรวจสอบกับ LINE
+                  </p>
+                </div>
 
                 <section
                   className="border-t border-slate-200 pt-7"

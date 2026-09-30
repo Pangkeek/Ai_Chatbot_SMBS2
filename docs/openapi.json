@@ -664,9 +664,85 @@
             ]
           }
         },
+        "required": [],
+        "minProperties": 1
+      },
+      "LineConnectionCheck": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "webhook_url": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        },
         "required": [
-          "channel_secret",
-          "channel_access_token"
+          "webhook_url"
+        ]
+      },
+      "LineConnectionResult": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "token_valid": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "bot_display_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "line_webhook_url": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "webhook_active": {
+            "type": "boolean"
+          },
+          "webhook_reachable": {
+            "type": "boolean"
+          },
+          "checked_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "status",
+          "token_valid",
+          "bot_display_name",
+          "line_webhook_url",
+          "webhook_active",
+          "webhook_reachable",
+          "checked_at"
         ]
       },
       "LineWebhook": {
@@ -4672,6 +4748,170 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/LineConfigUpdate"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/shops/{shopId}/line/verify": {
+      "post": {
+        "operationId": "verifyLineConnection",
+        "summary": "Check saved LINE token and ask LINE to test this shop's webhook (owner)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "shopId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/LineConnectionResult"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON or query",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Owner role required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource missing or inaccessible",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Duplicate email or conversation state conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Body exceeds 128 KiB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Expected application/json",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Schema validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Authentication rate limit exceeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LineConnectionCheck"
               }
             }
           }

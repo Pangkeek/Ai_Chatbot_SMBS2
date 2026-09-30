@@ -69,6 +69,8 @@ const elements = {
   lineChannelSecret: document.querySelector("#line-channel-secret"),
   lineChannelToken: document.querySelector("#line-channel-token"),
   saveLineBtn: document.querySelector("#save-line-btn"),
+  verifyLineBtn: document.querySelector("#verify-line-btn"),
+  lineVerificationDetail: document.querySelector("#line-verification-detail"),
   lineSimUser: document.querySelector("#line-sim-user"),
   lineSimText: document.querySelector("#line-sim-text"),
   lineSimBtn: document.querySelector("#line-sim-btn"),
@@ -411,10 +413,13 @@ async function loadLineConfig(shopId) {
     const config = await apiRequest(
       `/shops/${encodeURIComponent(shopId)}/line/config`
     );
+    if (shopId !== selectedShopId) return;
+    elements.verifyLineBtn.disabled = !config.configured;
     if (config.configured) {
-      elements.lineStatusBadge.textContent = "เชื่อมต่อแล้ว";
+      elements.lineStatusBadge.textContent = "บันทึกแล้ว · ยังไม่ตรวจสอบ";
       elements.lineStatusBadge.className =
-        "inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700";
+        "inline-flex items-center rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700";
+      elements.lineVerificationDetail.textContent = "กดตรวจสอบกับ LINE เพื่อยืนยัน Token และ Webhook URL";
       elements.lineChannelId.value = config.channel_id || "";
       elements.lineChannelSecret.value = "";
       elements.lineChannelSecret.placeholder =
@@ -430,6 +435,7 @@ async function loadLineConfig(shopId) {
       elements.lineStatusBadge.textContent = "ยังไม่ได้ตั้งค่า";
       elements.lineStatusBadge.className =
         "inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600";
+      elements.lineVerificationDetail.textContent = "บันทึกข้อมูลก่อน แล้วกดตรวจสอบกับ LINE";
       elements.lineChannelId.value = "";
       elements.lineChannelSecret.value = "";
       elements.lineChannelSecret.placeholder =
@@ -442,8 +448,58 @@ async function loadLineConfig(shopId) {
     }
   } catch (error) {
     console.error("Failed to load LINE config:", error);
+    if (shopId === selectedShopId) {
+      elements.verifyLineBtn.disabled = true;
+      elements.lineStatusBadge.textContent = "โหลดสถานะไม่สำเร็จ";
+      elements.lineVerificationDetail.textContent = error.message;
+    }
   }
 }
+
+const lineStatusMessages = {
+  connected: "LINE ยืนยัน Token และส่ง webhook ทดสอบถึง URL นี้สำเร็จ",
+  token_invalid: "Channel Access Token ใช้กับ LINE ไม่ได้ กรุณาตรวจ Token แล้วบันทึกใหม่",
+  webhook_not_configured: "Token ใช้ได้ แต่ยังไม่ได้ตั้ง Webhook URL ใน LINE Developers Console",
+  webhook_mismatch: "Token ใช้ได้ แต่ Webhook URL ใน LINE ไม่ตรงกับ URL ที่แสดงด้านบน",
+  webhook_inactive: "Token ใช้ได้ แต่ยังไม่ได้เปิด Use webhook ใน LINE Developers Console",
+  webhook_not_public: "Token ใช้ได้ แต่ LINE ต้องการ Webhook URL แบบ HTTPS ที่เข้าถึงได้จากภายนอก",
+  webhook_failed: "Token ใช้ได้ แต่ LINE ส่ง webhook ทดสอบมาไม่สำเร็จ ตรวจ Channel Secret และ URL",
+  line_unavailable: "ติดต่อ LINE เพื่อตรวจสอบไม่สำเร็จ กรุณาลองใหม่อีกครั้ง",
+};
+
+async function verifyLineForShop(shopId) {
+  if (!shopId || elements.verifyLineBtn.disabled) return;
+  setButtonLoading(elements.verifyLineBtn, true, "กำลังตรวจสอบ…");
+  elements.lineVerificationDetail.textContent = "กำลังตรวจสอบกับ LINE…";
+  try {
+    const result = await apiRequest(`/shops/${encodeURIComponent(shopId)}/line/verify`, {
+      method: "POST",
+      body: { webhook_url: elements.lineWebhookUrl.value },
+    });
+    if (shopId !== selectedShopId) return;
+    const connected = result.status === "connected";
+    elements.lineStatusBadge.textContent = connected
+      ? "เชื่อมต่อและตรวจสอบแล้ว"
+      : result.status === "line_unavailable" ? "ตรวจสอบไม่ได้" : "ยังไม่พร้อมใช้งานจริง";
+    elements.lineStatusBadge.className = connected
+      ? "inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700"
+      : result.status === "token_invalid"
+        ? "inline-flex items-center rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-red-700"
+        : "inline-flex items-center rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700";
+    const account = result.bot_display_name ? ` (${result.bot_display_name})` : "";
+    const lineUrl = result.status === "webhook_mismatch" && result.line_webhook_url
+      ? ` LINE ตั้งไว้: ${result.line_webhook_url}` : "";
+    elements.lineVerificationDetail.textContent = `${lineStatusMessages[result.status] || lineStatusMessages.line_unavailable}${account}${lineUrl}`;
+  } catch (error) {
+    if (shopId !== selectedShopId) return;
+    elements.lineStatusBadge.textContent = "ตรวจสอบไม่สำเร็จ";
+    elements.lineVerificationDetail.textContent = error.message;
+  } finally {
+    if (shopId === selectedShopId) setButtonLoading(elements.verifyLineBtn, false);
+  }
+}
+
+elements.verifyLineBtn.addEventListener("click", () => verifyLineForShop(selectedShopId));
 
 async function openShop(shopId) {
   const version = ++openShopVersion;
@@ -620,11 +676,7 @@ if (elements.lineSettingsForm) {
         }
       );
       await loadLineConfig(selectedShopId);
-      showNotification(
-        "success",
-        "บันทึกสำเร็จ",
-        "เชื่อมต่อ LINE Messaging API เรียบร้อยแล้ว"
-      );
+      showNotification("success", "บันทึกสำเร็จ", "บันทึกข้อมูล LINE แล้ว กรุณากดตรวจสอบกับ LINE");
     } catch (error) {
       showNotification("error", "บันทึกไม่สำเร็จ", error.message);
     } finally {

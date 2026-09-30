@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { transaction } from '../lib/db.js';
 import { hashPassword, verifyPassword, createSession } from '../lib/auth.js';
 import { ApiError } from '../utils/validation.js';
-import { verifyLineSignature } from './line.js';
+import { checkLineConnection, verifyLineSignature } from './line.js';
 import { createLineWorker } from './worker.js';
 
 export const publicUser = user => ({ id: user.id, email: user.email, name: user.name, created_at: user.created_at });
@@ -139,15 +139,33 @@ export function createService(db, options = {}) {
     updateLineConfig({ params, body }) {
       if (!db.prepare('SELECT 1 FROM shops WHERE id = ?').get(params.shopId)) missing();
       const time = now();
-      const existing = db.prepare('SELECT 1 FROM line_channels WHERE shop_id = ?').get(params.shopId);
+      const existing = db.prepare('SELECT * FROM line_channels WHERE shop_id = ?').get(params.shopId);
+      const secret = body.channel_secret?.trim() || existing?.channel_secret;
+      const token = body.channel_access_token?.trim() || existing?.channel_access_token;
+      if (!secret || !token) throw new ApiError(422, 'VALIDATION_ERROR', 'Channel Secret and Channel Access Token are required');
       if (existing) {
         db.prepare(`UPDATE line_channels SET channel_secret = ?, channel_access_token = ?, channel_id = ?, destination_user_id = ?, updated_at = ? WHERE shop_id = ?`)
-          .run(body.channel_secret.trim(), body.channel_access_token.trim(), body.channel_id?.trim() || null, body.destination_user_id?.trim() || null, time, params.shopId);
+          .run(secret, token, body.channel_id === undefined ? existing.channel_id : body.channel_id?.trim() || null, body.destination_user_id === undefined ? existing.destination_user_id : body.destination_user_id?.trim() || null, time, params.shopId);
       } else {
         db.prepare(`INSERT INTO line_channels VALUES (?, ?, ?, ?, ?, ?, ?)`)
-          .run(params.shopId, body.channel_id?.trim() || null, body.channel_secret.trim(), body.channel_access_token.trim(), body.destination_user_id?.trim() || null, time, time);
+          .run(params.shopId, body.channel_id?.trim() || null, secret, token, body.destination_user_id?.trim() || null, time, time);
       }
       return this.getLineConfig({ params });
+    },
+    async verifyLineConnection({ params, body }) {
+      const channel = db.prepare('SELECT * FROM line_channels WHERE shop_id = ?').get(params.shopId);
+      if (!channel) throw new ApiError(404, 'LINE_NOT_CONFIGURED', 'LINE channel is not configured for this shop');
+      let url;
+      try { url = new URL(body.webhook_url); } catch { /* Handled below. */ }
+      if (!url || !['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.search || url.hash ||
+          url.pathname !== `/api/v1/shops/${encodeURIComponent(params.shopId)}/line/webhook`) {
+        throw new ApiError(422, 'VALIDATION_ERROR', 'Invalid webhook URL for this shop');
+      }
+      return wrap(await checkLineConnection({
+        channelAccessToken: channel.channel_access_token,
+        expectedWebhookUrl: url.href,
+        fetchImpl: options.lineFetch,
+      }));
     },
     lineWebhook({ params, body, rawBody, headers }) {
       const channel = db.prepare('SELECT * FROM line_channels WHERE shop_id = ?').get(params.shopId);
@@ -198,7 +216,7 @@ export function createService(db, options = {}) {
         replyToken: null,
         timestamp: Date.now(),
       };
-      const result = await worker.handleMessageEvent({ shopId: params.shopId, event, channelConfig: channel });
+      const result = await worker.handleMessageEvent({ shopId: params.shopId, event, channelConfig: channel, simulated: true });
       return wrap({
         status: 'processed',
         conversation_id: result.conversationId,

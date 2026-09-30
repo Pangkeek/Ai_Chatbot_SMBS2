@@ -36,7 +36,15 @@ async function request(method, path, body, token, overrides = {}) {
 before(async () => {
   db = openDatabase(':memory:');
   await seedDemo(db);
-  server = createApp(db, { logErrors: false });
+  server = createApp(db, { logErrors: false, serviceOptions: {
+    workerOptions: { sendReply: async () => ({ status: 'ok' }), logErrors: false },
+    lineFetch: async (endpoint) => {
+      const webhookUrl = 'https://example.com/api/v1/shops/shop-coffee/line/webhook';
+      if (endpoint.endsWith('/info')) return new Response(JSON.stringify({ displayName: 'Coffee Bot' }), { status: 200 });
+      if (endpoint.endsWith('/endpoint')) return new Response(JSON.stringify({ endpoint: webhookUrl, active: true }), { status: 200 });
+      return new Response(JSON.stringify({ success: true }), { status: 200 });
+    },
+  } });
   server.listen(0, '127.0.0.1');
   await once(server, 'listening');
   url = `http://127.0.0.1:${server.address().port}`;
@@ -177,6 +185,18 @@ test('LINE channel configuration, webhook verification, deduplication and messag
   assert.equal(updated.payload.data.configured, true);
   assert.equal(updated.payload.data.channel_id, 'coffee-line');
   assert.match(updated.payload.data.channel_secret_masked, /\*+3456/);
+  const verifyPath = '/api/v1/shops/shop-coffee/line/verify';
+  const checked = await request('POST', verifyPath,
+    { webhook_url: 'https://example.com/api/v1/shops/shop-coffee/line/webhook' }, coffee);
+  assert.equal(checked.payload.data.status, 'connected');
+  assert.equal(checked.payload.data.bot_display_name, 'Coffee Bot');
+  assert.equal((await request('POST', verifyPath, { webhook_url: 'https://example.com/api/v1/shops/shop-flower/line/webhook' }, coffee)).status, 422);
+  assert.equal((await request('POST', verifyPath, { webhook_url: 'https://example.com/api/v1/shops/shop-coffee/line/webhook' }, flower)).status, 404);
+  const partial = await request('PUT', configPath, { channel_id: 'coffee-line-updated' }, coffee);
+  assert.equal(partial.status, 200);
+  assert.equal(partial.payload.data.channel_id, 'coffee-line-updated');
+  assert.equal(partial.payload.data.channel_secret_masked, updated.payload.data.channel_secret_masked);
+  assert.equal(partial.payload.data.channel_access_token_masked, updated.payload.data.channel_access_token_masked);
 
   const webhookPath = '/api/v1/shops/shop-coffee/line/webhook';
   const webhookBody = {

@@ -103,15 +103,25 @@ export const schemas = {
     webhook_url: str(500),
     updated_at: { anyOf: [date, { type: "null" }] },
   }),
-  LineConfigUpdate: object(
-    {
+  LineConfigUpdate: {
+    ...object({
       channel_secret: str(100, 1),
       channel_access_token: str(500, 1),
       channel_id: { anyOf: [id, { type: "null" }] },
       destination_user_id: { anyOf: [str(100), { type: "null" }] },
-    },
-    ["channel_secret", "channel_access_token"]
-  ),
+    }, []),
+    minProperties: 1,
+  },
+  LineConnectionCheck: object({ webhook_url: str(500, 1) }, ["webhook_url"]),
+  LineConnectionResult: object({
+    status: str(50),
+    token_valid: { anyOf: [{ type: "boolean" }, { type: "null" }] },
+    bot_display_name: { anyOf: [str(100), { type: "null" }] },
+    line_webhook_url: { anyOf: [str(500), { type: "null" }] },
+    webhook_active: { type: "boolean" },
+    webhook_reachable: { type: "boolean" },
+    checked_at: date,
+  }),
   LineWebhook: {
     type: "object",
     properties: {
@@ -371,6 +381,14 @@ export const routes = [
     "Update LINE channel credentials (owner)",
     data(schemas.LineConfig),
     { body: schemas.LineConfigUpdate, owner: true }
+  ),
+  route(
+    "POST",
+    `${base}/line/verify`,
+    "verifyLineConnection",
+    "Check saved LINE token and ask LINE to test this shop's webhook (owner)",
+    data(schemas.LineConnectionResult),
+    { body: schemas.LineConnectionCheck, owner: true }
   ),
   route(
     "POST",

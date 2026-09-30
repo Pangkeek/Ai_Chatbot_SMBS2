@@ -96,7 +96,7 @@ export default function DocsPage() {
               JSON body
               <textarea
                 id="body"
-                className={`${field} font-mono`}
+                className={field}
                 rows={7}
                 spellCheck="false"
                 defaultValue="{}"
@@ -113,7 +113,7 @@ export default function DocsPage() {
           />
           <pre
             id="response"
-            className="max-h-[600px] overflow-auto rounded-lg bg-[#142834] p-5 font-mono text-[13px] leading-[1.7] text-[#d6f3ea]"
+            className="max-h-[600px] overflow-auto rounded-lg bg-[#142834] p-5 text-[13px] leading-[1.7] text-[#d6f3ea]"
           >
             ผลลัพธ์จะปรากฏที่นี่
           </pre>

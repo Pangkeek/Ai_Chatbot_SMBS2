@@ -34,7 +34,7 @@ export function createLineWorker(db, options = {}) {
     setImmediate(processNext);
   }
 
-  async function handleMessageEvent({ shopId, event, channelConfig }) {
+  async function handleMessageEvent({ shopId, event, channelConfig, simulated = false }) {
     const userId = event.source?.userId || 'unknown-line-user';
     const messageText = event.message?.text || '';
     const customerName = `LINE User ${userId.length > 4 ? userId.slice(-4) : userId}`;
@@ -90,8 +90,8 @@ export function createLineWorker(db, options = {}) {
       : generateDefaultReply({ shop, messageText });
 
     // 5. ส่งข้อความกลับผ่าน LINE Messaging API
-    let sendSuccess = true;
-    if (event.replyToken && channelConfig?.channel_access_token) {
+    let sendSuccess = simulated;
+    if (!simulated && event.replyToken && channelConfig?.channel_access_token) {
       try {
         await replySender({
           channelAccessToken: channelConfig.channel_access_token,
@@ -99,6 +99,7 @@ export function createLineWorker(db, options = {}) {
           messages: [{ type: 'text', text: replyText }],
           fetchImpl: options.fetchImpl,
         });
+        sendSuccess = true;
       } catch (err) {
         sendSuccess = false;
         if (options.logErrors !== false) {
@@ -107,10 +108,17 @@ export function createLineWorker(db, options = {}) {
       }
     }
 
-    // 6. จัดเก็บข้อความฝั่งผู้ช่วย role: 'assistant'
+    // Don't show an undelivered live reply as if the customer received it.
     if (db.open === false) {
       return { conversationId: conversation.id, customerMsgId, replied: sendSuccess };
     }
+    if (!sendSuccess) {
+      if (event.webhookEventId) {
+        db.prepare(`UPDATE line_events SET status = 'failed' WHERE event_id = ?`).run(event.webhookEventId);
+      }
+      return { conversationId: conversation.id, customerMsgId, replied: false };
+    }
+    // 6. จัดเก็บข้อความฝั่งผู้ช่วย role: 'assistant'
     const replyMsgId = randomUUID();
     const replyTime = now();
     db.prepare(
@@ -121,7 +129,7 @@ export function createLineWorker(db, options = {}) {
     // 7. อัปเดตสถานะ event
     if (event.webhookEventId) {
       db.prepare(`UPDATE line_events SET status = ? WHERE event_id = ?`).run(
-        sendSuccess ? 'completed' : 'failed',
+        'completed',
         event.webhookEventId
       );
     }

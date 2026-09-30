@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createHmac } from 'node:crypto';
 import { openDatabase } from '../src/lib/db.js';
 import { seedDemo } from '../src/lib/seed.js';
-import { verifyLineSignature, sendLineReply, generateDefaultReply } from '../src/services/line.js';
+import { verifyLineSignature, checkLineConnection, sendLineReply, generateDefaultReply } from '../src/services/line.js';
 import { createLineWorker } from '../src/services/worker.js';
 import { createService } from '../src/services/service.js';
 
@@ -31,6 +31,57 @@ test('verifyLineSignature validates correct HMAC-SHA256 and rejects forgery', ()
   assert.equal(verifyLineSignature(body, validSig, 'wrong-secret'), false);
   assert.equal(verifyLineSignature(null, validSig, secret), false);
   assert.equal(verifyLineSignature(body, null, secret), false);
+});
+
+test('LINE connection check validates token and the actual webhook test result', async () => {
+  const webhookUrl = 'https://example.com/api/v1/shops/shop-coffee/line/webhook';
+  const calls = [];
+  const fetchImpl = async (url, options) => {
+    calls.push({ url, options });
+    if (url.endsWith('/info')) return new Response(JSON.stringify({ displayName: 'Coffee Bot' }), { status: 200 });
+    if (url.endsWith('/endpoint')) return new Response(JSON.stringify({ endpoint: webhookUrl, active: true }), { status: 200 });
+    return new Response(JSON.stringify({ success: true }), { status: 200 });
+  };
+  const connected = await checkLineConnection({ channelAccessToken: 'valid-token', expectedWebhookUrl: webhookUrl, fetchImpl });
+  assert.equal(connected.status, 'connected');
+  assert.equal(connected.token_valid, true);
+  assert.equal(connected.webhook_reachable, true);
+  assert.equal(connected.bot_display_name, 'Coffee Bot');
+  assert.equal(calls.length, 3);
+  assert.equal(calls[2].options.method, 'POST');
+
+  calls.length = 0;
+  const mismatch = await checkLineConnection({ channelAccessToken: 'valid-token', expectedWebhookUrl: webhookUrl + '-wrong', fetchImpl });
+  assert.equal(mismatch.status, 'webhook_mismatch');
+  assert.equal(calls.length, 2);
+
+  const invalid = await checkLineConnection({ channelAccessToken: 'bad-token', expectedWebhookUrl: webhookUrl,
+    fetchImpl: async () => new Response('', { status: 401 }) });
+  assert.equal(invalid.status, 'token_invalid');
+  assert.equal(invalid.token_valid, false);
+
+  const failedWebhook = await checkLineConnection({ channelAccessToken: 'valid-token', expectedWebhookUrl: webhookUrl,
+    fetchImpl: async (url) => url.endsWith('/info')
+      ? new Response('{}', { status: 200 })
+      : url.endsWith('/endpoint')
+        ? new Response(JSON.stringify({ endpoint: webhookUrl, active: true }), { status: 200 })
+        : new Response(JSON.stringify({ success: false, statusCode: 401 }), { status: 200 }) });
+  assert.equal(failedWebhook.status, 'webhook_failed');
+  assert.equal(failedWebhook.webhook_reachable, false);
+});
+
+test('failed LINE delivery is not recorded as a sent assistant message', async () => {
+  const worker = createLineWorker(db, { sendReply: async () => { throw new Error('LINE rejected'); }, logErrors: false });
+  const result = await worker.handleMessageEvent({
+    shopId: 'shop-coffee',
+    channelConfig: { channel_access_token: 'bad-token' },
+    event: { type: 'message', webhookEventId: 'evt-delivery-failed', replyToken: 'reply-failed',
+      source: { userId: 'line-cust-failed' }, message: { type: 'text', text: 'hello' } },
+  });
+  assert.equal(result.replied, false);
+  assert.equal(result.replyMsgId, undefined);
+  const messages = db.prepare('SELECT role FROM messages WHERE conversation_id = ?').all(result.conversationId);
+  assert.deepEqual(messages.map(message => message.role), ['customer']);
 });
 
 test('generateDefaultReply includes shop name and polite phrasing', () => {
@@ -139,7 +190,7 @@ test('LINE worker respects bot_mode paused / human (Handover Guard)', async () =
 
 test('service.lineWebhook deduplication drops replayed events and rejects invalid signatures', async () => {
   const secret = 'sec-dedup-test';
-  const service = createService(db);
+  const service = createService(db, { workerOptions: { sendReply: async () => ({ status: 'ok' }), logErrors: false } });
 
   // Setup channel
   service.updateLineConfig({
