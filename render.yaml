@@ -1,0 +1,51 @@
+# Reference production configuration. Applying this creates/updates PAID resources.
+# The user controls Render setup. Do not apply it to duplicate manually created services.
+# For staging, use separate service/database names and a separate LINE test channel.
+services:
+  - type: web
+    name: smb-chatbot-web
+    runtime: node
+    plan: 0.5c-512mb
+    region: singapore
+    numInstances: 1
+    autoDeployTrigger: 'off'
+    buildCommand: >-
+      npm exec --yes --package=npm@11.19.0 -- npm run check:toolchain &&
+      npm exec --yes --package=npm@11.19.0 -- npm ci &&
+      npm exec --yes --package=npm@11.19.0 -- npm run build
+    preDeployCommand: npm exec --yes --package=npm@11.19.0 -- npm run db:migrate
+    startCommand: npm exec --yes --package=npm@11.19.0 -- npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 24.19.0
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: smb-chatbot-db
+          property: connectionString
+      - key: DB_SSL_MODE
+        value: require
+      - key: DB_SCHEMA
+        value: public
+      - key: DB_POOL_MAX
+        value: '5'
+      - key: DB_CONNECT_TIMEOUT_MS
+        value: '5000'
+      - key: DB_QUERY_TIMEOUT_MS
+        value: '10000'
+      # Enable only after data verification; staging LINE tests need an isolated channel.
+      - key: LINE_WORKER_ENABLED
+        value: 'false'
+databases:
+  - name: smb-chatbot-db
+    databaseName: smb_chatbot
+    user: smb_chatbot
+    region: singapore
+    plan: 0.1c-256mb
+    postgresMajorVersion: '18'
+    diskSizeGB: 1
+    storageAutoscalingEnabled: false
+    # Internal access still works. Add only your temporary /32 import/admin IP externally.
+    ipAllowList: []

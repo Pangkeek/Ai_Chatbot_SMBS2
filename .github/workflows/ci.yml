@@ -1,5 +1,8 @@
 name: Verify foundation
 on: [push, pull_request]
+concurrency:
+  group: verify-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
@@ -29,10 +32,18 @@ jobs:
         with:
           node-version: 24.19.0
           cache: npm
+      - run: npm install --global npm@11.19.0
+      - run: npm run check:toolchain
       - run: npm ci
-      - run: npm test
+      - run: npm run test:sqlite
+      - run: npm run test:runtime
+      - run: npm run test:import
       - run: npm run test:postgres
       - run: npm run test:postgres:schema
       - run: npm run build
+        env:
+          DATABASE_URL: ''
+          LINE_WORKER_ENABLED: 'true'
       - run: npm run test:line:runtime
+      - run: npm run test:production
       - run: npm run api:check

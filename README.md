@@ -4,7 +4,7 @@
 
 ## รันครั้งแรก
 
-> สถานะระยะ F: API/auth/services ใช้ PostgreSQL แบบ async เครื่องมือ import/verify และ durable LINE jobs ผ่านการทดสอบแล้ว ข้อมูลยังไม่ได้ import ลงฐานพัฒนา/production ขั้นถัดไปคือ Render staging ใน G ก่อนเปิด LINE จริง
+> สถานะระยะ G: โค้ด/CI, render.yaml และ production rehearsal ในเครื่องพร้อมแล้ว ยังไม่ได้สร้าง/deploy Render หรือทดสอบ live LINE บน staging ข้อมูลยังไม่ได้ import ลงฐานพัฒนา/production ผู้ใช้ดำเนินการส่วน Render ตาม [คู่มือ staging](docs/render-staging.md)
 
 ### PostgreSQL สำหรับพัฒนา
 
@@ -20,7 +20,7 @@ npm run test:postgres:schema
 npm test
 ```
 
-Scripts โหลด `.env` ผ่าน `--env-file-if-exists` และ fail เมื่อไม่มี URL ไม่สร้าง SQLite ทดแทน `npm test` และ `test:postgres` ต้องมี `TEST_DATABASE_URL` ที่ชี้ loopback และชื่อ `chatbot_test` ต่างจาก runtime DB; ถ้าขาดจะ fail ไม่ skip CI ใช้ npm และ PostgreSQL 18 แล้ว ส่วน Render staging/deploy เป็นงานระยะ G
+Scripts โหลด `.env` ผ่าน `--env-file-if-exists` และ fail เมื่อไม่มี URL ไม่สร้าง SQLite ทดแทน Tests ที่ใช้ PostgreSQL ต้องมี `TEST_DATABASE_URL` ที่ชี้ loopback และชื่อ `chatbot_test` ต่างจาก runtime DB; ถ้าขาดจะ fail ไม่ skip CI pin Node 24.19.0/npm 11.19.0 ใช้ PostgreSQL 18 และแยก `test:sqlite`, `test:runtime`, `test:import`; `npm test` ยังรัน tests หลักรวมทั้งหมด
 
 `DB_POOL_MAX=5`, `DB_CONNECT_TIMEOUT_MS=5000`, `DB_QUERY_TIMEOUT_MS=10000` (server statement timeout) ต้องเป็นจำนวนเต็มบวก TLS ใช้ `disable` ได้เฉพาะ loopback, `require` เข้ารหัสโดยไม่ตรวจ certificate สำหรับ internal endpoint ที่กำหนดไว้ในแผน และ `verify-full` ตรวจ certificate สำหรับ external โดยเป็นค่า default ของ layer ห้ามใส่ query parameters เช่น `sslmode` ใน URL เพื่อป้องกัน override SSL config
 
@@ -157,7 +157,7 @@ Webhook URL ต้องเป็น HTTPS ที่ LINE เข้าถึง�
 
 งานต่อยอด: RAG/embedding, Gemini/OpenAI gateway และ failover การเปลี่ยน `bot_mode` ตอนนี้เป็นการบันทึกสถานะและตรวจเงื่อนไขเจ้าหน้าที่ตอบ ยังไม่มี AI worker ที่ทำงานเบื้องหลัง Endpoint บันทึกข้อความไม่ใช่หลักฐานว่าส่งถึง LINE แล้ว
 
-ขั้นถัดไปคือ CI/Render staging ใน G ดู [รีวิวระยะ F](PLAN/phase-f-review.md) และ [วิธีดูแลคิว LINE](docs/line-jobs.md) ส่วนการตั้งค่าและ deploy Render ผู้ใช้ดำเนินการเอง
+ดู [รีวิวระยะ G](PLAN/phase-g-review.md), [คู่มือ Render staging](docs/render-staging.md) และ [วิธีดูแลคิว LINE](docs/line-jobs.md) ต้องผ่าน staging จริงก่อน cutover H ส่วนการตั้งค่าและ deploy Render ผู้ใช้ดำเนินการเอง
 
 ## นำเข้า SQLite snapshot (ระยะ E)
 
@@ -183,4 +183,4 @@ Imported LINE events คง raw history และรายงาน received/pro
 
 ## Repository
 
-โฟลเดอร์นี้เริ่มต้นเป็น Git repository ในเครื่องแล้ว ยังไม่มี remote เนื่องจากยังไม่ได้ระบุบัญชีหรือ URL ของทีม เมื่อต้องการเผยแพร่ ให้สร้าง remote ของทีมแล้วเชื่อม repository นี้ตามขั้นตอนใน `CONTRIBUTING.md`
+โปรเจกต์มี Git repository และ origin แล้ว การเปลี่ยนแปลงระยะ G ในรอบนี้ยังไม่ได้ commit/push ให้เลือก commit ที่ผ่าน CI เมื่อนำขึ้น staging ดูขั้นตอน release ใน `CONTRIBUTING.md` และ `docs/render-staging.md`
