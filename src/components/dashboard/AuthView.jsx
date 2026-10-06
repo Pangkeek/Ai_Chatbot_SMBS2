@@ -1,5 +1,6 @@
 import RegisterForm from './RegisterForm.jsx';
 import LoginForm from './LoginForm.jsx';
+import Link from 'next/link';
 export default function AuthView() {
   return (
     <main
@@ -122,6 +123,7 @@ export default function AuthView() {
           </section>
 
           <section className="p-6 sm:p-10 lg:p-12">
+            <Link href="/home" className="mb-7 inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-blue-700">← กลับหน้าแรก</Link>
             <div className="mb-8 lg:hidden">
               <div className="mb-4 flex size-12 items-center justify-center rounded-2xl bg-blue-600 text-xl text-white shadow-lg shadow-blue-600/20">
                 <svg

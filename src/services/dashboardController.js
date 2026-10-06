@@ -989,7 +989,8 @@ elements.logoutButton.addEventListener("click", async () => {
   }
 });
 
-switchAuthTab("login");
+// ลิงก์สมัครสมาชิกจาก /home เปิดแท็บสมัครโดยตรง ส่วน /app ปกติเปิดแท็บเข้าสู่ระบบ
+switchAuthTab(new URLSearchParams(window.location.search).get("mode") === "register" ? "register" : "login");
 
 Router.events.on("routeChangeComplete", (url) => {
   if (url.startsWith("/app")) void syncDashboardRoute(url);

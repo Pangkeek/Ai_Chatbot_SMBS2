@@ -3,5 +3,6 @@ export default function Home() {
 }
 
 export async function getServerSideProps() {
-  return { redirect: { destination: '/app', permanent: false } };
+  // หน้าแรกของผู้เยี่ยมชมอยู่ที่ /home ส่วน /app ยังรับหน้าที่เข้าสู่ระบบและแดชบอร์ด
+  return { redirect: { destination: '/home', permanent: false } };
 }
