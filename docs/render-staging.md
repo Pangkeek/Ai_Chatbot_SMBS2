@@ -54,8 +54,10 @@ npm exec --yes --package=npm@11.19.0 -- npm run db:verify:import
 Copy Build Command แบบบรรทัดเดียว:
 
 ```text
-npm exec --yes --package=npm@11.19.0 -- npm run check:toolchain && npm exec --yes --package=npm@11.19.0 -- npm ci && npm exec --yes --package=npm@11.19.0 -- npm run build
+npm exec --yes --package=npm@11.19.0 -- npm run check:toolchain && npm exec --yes --package=npm@11.19.0 -- npm ci --include=dev && npm exec --yes --package=npm@11.19.0 -- npm run build
 ```
+
+ต้องใช้ `npm ci --include=dev` เพราะ Tailwind/PostCSS เป็น build dependencies ใน devDependencies และ `NODE_ENV=production` ทำให้ npm ข้ามกลุ่มนี้โดยปริยาย
 
 | Environment | ค่า |
 |---|---|
