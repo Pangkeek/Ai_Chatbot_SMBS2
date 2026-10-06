@@ -1,22 +1,27 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHmac } from 'node:crypto';
-import { openDatabase } from '../src/lib/db.js';
+import { createTestDatabase } from '../integration/postgresql-fixture.js';
+import { migratePostgresql } from '../scripts/postgresql/migrations.js';
 import { seedDemo } from '../src/lib/seed.js';
 import { verifyLineSignature, checkLineConnection, sendLineReply, generateDefaultReply } from '../src/services/line.js';
 import { createLineWorker } from '../src/services/worker.js';
 import { createService } from '../src/services/service.js';
 
-let db;
+let db, fixture;
 
 before(async () => {
-  db = openDatabase(':memory:');
+  fixture = await createTestDatabase();
+  db = fixture.db;
+  await migratePostgresql({ config: fixture.config });
   await seedDemo(db);
+  await createService(db).updateLineConfig({ params: { shopId: 'shop-coffee' }, body: {
+    channel_secret: 'test-secret', channel_access_token: 'test-token',
+  } });
 });
 
 after(async () => {
-  await new Promise(resolve => setTimeout(resolve, 50));
-  db.close();
+  await fixture?.dispose();
 });
 
 test('verifyLineSignature validates correct HMAC-SHA256 and rejects forgery', () => {
@@ -80,7 +85,7 @@ test('failed LINE delivery is not recorded as a sent assistant message', async (
   });
   assert.equal(result.replied, false);
   assert.equal(result.replyMsgId, undefined);
-  const messages = db.prepare('SELECT role FROM messages WHERE conversation_id = ?').all(result.conversationId);
+  const messages = (await db.query('SELECT role FROM messages WHERE conversation_id = $1', [result.conversationId])).rows;
   assert.deepEqual(messages.map(message => message.role), ['customer']);
 });
 
@@ -123,13 +128,13 @@ test('LINE worker creates conversation, persists messages, and handles reply', a
   assert.equal(repliesSent[0].replyToken, 'tok-1');
 
   // Verify conversation in DB
-  const conv = db.prepare('SELECT * FROM conversations WHERE id = ?').get(result.conversationId);
+  const conv = (await db.query('SELECT * FROM conversations WHERE id = $1', [result.conversationId])).rows[0];
   assert.equal(conv.shop_id, 'shop-coffee');
   assert.equal(conv.channel, 'line');
   assert.equal(conv.customer_external_id, 'line-cust-1');
 
   // Verify messages in DB (customer then assistant)
-  const msgs = db.prepare('SELECT * FROM messages WHERE conversation_id = ? ORDER BY created_at').all(result.conversationId);
+  const msgs = (await db.query('SELECT * FROM messages WHERE conversation_id = $1 ORDER BY created_at', [result.conversationId])).rows;
   assert.equal(msgs.length, 2);
   assert.equal(msgs[0].role, 'customer');
   assert.equal(msgs[0].content, 'เปิดกี่โมงครับ');
@@ -150,7 +155,7 @@ test('LINE worker creates conversation, persists messages, and handles reply', a
   });
 
   assert.equal(result2.conversationId, result.conversationId);
-  const msgs2 = db.prepare('SELECT * FROM messages WHERE conversation_id = ? ORDER BY created_at').all(result.conversationId);
+  const msgs2 = (await db.query('SELECT * FROM messages WHERE conversation_id = $1 ORDER BY created_at', [result.conversationId])).rows;
   assert.equal(msgs2.length, 4);
 });
 
@@ -163,7 +168,7 @@ test('LINE worker respects bot_mode paused / human (Handover Guard)', async () =
 
   // Create conversation and set bot_mode to 'human'
   const convId = 'conv-human-mode';
-  db.prepare(`INSERT INTO conversations VALUES (?, 'shop-coffee', 'line', 'line-cust-human', 'User Human', 'open', 'human', ?, ?)`).run(convId, new Date().toISOString(), new Date().toISOString());
+  (await db.query(`INSERT INTO conversations (id,shop_id,channel,customer_external_id,customer_name,status,bot_mode,created_at,updated_at) VALUES ($1, 'shop-coffee', 'line', 'line-cust-human', 'User Human', 'open', 'human', $2, $3)`, [convId, new Date().toISOString(), new Date().toISOString()]));
 
   const result = await worker.handleMessageEvent({
     shopId: 'shop-coffee',
@@ -182,7 +187,7 @@ test('LINE worker respects bot_mode paused / human (Handover Guard)', async () =
   assert.equal(repliesSent.length, 0);
 
   // Customer message is still safely stored
-  const msgs = db.prepare('SELECT * FROM messages WHERE conversation_id = ?').all(convId);
+  const msgs = (await db.query('SELECT * FROM messages WHERE conversation_id = $1', [convId])).rows;
   assert.equal(msgs.length, 1);
   assert.equal(msgs[0].role, 'customer');
   assert.equal(msgs[0].content, 'ต้องการคุยกับเจ้าหน้าที่');
@@ -193,7 +198,7 @@ test('service.lineWebhook deduplication drops replayed events and rejects invali
   const service = createService(db, { workerOptions: { sendReply: async () => ({ status: 'ok' }), logErrors: false } });
 
   // Setup channel
-  service.updateLineConfig({
+  await service.updateLineConfig({
     params: { shopId: 'shop-flower' },
     body: { channel_secret: secret, channel_access_token: 'token-flower' },
   });
@@ -212,8 +217,8 @@ test('service.lineWebhook deduplication drops replayed events and rejects invali
   const rawBody = JSON.stringify(eventPayload);
 
   // 1. Invalid signature rejection
-  assert.throws(() => {
-    service.lineWebhook({
+  await assert.rejects(async () => {
+    await service.lineWebhook({
       params: { shopId: 'shop-flower' },
       body: eventPayload,
       rawBody,
@@ -223,7 +228,7 @@ test('service.lineWebhook deduplication drops replayed events and rejects invali
 
   // 2. First valid delivery
   const validSig = createHmac('sha256', secret).update(rawBody).digest('base64');
-  const res1 = service.lineWebhook({
+  const res1 = await service.lineWebhook({
     params: { shopId: 'shop-flower' },
     body: eventPayload,
     rawBody,
@@ -232,11 +237,12 @@ test('service.lineWebhook deduplication drops replayed events and rejects invali
   assert.equal(res1.data.processed_count, 1);
 
   // 3. Replayed webhook (same eventId) -> deduplicated, processed_count = 0
-  const res2 = service.lineWebhook({
+  const res2 = await service.lineWebhook({
     params: { shopId: 'shop-flower' },
     body: eventPayload,
     rawBody,
     headers: { 'x-line-signature': validSig },
   });
   assert.equal(res2.data.processed_count, 0);
+  await service.worker.drain();
 });

@@ -16,20 +16,16 @@ export async function verifyPassword(password, encoded) {
 }
 export const tokenHash = (token) =>
   createHash("sha256").update(token).digest("hex");
-export function createSession(db, userId) {
+export async function createSession(db, userId) {
   const token = randomBytes(32).toString("base64url");
   const now = new Date();
   const expires_at = new Date(
     now.getTime() + 7 * 24 * 60 * 60 * 1000
   ).toISOString();
-  db.prepare("DELETE FROM sessions WHERE expires_at <= ?").run(
-    now.toISOString()
-  );
-  db.prepare("INSERT INTO sessions VALUES (?, ?, ?, ?)").run(
-    tokenHash(token),
+  (await db.query("DELETE FROM sessions WHERE expires_at <= $1", [now.toISOString()]));
+  (await db.query("INSERT INTO sessions (token_hash,user_id,expires_at,created_at) VALUES ($1, $2, $3, $4)", [tokenHash(token),
     userId,
     expires_at,
-    now.toISOString()
-  );
+    now.toISOString()]));
   return { access_token: token, token_type: "Bearer", expires_at };
 }

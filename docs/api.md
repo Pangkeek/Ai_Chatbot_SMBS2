@@ -4,6 +4,12 @@ Base URL: `http://127.0.0.1:3000/api/v1` ใช้ JSON UTF-8 และชื่
 
 Contract ที่อ่านด้วยเครื่อง: [openapi.json](openapi.json) หรือ `GET /openapi.json` จาก server; API Console: `/docs` โดย runtime route และ request validation ใช้ source เดียวกันใน `src/lib/contracts.js`
 
+Runtime ใช้ PostgreSQL; timestamp ใน response ยังเป็น ISO UTC และ `meta.total` เป็น number ตาม contract เดิม `/api/health` และ `/health` ตรวจ DB จริง หาก connection/schema ไม่พร้อมคืน HTTP 503 `DATABASE_UNAVAILABLE` โดยไม่เปิดเผย SQL หรือ credentials
+
+LINE webhook บันทึก event กับ text job ใน transaction เดียวและตอบสำเร็จหลัง commit `processed_count` คือจำนวน jobs ใหม่ ไม่ใช่จำนวนคำตอบที่ส่งแล้ว ทุก event ต้องมี webhookEventId หรือ message.id; text ต้องมี userId และข้อความที่ไม่ว่าง หาก event ID ชนกับร้านอื่นคืน 409 `LINE_EVENT_COLLISION` โดยไม่เปิดเผยร้านเดิม ประเภทที่ไม่รองรับเก็บ ignored ไม่มี job ดู [นโยบาย delivery/recovery](line-jobs.md)
+
+`POST /api/v1/shops/{shopId}/line/simulate` ใช้เฉพาะ development/staging; เมื่อ `NODE_ENV=production` คืน 404 ก่อนตรวจ auth/body และไม่สร้าง event/message บัญชี demo ต้อง seed เองใน local; seed ถูกปิดใน production
+
 ## รูปแบบกลาง
 
 ```json
@@ -133,7 +139,7 @@ Invoke-RestMethod -Method Patch -Uri $conversationUrl -Headers $apiHeaders -Cont
 | open + human | บันทึก customer/agent ได้; แสดงว่าเจ้าหน้าที่ดูแล |
 | closed | ปฏิเสธข้อความใหม่ทุก role ที่เปิดให้ API ด้วย 409; PATCH กลับ open ได้ |
 
-การเปลี่ยน active/paused/human ทำได้โดยสมาชิกของร้านทั้งสอง role ปัจจุบันเป็นสถานะจัดเก็บ ไม่มี AI ถูกเรียกอัตโนมัติ เมื่อเพิ่ม worker ต้องตรวจ `status` และ `bot_mode` อีกครั้งก่อนส่งข้อความ เพื่อไม่ให้คำตอบ AI ที่ค้างอยู่ถูกส่งหลัง handover
+การเปลี่ยน active/paused/human ทำได้โดยสมาชิกของร้านทั้งสอง role Durable LINE worker ตรวจ `status` และ `bot_mode` ใหม่ก่อนส่งข้อความ เมื่อ bot inactive จะเก็บข้อความลูกค้าโดยไม่ตอบอัตโนมัติ คำตอบปัจจุบันใช้ default reply ไม่ได้เรียก AI provider
 
 ## การเปลี่ยน contract ของทีม
 

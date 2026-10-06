@@ -3,10 +3,10 @@
 ## เริ่มพัฒนา
 
 1. ใช้ Node ตาม `.nvmrc` และรันตาม README
-2. ใช้ SQLite คนละไฟล์ภายในเครื่อง ไม่ commit `data/` หรือ `.env`
+2. ใช้ PostgreSQL 18 แยก dev/test DB; tests ใช้ TEST_DATABASE_URL และ schema สุ่ม ไม่ commit `data/` หรือ `.env`
 3. แบ่ง branch ตามงาน เช่น `feature/dashboard`, `feature/line-webhook`, `feature/rag`
 4. ใช้ OpenAPI v0.1.0 เป็น baseline; ทบทวน semantics กับทีมก่อนเปลี่ยน contract ที่ frontend ใช้แล้ว
-5. ก่อนส่ง PR รัน `node --test` และ `node scripts/openapi.js --check`
+5. ก่อนส่ง PR รัน `npm test`, `npm run test:postgres`, `npm run test:postgres:schema`, `npm run build`, `npm run test:line:runtime` (หลัง build) และ `npm run api:check` ด้วย npm/package-lock.json
 
 ## กฎสำหรับการแก้ไข
 
