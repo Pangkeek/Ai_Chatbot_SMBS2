@@ -1,4 +1,6 @@
 import { createKnowledgeManager } from "./knowledgeManager.js";
+import Router from "next/router";
+import { parseDashboardRoute, shopRoute } from "../utils/dashboardRoutes.js";
 
 const API_BASE = "/api/v1";
 const TOKEN_KEY = "smb_access_token";
@@ -381,7 +383,9 @@ function createShopCard(shop) {
   footer.append(role, action);
   card.append(top, name, description, footer);
 
-  card.addEventListener("click", () => openShop(shop.id));
+  card.addEventListener("click", () => {
+    Router.push(shopRoute(shop.id), undefined, { shallow: true, scroll: false });
+  });
 
   return card;
 }
@@ -501,21 +505,59 @@ async function verifyLineForShop(shopId) {
 
 elements.verifyLineBtn.addEventListener("click", () => verifyLineForShop(selectedShopId));
 
-async function openShop(shopId) {
+async function openShop(shopId, tab = "business") {
   const version = ++openShopVersion;
   try {
     const shop = await apiRequest(`/shops/${encodeURIComponent(shopId)}`);
-    if (version !== openShopVersion) return;
+    if (version !== openShopVersion) return false;
 
     // ใช้ข้อมูลจาก API โดยตรงเพื่อป้องกันการแสดงข้อมูลเก่า
     fillBusinessSettingsForm(shop);
 
-    // เมื่อโหลดข้อมูลสำเร็จให้เปิดหน้าตั้งค่าธุรกิจ
-    activateSettingsTab("business");
+    if (tab === "line" && selectedShopRole !== "owner") {
+      await Router.replace(shopRoute(shopId), undefined, { shallow: true, scroll: false });
+      return true;
+    }
+
+    activateSettingsTab(tab);
     showBusinessSettingsView();
+    return true;
   } catch (error) {
-    if (version !== openShopVersion) return;
+    if (version !== openShopVersion) return false;
     showNotification("error", "เปิดข้อมูลร้านไม่สำเร็จ", error.message);
+    return false;
+  }
+}
+
+async function syncDashboardRoute(url = window.location.pathname) {
+  const route = parseDashboardRoute(url);
+  if (!route || !accessToken) return;
+
+  if (!route.shopId) {
+    // ยกเลิกคำขอเปิดร้านที่ยังไม่เสร็จเมื่อกลับหน้ารวมร้าน
+    openShopVersion++;
+    showDashboardHomeView();
+    showDashboardView();
+    return;
+  }
+
+  const tab = route.tab === "settings" ? "business" : route.tab;
+  if (selectedShopId === route.shopId) {
+    if (tab === "line" && selectedShopRole !== "owner") {
+      await Router.replace(shopRoute(route.shopId), undefined, { shallow: true, scroll: false });
+      return;
+    }
+    activateSettingsTab(tab);
+    showBusinessSettingsView();
+    showDashboardView();
+    return;
+  }
+
+  const opened = await openShop(route.shopId, tab);
+  // คำขอเก่าต้องไม่พาออกจากร้านใหม่ที่ผู้ใช้เปิดระหว่างรอ API
+  const currentRoute = parseDashboardRoute(window.location.pathname);
+  if (!opened && currentRoute?.shopId === route.shopId && currentRoute.tab === route.tab) {
+    await Router.replace("/app", undefined, { shallow: true, scroll: false });
   }
 }
 
@@ -535,8 +577,11 @@ async function loadDashboard() {
     elements.welcomeName.textContent = user.name;
 
     renderShops(shops);
-    showDashboardHomeView();
+    if (parseDashboardRoute(window.location.pathname)?.shopId) {
+      elements.dashboardHomeView.classList.add("hidden");
+    }
     showDashboardView();
+    await syncDashboardRoute();
   } catch (error) {
     clearSession();
 
@@ -546,19 +591,19 @@ async function loadDashboard() {
 
 // ปุ่มย้อนกลับจากหน้าตั้งค่าไปยังหน้ารวมร้านค้า
 elements.settingsBackButton.addEventListener("click", () => {
-  showDashboardHomeView();
+  Router.push("/app", undefined, { shallow: true, scroll: false });
 });
 
 elements.settingsBusinessTab.addEventListener("click", () => {
-  activateSettingsTab("business");
+  Router.push(shopRoute(selectedShopId), undefined, { shallow: true, scroll: false });
 });
 
 elements.settingsKnowledgeTab.addEventListener("click", () => {
-  activateSettingsTab("knowledge");
+  Router.push(shopRoute(selectedShopId, "knowledge"), undefined, { shallow: true, scroll: false });
 });
 
 elements.settingsLineTab.addEventListener("click", () => {
-  activateSettingsTab("line");
+  Router.push(shopRoute(selectedShopId, "line"), undefined, { shallow: true, scroll: false });
 });
 
 // ส่งข้อมูลที่แก้ไขไปบันทึกด้วย PATCH เฉพาะร้านที่กำลังเลือก
@@ -906,7 +951,9 @@ elements.shopForm.addEventListener("submit", async (event) => {
     formElement.reset();
 
     await loadDashboard();
-    await openShop(shop.id);
+    if (await openShop(shop.id)) {
+      await Router.push(shopRoute(shop.id), undefined, { shallow: true, scroll: false });
+    }
 
     showNotification(
       "success",
@@ -931,6 +978,7 @@ elements.logoutButton.addEventListener("click", async () => {
     // ลบ session ใน browser แม้ server จะติดต่อไม่ได้
   } finally {
     clearSession();
+    await Router.replace("/app", undefined, { shallow: true, scroll: false });
     elements.logoutButton.disabled = false;
 
     showNotification(
@@ -942,6 +990,10 @@ elements.logoutButton.addEventListener("click", async () => {
 });
 
 switchAuthTab("login");
+
+Router.events.on("routeChangeComplete", (url) => {
+  if (url.startsWith("/app")) void syncDashboardRoute(url);
+});
 
 if (accessToken) {
   loadDashboard();

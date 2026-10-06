@@ -17,6 +17,18 @@ npm run dev
 
 เปิด **http://127.0.0.1:3000/app** เพื่อใช้แดชบอร์ด, **http://127.0.0.1:3000/docs** เพื่อใช้ API Console และ **http://127.0.0.1:3000/health** เพื่อตรวจการเชื่อมต่อฐานข้อมูล หยุด server ด้วย `Ctrl+C`
 
+เส้นทางหน้าเว็บของแดชบอร์ด:
+
+| URL | หน้า |
+|---|---|
+| `/app` | ร้านค้าทั้งหมดของบัญชี |
+| `/app/shops/:shopId/settings` | ข้อมูลธุรกิจของร้าน |
+| `/app/shops/:shopId/knowledge` | FAQ และคลังความรู้ |
+| `/app/shops/:shopId/line` | การเชื่อมต่อ LINE และ simulator |
+| `/docs` | API Console |
+
+เปิด URL ของร้านโดยตรงหรือรีเฟรชหน้าได้ ระบบจะให้เข้าสู่ระบบก่อนหากยังไม่มี session และตรวจสิทธิ์ร้านผ่าน API ก่อนแสดงข้อมูล
+
 สำหรับ production ให้รัน `npm run build` แล้วจึง `npm start` Next.js จะสร้างหน้าเว็บและ Tailwind CSS ในขั้น build หน้าเว็บและ REST API ให้บริการจาก origin เดียวกัน สไตล์ของหน้าเว็บอยู่ใน utility classes ของ JSX โดย `src/styles/globals.css` มีเพียงการนำเข้า Tailwind และตั้งค่าฟอนต์
 
 | ร้านทดสอบ | อีเมล | รหัสผ่าน | shopId |
@@ -69,7 +81,7 @@ src/
   hooks/                 ผูกการทำงานของหน้าเว็บฝั่ง browser
   layouts/               layout ร่วมของหน้าเว็บ
   lib/                   routing, auth, database, contract และข้อมูลตัวอย่าง
-  pages/                 Pages Router: /, /app, /docs และ API routes
+  pages/                 Pages Router: /, /app, /app/shops/:shopId/*, /docs และ API routes
     api/v1/              REST API เดิมบน Next.js API Routes
   services/              business rules, LINE worker และตัวควบคุม UI
   styles/                Tailwind entry และการตั้งค่าฟอนต์
