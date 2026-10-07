@@ -968,6 +968,30 @@
                 "type": "null"
               }
             ]
+          },
+          "reply_method": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "faq",
+                  "generator",
+                  "extractive",
+                  "no_evidence"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reply_source_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
           }
         },
         "required": [
@@ -976,7 +1000,9 @@
           "customer_message_id",
           "replied",
           "reply_message_id",
-          "reply_text"
+          "reply_text",
+          "reply_method",
+          "reply_source_ids"
         ]
       },
       "Error": {

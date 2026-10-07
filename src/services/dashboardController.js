@@ -732,7 +732,9 @@ function appendSimulatorMessage(role, text) {
 
 for (const button of document.querySelectorAll("[data-sim-prompt]")) {
   button.addEventListener("click", () => {
-    elements.lineSimText.value = button.dataset.simPrompt;
+    elements.lineSimText.value = selectedShopId === "shop-flower"
+      ? button.dataset.simPromptFlower || button.dataset.simPrompt
+      : button.dataset.simPrompt;
     elements.lineSimText.focus();
   });
 }
@@ -768,6 +770,17 @@ elements.lineSimForm.addEventListener("submit", async (event) => {
     pending.remove();
     if (result.replied && result.reply_text) {
       appendSimulatorMessage("bot", result.reply_text);
+      const methodLabels = {
+        faq: "FAQ ตรงคำถาม",
+        generator: "AI เลือกคำตอบจากข้อมูลที่ค้นได้",
+        extractive: "ค้นข้อมูลแล้วคัดข้อความหลักฐาน (ยังไม่ได้ต่อ AI)",
+        no_evidence: "ไม่พบหลักฐานเพียงพอ",
+      };
+      const sourceIds = Array.isArray(result.reply_source_ids) ? result.reply_source_ids : [];
+      appendSimulatorMessage("system", [
+        `วิธีตอบ: ${methodLabels[result.reply_method] || "ไม่ระบุ"}`,
+        `แหล่งความรู้: ${sourceIds.length ? sourceIds.join(", ") : "ไม่มี"}`,
+      ].join("\n"));
       elements.lineSimStatus.textContent = "ตอบกลับสำเร็จ";
     } else {
       appendSimulatorMessage(

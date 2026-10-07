@@ -1,10 +1,17 @@
 import { randomUUID } from 'node:crypto';
-import { generateDefaultReply, sendLineReply } from './line.js';
+import { sendLineReply } from './line.js';
+import { answerQuestion } from './rag.js';
+import { createHttpRagGenerator } from './ragGenerator.js';
 
 const now = () => new Date().toISOString();
 
 export function createLineWorker(db, options = {}) {
   const replySender = options.sendReply || sendLineReply;
+  const generator = options.generator ?? createHttpRagGenerator({
+    url: process.env.RAG_GENERATOR_URL,
+    token: process.env.RAG_GENERATOR_TOKEN,
+    fetchImpl: options.fetchImpl,
+  });
   const queue = [];
   let isProcessing = false;
 
@@ -84,10 +91,19 @@ export function createLineWorker(db, options = {}) {
     }
 
     // 4. บอทอยู่ในโหมด 'active': สร้างข้อความตอบกลับ
-    const shop = db.prepare('SELECT * FROM shops WHERE id = ?').get(shopId);
-    const replyText = options.generateReply
-      ? options.generateReply({ shop, conversation, messageText })
-      : generateDefaultReply({ shop, messageText });
+    const answer = await answerQuestion(db, { shopId, query: messageText, generator });
+    const replyText = answer.text;
+
+    // A human may take over while retrieval or generation is in progress.
+    const latest = db.prepare('SELECT status, bot_mode FROM conversations WHERE shop_id = ? AND id = ?')
+      .get(shopId, conversation.id);
+    if (!latest || latest.status !== 'open' || latest.bot_mode !== 'active') {
+      if (event.webhookEventId) {
+        db.prepare("UPDATE line_events SET status = 'completed' WHERE event_id = ? AND shop_id = ?")
+          .run(event.webhookEventId, shopId);
+      }
+      return { conversationId: conversation.id, customerMsgId, replied: false, reason: latest?.bot_mode || 'closed' };
+    }
 
     // 5. ส่งข้อความกลับผ่าน LINE Messaging API
     let sendSuccess = simulated;
@@ -124,6 +140,12 @@ export function createLineWorker(db, options = {}) {
     db.prepare(
       `INSERT INTO messages VALUES (?, ?, ?, ?, ?, ?, ?)`
     ).run(replyMsgId, shopId, conversation.id, 'assistant', replyText, null, replyTime);
+    const saveSource = db.prepare(`INSERT INTO message_sources
+      (shop_id, message_id, knowledge_entry_id, chunk_id, source_excerpt) VALUES (?, ?, ?, ?, ?)`);
+    for (const source of answer.sources) {
+      saveSource.run(shopId, replyMsgId, source.knowledge_entry_id, source.chunk_id,
+        answer.method === 'faq' ? replyText : source.content);
+    }
     db.prepare(`UPDATE conversations SET updated_at = ? WHERE shop_id = ? AND id = ?`).run(replyTime, shopId, conversation.id);
 
     // 7. อัปเดตสถานะ event
@@ -139,6 +161,8 @@ export function createLineWorker(db, options = {}) {
       customerMsgId,
       replyMsgId,
       replyText,
+      replyMethod: answer.method,
+      sourceKnowledgeIds: [...new Set(answer.sources.map(source => source.knowledge_entry_id))],
       replied: true,
     };
   }

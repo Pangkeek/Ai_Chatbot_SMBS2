@@ -1,5 +1,6 @@
 import { hashPassword } from "./auth.js";
 import { transaction } from "./db.js";
+import { rebuildKnowledgeIndex } from "../services/rag.js";
 
 export const demoPassword = "DemoPass!2026";
 export const demoShops = [
@@ -131,4 +132,5 @@ export async function seedDemo(db) {
       });
     }
   });
+  rebuildKnowledgeIndex(db);
 }

@@ -11,15 +11,15 @@ flowchart LR
     API --> Auth[Session และ shop membership]
     Auth --> Service[Service และกฎบทสนทนา]
     Service --> DB[(SQLite พร้อม migrations)]
-    LINE[LINE webhook ระยะถัดไป] -.-> Queue[Queue และ event deduplication]
-    Queue -.-> Worker[Chat worker]
-    Worker -.-> KB[Tenant-scoped retrieval]
-    KB -.-> DB
-    Worker -.-> Gateway[Gemini / OpenAI gateway]
-    Worker -.-> Delivery[LINE delivery]
+    LINE[LINE webhook] --> Queue[คิวในหน่วยความจำและ event deduplication]
+    Queue --> Worker[Chat worker]
+    Worker --> KB[Tenant-scoped retrieval]
+    KB --> DB
+    Worker -.-> Gateway[AI generator endpoint / Gemini / OpenAI]
+    Worker --> Delivery[LINE delivery]
 ```
 
-เส้นทึบคือส่วนที่ทำงานใน repository นี้ เส้นประคือจุดออกแบบสำหรับพัฒนาต่อ
+เส้นทึบคือส่วนที่ทำงานใน repository นี้ เส้นประคือจุดเชื่อม AI ที่เป็นทางเลือกและ provider เฉพาะที่ยังต้องพัฒนาต่อ
 
 ## การตัดสินใจทางเทคนิค
 
@@ -61,7 +61,7 @@ Gemini เป็น provider หลักและ OpenAI เป็นสำร�
 
 เมื่อทีมต้องใช้ฐานข้อมูลร่วมกันหรือเพิ่ม vector search ให้ย้าย persistence ไป PostgreSQL โดยคง API contract เดิม แปลงเวลาเป็น `timestamptz`, เลือก UUID/opaque ID ให้สอดคล้องกับ migration ข้อมูล seed, เพิ่ม tenant RLS และ transaction context, แล้วรัน tenant isolation tests กับ database ใหม่ด้วย
 
-ความรู้ยังเป็นข้อความธรรมดาในระยะนี้ ไม่ใส่ embedding column ที่ยังไม่มี pipeline เมื่อทำ RAG ให้เพิ่มตาราง knowledge_chunks ซึ่งมี shop_id, knowledge_entry_id, content, embedding version และ composite foreign key เพื่อป้องกัน cross-tenant references
+งานข้อ 7 เพิ่ม `knowledge_chunks` พร้อม local embedding version, `shop_id`, `knowledge_entry_id` และ composite foreign key แล้ว Index ถูกอัปเดตใน transaction ของ CRUD และมี `npm run rag:reindex` สำหรับข้อมูลเดิม `message_sources` เก็บรหัสและข้อความหลักฐานที่ใช้ตอบเพื่อ audit แม้ลบ entry ภายหลัง การค้นเริ่มจาก `shop_id` และ `published` ในฐานข้อมูล ก่อนจัดอันดับด้วย embedding และคำที่ตรงกัน ส่วน AI generator เป็น interface ที่ฉีดเข้า worker ได้; provider จริงและ failover อยู่ในงานข้อ 8
 
 ## ก่อนใช้กับข้อมูลจริง
 

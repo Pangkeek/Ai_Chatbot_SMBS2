@@ -1142,7 +1142,8 @@ export default function AppPage() {
                         <button
                           className={presetButton}
                           type="button"
-                          data-sim-prompt="สวัสดีครับ มีสินค้าหรือบริการอะไรแนะนำบ้างครับ"
+                          data-sim-prompt="ลาเต้เย็นราคาเท่าไหร่"
+                          data-sim-prompt-flower="ช่อกุหลาบราคาเท่าไหร่"
                         >
                           <span
                             className="grid size-[30px] shrink-0 place-items-center rounded-[9px] bg-green-50 text-lg text-green-700"
@@ -1151,9 +1152,9 @@ export default function AppPage() {
                             ✦
                           </span>
                           <span>
-                            สินค้าและบริการ
+                            ค้นข้อมูลสินค้า
                             <small className="mt-[3px] block text-[10px] font-normal text-slate-500">
-                              ลองถามสิ่งที่ร้านมีให้บริการ
+                              ตัวอย่างค้นความรู้ที่ไม่ใช่ FAQ
                             </small>
                           </span>
                           <span

@@ -66,6 +66,8 @@ test('seed is repeatable and preserves edited content and row counts', async () 
     assert.equal(db.prepare(`SELECT count(*) AS n FROM ${table}`).get().n, n);
   }
   assert.equal(db.prepare("SELECT title FROM knowledge_entries WHERE id = 'shop-coffee-kb-1'").get().title, 'Edited');
+  db.prepare("UPDATE knowledge_entries SET title = 'เวลาเปิดร้าน' WHERE id = 'shop-coffee-kb-1'").run();
+  await seedDemo(db);
 });
 
 test('registration, session revocation, expiry, duplicate emails and private user fields', async () => {
@@ -227,6 +229,12 @@ test('LINE channel configuration, webhook verification, deduplication and messag
   assert.equal(simRes.payload.data.status, 'processed');
   assert.equal(simRes.payload.data.replied, true);
   assert.ok(simRes.payload.data.conversation_id);
+  const sourced = await request('POST', simPath, { user_id: 'line-user-100', text: 'ร้านเปิดกี่โมงครับ' }, coffee);
+  assert.deepEqual(sourced.payload.data.reply_source_ids, ['shop-coffee-kb-1']);
+  assert.equal(sourced.payload.data.reply_method, 'faq');
+  const retrieved = await request('POST', simPath, { user_id: 'line-user-101', text: 'ลาเต้เย็นราคาเท่าไหร่' }, coffee);
+  assert.equal(retrieved.payload.data.reply_method, 'extractive');
+  assert.deepEqual(retrieved.payload.data.reply_source_ids, ['shop-coffee-kb-2']);
 });
 
 test('database constraints reject cross-shop references even outside the API', () => {

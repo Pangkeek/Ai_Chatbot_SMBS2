@@ -4,6 +4,7 @@ import { hashPassword, verifyPassword, createSession } from '../lib/auth.js';
 import { ApiError } from '../utils/validation.js';
 import { checkLineConnection, verifyLineSignature } from './line.js';
 import { createLineWorker } from './worker.js';
+import { indexKnowledgeEntry } from './rag.js';
 
 export const publicUser = user => ({ id: user.id, email: user.email, name: user.name, created_at: user.created_at });
 const now = () => new Date().toISOString();
@@ -82,19 +83,27 @@ export function createService(db, options = {}) {
     },
     listKnowledge({ params, query }) { return page('knowledge_entries', 'shop_id = ?', [params.shopId], query); },
     createKnowledge({ params, user, body }) {
-      const id = randomUUID(), time = now();
-      db.prepare('INSERT INTO knowledge_entries VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)').run(id, params.shopId, body.kind, body.title, body.content, body.status, user.id, time, time);
-      return wrap(get('knowledge_entries', params.shopId, id));
+      return transaction(db, () => {
+        const id = randomUUID(), time = now();
+        db.prepare('INSERT INTO knowledge_entries VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)').run(id, params.shopId, body.kind, body.title, body.content, body.status, user.id, time, time);
+        indexKnowledgeEntry(db, params.shopId, id);
+        return wrap(get('knowledge_entries', params.shopId, id));
+      });
     },
     getKnowledge({ params }) { return wrap(get('knowledge_entries', params.shopId, params.knowledgeId)); },
     updateKnowledge({ params, body }) {
-      get('knowledge_entries', params.shopId, params.knowledgeId);
-      patch('knowledge_entries', body, 'shop_id = ? AND id = ?', [params.shopId, params.knowledgeId]);
-      return this.getKnowledge({ params });
+      return transaction(db, () => {
+        get('knowledge_entries', params.shopId, params.knowledgeId);
+        patch('knowledge_entries', body, 'shop_id = ? AND id = ?', [params.shopId, params.knowledgeId]);
+        indexKnowledgeEntry(db, params.shopId, params.knowledgeId);
+        return this.getKnowledge({ params });
+      });
     },
     deleteKnowledge({ params }) {
-      get('knowledge_entries', params.shopId, params.knowledgeId);
-      db.prepare('DELETE FROM knowledge_entries WHERE shop_id = ? AND id = ?').run(params.shopId, params.knowledgeId);
+      return transaction(db, () => {
+        get('knowledge_entries', params.shopId, params.knowledgeId);
+        db.prepare('DELETE FROM knowledge_entries WHERE shop_id = ? AND id = ?').run(params.shopId, params.knowledgeId);
+      });
     },
     listConversations({ params, query }) { return page('conversations', 'shop_id = ?', [params.shopId], query); },
     createConversation({ params, body }) {
@@ -204,6 +213,8 @@ export function createService(db, options = {}) {
           replied: false,
           reply_message_id: null,
           reply_text: null,
+          reply_method: null,
+          reply_source_ids: [],
         });
       }
       const time = now();
@@ -224,6 +235,8 @@ export function createService(db, options = {}) {
         replied: result.replied,
         reply_message_id: result.replyMsgId || null,
         reply_text: result.replyText || null,
+        reply_method: result.replyMethod || null,
+        reply_source_ids: result.sourceKnowledgeIds || [],
       });
     },
     worker,

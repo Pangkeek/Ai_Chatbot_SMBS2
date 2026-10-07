@@ -119,7 +119,17 @@ Webhook URL ต้องเป็น HTTPS ที่ LINE เข้าถึง�
 
 ระบบรับ webhook ตรวจลายเซ็นจาก raw body, กัน event ซ้ำ และส่งข้อความตอบกลับผ่าน LINE API ใน process เดียวกัน งานตอบกลับรันในคิวหน่วยความจำ จึงต้องใช้ worker/queue แบบคงทนก่อนใช้กับโฮสต์ที่หยุด process ทันทีหลังตอบ HTTP
 
-งานต่อยอด: RAG/embedding, Gemini/OpenAI gateway และ failover การเปลี่ยน `bot_mode` ตอนนี้เป็นการบันทึกสถานะและตรวจเงื่อนไขเจ้าหน้าที่ตอบ ยังไม่มี AI worker ที่ทำงานเบื้องหลัง Endpoint บันทึกข้อความไม่ใช่หลักฐานว่าส่งถึง LINE แล้ว
+## ค้นความรู้และตอบ LINE (งานข้อ 7)
+
+ความรู้สถานะ `published` จะถูกแบ่งและทำ local embedding ลง `knowledge_chunks` เมื่อสร้างหรือแก้ผ่าน API/หน้า **FAQ/ข้อมูลความรู้** การเปลี่ยนเป็น `draft` และการลบจะเอาออกจาก index ทันที ตัวค้นกรอง `shop_id` และสถานะ `published` ใน SQL ก่อนจัดอันดับ คำถาม FAQ ที่ตรงชัดเจนใช้คำตอบเดิม ส่วนคำถามอื่นใช้ข้อความจากส่วนที่เกี่ยวข้อง ถ้าไม่พบหลักฐานจะตอบขอให้ติดต่อเจ้าหน้าที่
+
+หลังอัปเกรดฐานข้อมูลเดิม ให้สร้าง index ครั้งแรกด้วย `npm run rag:reindex` (รันซ้ำได้) หรือ `npm run db:seed` สำหรับข้อมูล demo หากมีการแก้ข้อมูลด้วย SQL โดยตรง ให้รัน `npm run rag:reindex` อีกครั้ง เพราะทางลัดนี้ไม่ผ่านกลไกอัปเดต index ของ API
+
+ทดลองได้ในหน้า **LINE Simulator** หรือ `POST /api/v1/shops/{shopId}/line/simulate` โดยใช้บัญชีเจ้าของร้าน หน้า Simulator แสดงวิธีตอบและรหัสแหล่งความรู้ใต้คำตอบ ปุ่ม **ค้นข้อมูลสินค้า** ใช้คำถามที่ไม่ตรง FAQ เพื่อให้เห็นขั้นค้น chunks (`shop-coffee`: ลาเต้เย็นราคาเท่าไหร่; `shop-flower`: ช่อกุหลาบราคาเท่าไหร่) ผล API มี `reply_method` (`faq`, `extractive`, `generator`, `no_evidence`) และ `reply_source_ids` ส่วนข้อความ LINE จริงบันทึกหลักฐานไว้ใน `message_sources` (`shop_id`, `message_id`, `knowledge_entry_id`, `chunk_id`, `source_excerpt`) แม้ภายหลังลบความรู้นั้นไปแล้ว คำตอบที่ส่งไม่สำเร็จจะไม่ถูกบันทึกเป็นข้อความผู้ช่วย
+
+หากมีบริการ AI ของตนเอง ตั้ง `RAG_GENERATOR_URL` และ `RAG_GENERATOR_TOKEN` ใน `.env` เพื่อให้ worker ส่ง `POST` JSON `{ shopId, query, context, instruction }` ไปยังบริการนั้น `context` มีเฉพาะ chunk ของร้านที่เกี่ยวข้อง บริการต้องตอบ JSON เช่น `{ "text": "จัดส่งภายในเมือง ค่าจัดส่ง 50 บาท", "sourceChunkIds": ["shop-flower-kb-3:0"] }` โดย `text` ต้องคัดตรงจากเนื้อหา chunk ที่อ้างอิง หรือ `{ "insufficient": true }` เมื่อหลักฐานไม่พอ หากผลไม่ผ่านการตรวจ ระบบใช้ข้อความหลักฐานโดยตรงแทน จุด `generator.generate(...)` ยังฉีด implementation อื่นได้ **ถ้าไม่ได้ตั้ง URL ระบบทำเฉพาะ retrieval และตอบแบบคัดข้อความหลักฐาน จึงยังไม่มีขั้นสร้างคำตอบด้วย AI จริง** การเชื่อม Gemini/OpenAI, retry หรือ circuit breaker อยู่ในงานข้อ 8 Local embedding เป็น character n-gram hashing จึงไม่มีค่า API แต่ความแม่นยำด้านความหมายมีข้อจำกัด ควรตรวจคำถามตัวอย่างของร้านก่อนใช้งานจริง
+
+การเปลี่ยน `bot_mode` จะถูกตรวจอีกครั้งหลังเตรียมคำตอบและก่อนส่ง LINE Endpoint บันทึกข้อความไม่ใช่หลักฐานว่าส่งถึง LINE แล้ว
 
 SQLite เหมาะสำหรับเริ่มพัฒนาแบบหนึ่ง process; แผนขยายไป PostgreSQL และข้อกำหนด tenant scope อยู่ในเอกสารสถาปัตยกรรม บัญชี demo และ API จำลองลูกค้าใช้สำหรับพัฒนาภายในเครื่อง
 
