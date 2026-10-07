@@ -1,6 +1,7 @@
 import Head from 'next/head';
 import HomeHeader from '@/components/home/HomeHeader';
 import HomeHero from '@/components/home/HomeHero';
+import HomeFeatures from '@/components/home/HomeFeatures';
 
 export default function HomePage() {
   return (
@@ -13,6 +14,7 @@ export default function HomePage() {
       <HomeHeader />
       <main id="main-content" className="min-h-screen bg-[#f7f9fc] text-slate-900">
         <HomeHero />
+        <HomeFeatures />
       </main>
     </>
   );
