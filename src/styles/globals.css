@@ -11,3 +11,20 @@
 html, body, button, input, select, textarea, pre, code {
   font-family: "Kanit", "Noto Sans Thai", "Leelawadee UI", Tahoma, Arial, sans-serif;
 }
+
+/* สีและลายตารางนี้ใช้เฉพาะหน้าแนะนำ เพื่อให้ใกล้ภาพอ้างอิงโดยไม่กระทบแดชบอร์ด */
+.home-page {
+  --home-blue: #4564c9;
+  --home-ink: #18345c;
+  --home-teal: #36bcb3;
+  --home-orange: #ff8842;
+  --home-green: #06c755;
+}
+
+.home-graph-paper {
+  background-color: #f9fbfc;
+  background-image:
+    linear-gradient(rgba(57, 92, 139, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(57, 92, 139, 0.055) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
