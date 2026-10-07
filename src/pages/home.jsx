@@ -3,6 +3,7 @@ import HomeHeader from '@/components/home/HomeHeader';
 import HomeHero from '@/components/home/HomeHero';
 import HomeFeatures from '@/components/home/HomeFeatures';
 import HomeJourney from '@/components/home/HomeJourney';
+import HomeFooter from '@/components/home/HomeFooter';
 
 export default function HomePage() {
   return (
@@ -18,6 +19,7 @@ export default function HomePage() {
         <HomeFeatures />
         <HomeJourney />
       </main>
+      <HomeFooter />
     </>
   );
 }
