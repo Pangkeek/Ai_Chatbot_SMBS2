@@ -8,7 +8,7 @@ const navigation = [
 
 export default function HomeHeader() {
   return (
-    <header className="sticky top-0 z-30 border-b border-white/20 bg-[#4564c9] text-white shadow-[0_8px_24px_-18px_rgba(19,42,102,.8)]">
+    <header className="sticky top-0 z-30 border-b border-white/20 bg-[var(--home-blue)] text-white shadow-[0_8px_24px_-18px_rgba(19,42,102,.8)]">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-3.5 sm:px-8">
         <Link
           href="/home"

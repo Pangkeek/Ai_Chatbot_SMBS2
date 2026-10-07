@@ -5,7 +5,7 @@ const highlights = ['ข้อมูลร้านแยกเป็นสั�
 
 export default function HomeHero() {
   return (
-    <section className="relative isolate overflow-hidden bg-[#4564c9] text-white">
+    <section className="relative isolate overflow-hidden bg-[var(--home-blue)] text-white">
       <div aria-hidden="true" className="pointer-events-none absolute -left-24 bottom-0 size-80 rounded-full border-[54px] border-white/5" />
       <div aria-hidden="true" className="pointer-events-none absolute -right-28 -top-32 size-[30rem] rounded-full bg-[#8dbbff]/25 blur-3xl" />
 
