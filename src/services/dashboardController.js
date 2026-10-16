@@ -8,6 +8,7 @@ import { createLineSettings } from './dashboard/lineSettings.js';
 import { createLineSimulator } from './dashboard/lineSimulator.js';
 import { parseDashboardRoute, shopRoute } from "../utils/dashboardRoutes.js";
 import { fillBusinessHours, readBusinessHours, setupBusinessHoursForm } from "./dashboard/businessHoursForm.js";
+import { CHATBOT_PERSONA_STYLES, parseChatbotPersona, formatChatbotPersona } from "../utils/chatbotPersona.js";
 
 const TOKEN_KEY = "smb_access_token";
 
@@ -116,7 +117,12 @@ function fillBusinessSettingsForm(shop) {
   elements.settingsName.value = shop.name;
   elements.settingsDescription.value = shop.description || "";
   fillBusinessHours(elements.businessSettingsForm, shop.opening_hours);
-  elements.settingsPersona.value = shop.persona || "";
+  const persona = parseChatbotPersona(shop.persona);
+  elements.settingsPersonaStyle.value = persona.style;
+  elements.settingsPersonaDetails.value = persona.details;
+  elements.businessSettingsForm.dataset.originalPersona = shop.persona || "";
+  elements.businessSettingsForm.dataset.personaChanged = "false";
+  updatePersonaHint();
   elements.settingsShopId.textContent = `รหัสร้าน: ${shop.id}`;
   const owner = shop.member_role === "owner";
   for (const field of elements.businessSettingsForm.elements) {
@@ -166,6 +172,19 @@ const knowledgeManager = createKnowledgeManager({
 });
 
 setupBusinessHoursForm(elements.businessSettingsForm);
+
+function updatePersonaHint() {
+  const selected = CHATBOT_PERSONA_STYLES.find(([style]) => style === elements.settingsPersonaStyle.value);
+  elements.settingsPersonaHint.textContent = selected?.[1] || "";
+}
+
+elements.settingsPersonaStyle.addEventListener("change", () => {
+  elements.businessSettingsForm.dataset.personaChanged = "true";
+  updatePersonaHint();
+});
+elements.settingsPersonaDetails.addEventListener("input", () => {
+  elements.businessSettingsForm.dataset.personaChanged = "true";
+});
 
 function switchAuthTab(tab) {
   const loginSelected = tab === "login";
@@ -322,7 +341,10 @@ elements.businessSettingsForm.addEventListener("submit", async (event) => {
           name: readField("name"),
           description: readField("description"),
           opening_hours: openingHours,
-          persona: readField("persona"),
+          // ถ้ายังไม่ได้แก้บุคลิก ให้คงข้อความเก่าไว้เมื่อบันทึกข้อมูลส่วนอื่น
+          persona: formElement.dataset.personaChanged === "true" || !formElement.dataset.originalPersona
+            ? formatChatbotPersona(elements.settingsPersonaStyle.value, elements.settingsPersonaDetails.value)
+            : formElement.dataset.originalPersona,
         },
       }
     );
