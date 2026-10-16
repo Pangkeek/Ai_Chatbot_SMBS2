@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { sendLineReply } from './line.js';
 import { answerQuestion } from './rag.js';
 import { createHttpRagGenerator } from './ragGenerator.js';
+import { formatChatbotReply } from './chatbotReply.js';
 
 const now = () => new Date().toISOString();
 
@@ -92,7 +93,8 @@ export function createLineWorker(db, options = {}) {
 
     // 4. บอทอยู่ในโหมด 'active': สร้างข้อความตอบกลับ
     const answer = await answerQuestion(db, { shopId, query: messageText, generator });
-    const replyText = answer.text;
+    const shop = db.prepare('SELECT persona FROM shops WHERE id = ?').get(shopId);
+    const replyText = formatChatbotReply(answer, shop?.persona);
 
     // A human may take over while retrieval or generation is in progress.
     const latest = db.prepare('SELECT status, bot_mode FROM conversations WHERE shop_id = ? AND id = ?')
@@ -144,7 +146,7 @@ export function createLineWorker(db, options = {}) {
       (shop_id, message_id, knowledge_entry_id, chunk_id, source_excerpt) VALUES (?, ?, ?, ?, ?)`);
     for (const source of answer.sources) {
       saveSource.run(shopId, replyMsgId, source.knowledge_entry_id, source.chunk_id,
-        answer.method === 'faq' ? replyText : source.content);
+        answer.method === 'faq' ? answer.text : source.content);
     }
     db.prepare(`UPDATE conversations SET updated_at = ? WHERE shop_id = ? AND id = ?`).run(replyTime, shopId, conversation.id);
 

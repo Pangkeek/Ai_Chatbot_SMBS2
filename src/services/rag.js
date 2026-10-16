@@ -1,5 +1,7 @@
 import { createHash } from 'node:crypto';
 import { transaction } from '../lib/db.js';
+import { buildBusinessEvidence, matchesBusinessQuestion } from './businessEvidence.js';
+import { buildAnswerPrompt } from './answerPrompt.js';
 
 export const EMBEDDING_VERSION = 'local-chargram-v1-256';
 export const UNKNOWN_ANSWER = 'ขออภัย ยังไม่มีข้อมูลที่ยืนยันคำตอบนี้ได้ กรุณาติดต่อเจ้าหน้าที่';
@@ -87,15 +89,17 @@ function cosine(left, right) {
   return left.reduce((sum, value, index) => sum + value * right[index], 0);
 }
 
-export function retrieve(db, { shopId, query, limit = 4 }) {
+export function retrieve(db, { shopId, query, limit = 4, shop }) {
   if (!shopId || !normalize(query)) return [];
+  const business = shop || db.prepare('SELECT * FROM shops WHERE id = ?').get(shopId);
   const searchQuery = /ส่ง|เดลิเวอรี่|delivery/i.test(query) ? `${query} การจัดส่ง` : query;
-  const rows = db.prepare(`SELECT c.id AS chunk_id, c.knowledge_entry_id, c.content, c.embedding_json,
+  const knowledgeRows = db.prepare(`SELECT c.id AS chunk_id, c.knowledge_entry_id, c.content, c.embedding_json,
       e.kind, e.title, e.content AS full_content
     FROM knowledge_chunks c JOIN knowledge_entries e
       ON e.shop_id = c.shop_id AND e.id = c.knowledge_entry_id
     WHERE c.shop_id = ? AND e.status = 'published'
       AND c.embedding_version = ? AND c.source_updated_at = e.updated_at`).all(shopId, EMBEDDING_VERSION);
+  const rows = [...knowledgeRows, ...buildBusinessEvidence(business)];
   const queryVector = embed(searchQuery);
   const queryTerms = terms(searchQuery);
   const ranked = rows.map(row => {
@@ -104,32 +108,46 @@ export function retrieve(db, { shopId, query, limit = 4 }) {
     const titleHits = [...queryTerms].filter(term => titleTerms.has(term)).length;
     const bodyHits = [...queryTerms].filter(term => bodyTerms.has(term)).length;
     const overlap = queryTerms.size ? Math.min(1, (titleHits * 1.5 + bodyHits * 0.5) / queryTerms.size) : 0;
-    const similarity = cosine(queryVector, JSON.parse(row.embedding_json));
+    const similarity = cosine(queryVector, row.embedding_json ? JSON.parse(row.embedding_json) : embed(`${row.title} ${row.content}`));
     const exactFaq = row.kind === 'faq' && canonicalQuestion(query) === canonicalQuestion(row.title);
-    const score = exactFaq ? 1 : 0.6 * similarity + 0.4 * overlap;
-    return { ...row, score, exactFaq };
-  }).filter(row => row.exactFaq || row.score >= 0.23)
+    const businessMatch = row.source_type === 'business' && matchesBusinessQuestion(query, row.source_field);
+    const score = exactFaq ? 1 : businessMatch ? 0.9 : 0.6 * similarity + 0.4 * overlap;
+    // ข้อมูลร้านต้องตรงกับหัวข้อคำถามหรือมีคำร่วมกัน เพื่อลดการหยิบข้อมูลผิดเรื่อง
+    const sharedBusinessTerm = [...queryTerms].some(term => bodyTerms.has(term));
+    const relevant = exactFaq || (score >= 0.23 &&
+      (row.source_type !== 'business' || businessMatch || sharedBusinessTerm));
+    return { ...row, score, exactFaq, relevant };
+  }).filter(row => row.relevant)
     .sort((a, b) => b.score - a.score || a.chunk_id.localeCompare(b.chunk_id));
   return ranked.filter(row => row.exactFaq || row.score >= ranked[0].score - 0.15)
     .slice(0, Math.min(Math.max(limit, 1), 8))
-    .map(({ embedding_json, ...row }) => row);
+    .map(({ embedding_json, relevant, ...row }) => row);
 }
 
-// A generator can be injected by the next AI integration. It receives only the
-// tenant-filtered context. The default keeps the application useful offline.
+// ใช้ฟังก์ชันเดียวกันทั้งตอนตอบจริงและตอนดูตัวอย่าง เพื่อให้หลักฐานตรงกัน
+export function prepareAnswerContext(db, { shopId, query }) {
+  const shop = db.prepare('SELECT * FROM shops WHERE id = ?').get(shopId);
+  if (!shop) return null;
+  const matches = retrieve(db, { shopId, query, shop });
+  const context = matches.map(({ chunk_id, knowledge_entry_id, source_type, title, content, score }) =>
+    ({ chunkId: chunk_id, knowledgeEntryId: knowledge_entry_id, sourceType: source_type || 'knowledge', title, content, score }));
+  return { shop, matches, context, prompt: buildAnswerPrompt({ shop, query, context }) };
+}
+
+// หากยังไม่ได้ต่อบริการ AI ภายนอก ระบบจะคัดข้อความจากหลักฐานที่ค้นพบแทน
 export async function answerQuestion(db, { shopId, query, generator }) {
-  const matches = retrieve(db, { shopId, query });
+  const prepared = prepareAnswerContext(db, { shopId, query });
+  const matches = prepared?.matches || [];
   if (!matches.length) return { text: UNKNOWN_ANSWER, sources: [], method: 'no_evidence' };
   const exact = matches.find(match => match.exactFaq);
   if (exact) {
     return { text: exact.full_content.slice(0, 5000), sources: [exact], method: 'faq' };
   }
-  const context = matches.map(({ chunk_id, knowledge_entry_id, title, content, score }) =>
-    ({ chunkId: chunk_id, knowledgeEntryId: knowledge_entry_id, title, content, score }));
   if (generator) {
     try {
+      const { context, prompt } = prepared;
       const generated = await generator.generate({ shopId, query, context,
-        instruction: 'Select an exact quote from one supplied context chunk as the answer. Do not paraphrase or add claims. Return its chunk ID. If insufficient, say you do not know.' });
+        instruction: prompt.messages[0].content, prompt });
       if (generated?.insufficient === true) {
         return { text: UNKNOWN_ANSWER, sources: [], method: 'no_evidence' };
       }
