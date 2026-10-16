@@ -1,6 +1,6 @@
 # รีวิวระยะ F — durable LINE jobs
 
-วันที่: 6 ตุลาคม 2026 (Asia/Bangkok)  
+วันที่: 6 ตุลาคม 2026 (Asia/Bangkok)
 Branch: `codex/postgresql-render-migration`
 
 ## ผลลัพธ์

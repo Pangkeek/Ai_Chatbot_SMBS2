@@ -1,7 +1,7 @@
 # แผนย้าย SQLite ไป PostgreSQL และ Deploy บน Render
 
-วันที่จัดทำ: 6 ตุลาคม 2026 (Asia/Bangkok)  
-โปรเจกต์: SMB Chatbot Platform — `Ai_Chatbot_SMBS2`  
+วันที่จัดทำ: 6 ตุลาคม 2026 (Asia/Bangkok)
+โปรเจกต์: SMB Chatbot Platform — `Ai_Chatbot_SMBS2`
 สถานะ: แผนสำหรับนำไปพัฒนา ยังไม่ได้เปลี่ยนฐานข้อมูลหรือสร้างบริการ Render
 
 ## 1. เป้าหมายและผลลัพธ์
