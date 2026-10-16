@@ -3,6 +3,6 @@
 docker compose up --build -d
 
 
-ระบบอยู่ที่ http://localhost:3000 และ /health ตอบ 200 
+ระบบอยู่ที่ http://localhost:3000 และ /health ตอบ 200
 -ฐานข้อมูล PostgreSQL เก็บใน Docker volume จึงไม่หายเมื่อหยุด container หยุดระบบด้วย docker compose down
 ระบบไม่สร้างบัญชี demo อัตโนมัติ ให้สมัครบัญชีผ่านหน้าเว็บได้เลย 
