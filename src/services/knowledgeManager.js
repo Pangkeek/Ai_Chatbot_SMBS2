@@ -1,118 +1,21 @@
-const PAGE_SIZE = 8;
-const LOAD_SIZE = 100;
+import { PAGE_SIZE, filterKnowledgeEntries, paginateKnowledgeEntries, fetchAllKnowledgeEntries } from './knowledge/data.js';
+import { getKnowledgeElements } from './knowledge/elements.js';
+import { createKnowledgeCard } from './knowledge/card.js';
 
-const kindLabels = {
-  faq: "คำถามที่พบบ่อย",
-  product: "สินค้า/บริการ",
-  policy: "นโยบาย",
-  general: "ข้อมูลทั่วไป",
-};
-
-const dateFormatter = new Intl.DateTimeFormat("th-TH", {
-  dateStyle: "medium",
-  timeStyle: "short",
-});
-
-function element(tag, className, text) {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text !== undefined) node.textContent = text;
-  return node;
-}
-
-export function filterKnowledgeEntries(entries, filters) {
-  const query = filters.query.trim().toLocaleLowerCase("th");
-  return entries.filter((entry) => {
-    const matchesQuery =
-      !query ||
-      entry.title.toLocaleLowerCase("th").includes(query) ||
-      entry.content.toLocaleLowerCase("th").includes(query);
-    const matchesKind = filters.kind === "all" || entry.kind === filters.kind;
-    const matchesStatus =
-      filters.status === "all" || entry.status === filters.status;
-    return matchesQuery && matchesKind && matchesStatus;
-  });
-}
-
-export function paginateKnowledgeEntries(entries, page, pageSize = PAGE_SIZE) {
-  const pageCount = Math.max(1, Math.ceil(entries.length / pageSize));
-  const safePage = Math.min(Math.max(1, page), pageCount);
-  const start = (safePage - 1) * pageSize;
-  return {
-    entries: entries.slice(start, start + pageSize),
-    page: safePage,
-    pageCount,
-    start,
-  };
-}
-
-export async function fetchAllKnowledgeEntries({ shopId, apiRequest, signal }) {
-  const all = [];
-  let offset = 0;
-  let total = 0;
-  do {
-    const payload = await apiRequest(
-      `/shops/${encodeURIComponent(shopId)}/knowledge?limit=${LOAD_SIZE}&offset=${offset}`,
-      { withMeta: true, signal }
-    );
-    all.push(...payload.data);
-    total = payload.meta.total;
-    if (payload.data.length === 0) break;
-    offset += payload.data.length;
-  } while (offset < total);
-  return all;
-}
+export { filterKnowledgeEntries, paginateKnowledgeEntries, fetchAllKnowledgeEntries } from './knowledge/data.js';
 
 export function createKnowledgeManager({
   apiRequest,
   showNotification,
   onUnauthorized,
 }) {
-  const elements = {
-    section: document.querySelector("#knowledge-management-section"),
-    addButton: document.querySelector("#knowledge-add-button"),
-    readonlyNotice: document.querySelector("#knowledge-readonly-notice"),
-    totalCount: document.querySelector("#knowledge-total-count"),
-    publishedCount: document.querySelector("#knowledge-published-count"),
-    draftCount: document.querySelector("#knowledge-draft-count"),
-    search: document.querySelector("#knowledge-search"),
-    kindFilter: document.querySelector("#knowledge-kind-filter"),
-    statusFilter: document.querySelector("#knowledge-status-filter"),
-    loading: document.querySelector("#knowledge-loading"),
-    error: document.querySelector("#knowledge-error"),
-    errorMessage: document.querySelector("#knowledge-error-message"),
-    retryButton: document.querySelector("#knowledge-retry-button"),
-    empty: document.querySelector("#knowledge-empty"),
-    emptyTitle: document.querySelector("#knowledge-empty-title"),
-    emptyMessage: document.querySelector("#knowledge-empty-message"),
-    list: document.querySelector("#knowledge-list"),
-    pagination: document.querySelector("#knowledge-pagination"),
-    resultsSummary: document.querySelector("#knowledge-results-summary"),
-    pageLabel: document.querySelector("#knowledge-page-label"),
-    prevButton: document.querySelector("#knowledge-prev-button"),
-    nextButton: document.querySelector("#knowledge-next-button"),
-    modal: document.querySelector("#knowledge-modal"),
-    modalTitle: document.querySelector("#knowledge-modal-title"),
-    modalClose: document.querySelector("#knowledge-modal-close"),
-    form: document.querySelector("#knowledge-form"),
-    kind: document.querySelector("#knowledge-kind"),
-    title: document.querySelector("#knowledge-title"),
-    content: document.querySelector("#knowledge-content"),
-    titleLabel: document.querySelector("#knowledge-title-label"),
-    contentLabel: document.querySelector("#knowledge-content-label"),
-    titleCount: document.querySelector("#knowledge-title-count"),
-    contentCount: document.querySelector("#knowledge-content-count"),
-    titleError: document.querySelector("#knowledge-title-error"),
-    contentError: document.querySelector("#knowledge-content-error"),
-    formError: document.querySelector("#knowledge-form-error"),
-    formCancel: document.querySelector("#knowledge-form-cancel"),
-    formSubmit: document.querySelector("#knowledge-form-submit"),
-    deleteModal: document.querySelector("#knowledge-delete-modal"),
-    deleteDescription: document.querySelector("#knowledge-delete-description"),
-    deleteError: document.querySelector("#knowledge-delete-error"),
-    deleteCancel: document.querySelector("#knowledge-delete-cancel"),
-    deleteConfirm: document.querySelector("#knowledge-delete-confirm"),
-  };
+  const elements = getKnowledgeElements();
+  const knowledgeCard = (entry) => createKnowledgeCard(entry, {
+    isOwner,
+    openForm,
+    toggleStatus,
+    openDelete,
+  });
 
   const state = {
     shopId: "",
@@ -151,85 +54,6 @@ export function createKnowledgeManager({
     elements.draftCount.textContent = String(
       state.entries.filter((entry) => entry.status === "draft").length
     );
-  }
-
-  function knowledgeCard(entry) {
-    const card = element(
-      "article",
-      "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-violet-200 hover:shadow-md"
-    );
-    const header = element("div", "flex flex-wrap items-start justify-between gap-3");
-    const badges = element("div", "flex flex-wrap gap-2");
-    const kind = element(
-      "span",
-      "rounded-full bg-violet-50 px-3 py-1 text-xs font-semibold text-violet-700",
-      kindLabels[entry.kind]
-    );
-    const published = entry.status === "published";
-    const status = element(
-      "span",
-      published
-        ? "rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700"
-        : "rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700",
-      published ? "เผยแพร่แล้ว" : "ฉบับร่าง"
-    );
-    badges.append(kind, status);
-
-    const date = element(
-      "time",
-      "text-xs text-slate-400",
-      `แก้ไข ${dateFormatter.format(new Date(entry.updated_at))}`
-    );
-    date.dateTime = entry.updated_at;
-    header.append(badges, date);
-
-    const title = element(
-      "h3",
-      "mt-4 text-lg font-bold leading-7 text-slate-900",
-      entry.title
-    );
-    const content = element(
-      "p",
-      "mt-2 line-clamp-3 whitespace-pre-line text-sm leading-6 text-slate-600",
-      entry.content
-    );
-    card.append(header, title, content);
-
-    if (isOwner()) {
-      const actions = element(
-        "div",
-        "mt-5 flex flex-wrap gap-2 border-t border-slate-100 pt-4"
-      );
-      const edit = element(
-        "button",
-        "rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50",
-        "แก้ไข"
-      );
-      edit.type = "button";
-      edit.addEventListener("click", () => openForm(entry));
-
-      const toggle = element(
-        "button",
-        published
-          ? "rounded-lg border border-amber-200 px-3 py-2 text-xs font-semibold text-amber-700 transition hover:bg-amber-50"
-          : "rounded-lg border border-emerald-200 px-3 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50",
-        published ? "เปลี่ยนเป็นฉบับร่าง" : "เผยแพร่"
-      );
-      toggle.type = "button";
-      toggle.addEventListener("click", () => toggleStatus(entry, toggle));
-
-      const remove = element(
-        "button",
-        "ml-auto rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50",
-        "ลบ"
-      );
-      remove.type = "button";
-      remove.addEventListener("click", () => openDelete(entry));
-      actions.append(edit, toggle, remove);
-      card.append(actions);
-    }
-
-    return card;
   }
 
   function render() {

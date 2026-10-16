@@ -103,6 +103,22 @@ docs/                    ERD, API, architecture, OpenAPI
 data/                    ฐานข้อมูล local (ไม่เก็บใน Git)
 ```
 
+## เริ่มอ่านโค้ดจากตรงไหน
+
+| ต้องการแก้อะไร | เปิดไฟล์/โฟลเดอร์ |
+|---|---|
+| หน้าแนะนำระบบ | `src/pages/home.jsx` ประกอบ `src/components/home/` |
+| หน้าแดชบอร์ด | `src/pages/app/[[...path]].jsx` ประกอบ `src/components/dashboard/` |
+| หน้า API Console | `src/pages/docs.jsx` ประกอบ `src/components/api-console/` |
+| การแสดงผลและคลิกในแดชบอร์ด | `src/services/dashboardController.js` และตัวช่วยใน `src/services/dashboard/` |
+| การตั้งค่า LINE และตัวจำลองแชต | `src/services/dashboard/lineSettings.js` และ `lineSimulator.js` |
+| การจัดการ FAQ และคลังความรู้ | `src/services/knowledgeManager.js` ประกอบตัวช่วยใน `src/services/knowledge/` |
+| API ฝั่ง server | `src/lib/app.js` จับคู่ route จาก `src/lib/contracts.js` กับคำสั่งใน `src/services/api/` |
+
+แต่ละไฟล์ใน `src/components/` ดูแลหน้าตาและ markup ส่วน `src/services/dashboard/` ดูแลการเรียก API และเหตุการณ์จากปุ่ม/ฟอร์ม รหัส `id` ใน component ยังถูก controller ใช้เชื่อมกับ DOM จึงควรแก้ทั้งสองจุดพร้อมกันเมื่อเปลี่ยนชื่อ `id`
+
+เส้นทาง `/app/shops/:shopId/*` ใช้ไฟล์หน้า `src/pages/app/[[...path]].jsx` ร่วมกัน เพื่อให้การเปลี่ยนแท็บยังใช้แดชบอร์ดชุดเดิม ส่วนเนื้อหาของแต่ละแท็บแยกใน `src/components/dashboard/` แล้ว
+
 ## Configuration
 
 ค่าเริ่มต้นใช้งานได้ทันที ถ้าต้องการแก้ไขให้คัดลอก `.env.example` เป็น `.env` แล้วปรับค่า:
