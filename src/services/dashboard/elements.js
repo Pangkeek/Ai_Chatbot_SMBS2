@@ -1,0 +1,77 @@
+// รวม element ที่ controller ใช้ เพื่อหา id ได้จากที่เดียว
+export const elements = {
+  authView: document.querySelector("#auth-view"),
+  dashboardView: document.querySelector("#dashboard-view"),
+
+  // ส่วนที่ใช้สลับระหว่างหน้าหลักกับหน้าตั้งค่าธุรกิจ
+  dashboardHomeView: document.querySelector("#dashboard-home-view"),
+  businessSettingsView: document.querySelector("#business-settings-view"),
+  settingsBackButton: document.querySelector("#settings-back-button"),
+  businessSettingsForm: document.querySelector("#business-settings-form"),
+  settingsName: document.querySelector("#settings-name"),
+  settingsDescription: document.querySelector("#settings-description"),
+  settingsOpeningHours: document.querySelector("#settings-opening-hours"),
+  settingsPersona: document.querySelector("#settings-persona"),
+  settingsShopId: document.querySelector("#settings-shop-id"),
+  settingsEyebrow: document.querySelector("#settings-eyebrow"),
+  settingsTitle: document.querySelector("#settings-title"),
+  settingsDescriptionText: document.querySelector("#settings-description-text"),
+  settingsBusinessTab: document.querySelector("#settings-business-tab"),
+  settingsKnowledgeTab: document.querySelector("#settings-knowledge-tab"),
+  settingsLineTab: document.querySelector("#settings-line-tab"),
+  businessSettingsSection: document.querySelector("#business-settings-section"),
+  knowledgeManagementSection: document.querySelector("#knowledge-management-section"),
+
+  loginTab: document.querySelector("#login-tab"),
+  registerTab: document.querySelector("#register-tab"),
+  loginForm: document.querySelector("#login-form"),
+  registerForm: document.querySelector("#register-form"),
+  shopForm: document.querySelector("#shop-form"),
+  logoutButton: document.querySelector("#logout-button"),
+
+  notification: document.querySelector("#notification"),
+  notificationIcon: document.querySelector("#notification-icon"),
+  notificationTitle: document.querySelector("#notification-title"),
+  notificationMessage: document.querySelector("#notification-message"),
+
+  headerUserName: document.querySelector("#header-user-name"),
+  headerUserEmail: document.querySelector("#header-user-email"),
+  welcomeName: document.querySelector("#welcome-name"),
+  shopCount: document.querySelector("#shop-count"),
+
+  shopLoading: document.querySelector("#shop-loading"),
+  emptyShops: document.querySelector("#empty-shops"),
+  shopList: document.querySelector("#shop-list"),
+
+  shopDetail: document.querySelector("#shop-detail"),
+  selectedShopName: document.querySelector("#selected-shop-name"),
+  selectedShopDescription: document.querySelector("#selected-shop-description"),
+  selectedShopHours: document.querySelector("#selected-shop-hours"),
+
+  lineIntegrationSection: document.querySelector("#line-integration-section"),
+  lineStatusBadge: document.querySelector("#line-status-badge"),
+  lineWebhookUrl: document.querySelector("#line-webhook-url"),
+  copyWebhookBtn: document.querySelector("#copy-webhook-btn"),
+  lineSettingsForm: document.querySelector("#line-settings-form"),
+  lineChannelId: document.querySelector("#line-channel-id"),
+  lineChannelSecret: document.querySelector("#line-channel-secret"),
+  lineChannelToken: document.querySelector("#line-channel-token"),
+  saveLineBtn: document.querySelector("#save-line-btn"),
+  verifyLineBtn: document.querySelector("#verify-line-btn"),
+  lineVerificationDetail: document.querySelector("#line-verification-detail"),
+  lineSimUser: document.querySelector("#line-sim-user"),
+  lineSimText: document.querySelector("#line-sim-text"),
+  lineSimBtn: document.querySelector("#line-sim-btn"),
+  lineSimResult: document.querySelector("#line-sim-result"),
+  lineSimForm: document.querySelector("#line-sim-form"),
+  lineSimStatus: document.querySelector("#line-sim-status"),
+  lineSimClear: document.querySelector("#line-sim-clear"),
+  lineSimShopName: document.querySelector("#line-sim-shop-name"),
+};
+
+export const icons = {
+  alert: `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="size-5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8.25v4.5m0 3h.01M10.33 4.63 3.96 16.1a1.5 1.5 0 0 0 1.31 2.23h13.46a1.5 1.5 0 0 0 1.31-2.23L13.67 4.63a.96.96 0 0 0-1.68 0Z" /></svg>`,
+  check: `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="size-5"><path stroke-linecap="round" stroke-linejoin="round" d="m5.25 12.75 4.5 4.5 9-9" /></svg>`,
+  arrow: `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="size-5"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 12h13.5m-5.25-5.25L18.75 12l-5.25 5.25" /></svg>`,
+  store: `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="size-7"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 9.25h16.5l-1.25-4.5H5l-1.25 4.5Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 9.25v9.5h13.5v-9.5M9 18.75V14h6v4.75" /></svg>`,
+};
