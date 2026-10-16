@@ -118,6 +118,21 @@ test('shops can be created and updated with an atomic owner membership', async (
   assert.equal(listed.payload.meta.total, 2);
 });
 
+test('AI preview shows only this shop data, evidence and prompt', async () => {
+  const preview = await request('POST', '/api/v1/shops/shop-coffee/ai/preview',
+    { question: 'ร้านเปิดกี่โมงครับ' }, coffee);
+  assert.equal(preview.status, 200);
+  assert.equal(preview.payload.data.shop.name, 'บ้านกาแฟ');
+  assert.equal(typeof preview.payload.data.aiConfigured, 'boolean');
+  assert.ok(preview.payload.data.sources.length);
+  assert.ok(preview.payload.data.sources.every(source => source.chunkId.startsWith('shop-coffee')));
+  assert.ok(preview.payload.data.prompt.messages[0].content.includes('หลักฐาน'));
+  assert.equal((await request('POST', '/api/v1/shops/shop-flower/ai/preview',
+    { question: 'ร้านขายอะไร' }, coffee)).status, 404);
+  assert.equal((await request('POST', '/api/v1/shops/shop-coffee/ai/preview',
+    { question: '' }, coffee)).status, 422);
+});
+
 test('all tenant routes reject the other shop; resource IDs cannot be mixed between shops', async () => {
   const shopList = await request('GET', '/api/v1/shops', undefined, flower);
   assert.deepEqual(shopList.payload.data.map(shop => shop.id), ['shop-flower']);

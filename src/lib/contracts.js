@@ -177,6 +177,31 @@ export const schemas = {
     reply_method: { anyOf: [choice("faq", "generator", "extractive", "no_evidence"), { type: "null" }] },
     reply_source_ids: { type: "array", items: id },
   }),
+  AiPreviewRequest: object({ question: str(500) }),
+  AiPreview: object({
+    aiConfigured: { type: "boolean" },
+    shop: object({
+      name: str(120),
+      description: str(5000, 0),
+      opening_hours: str(1000, 0),
+      persona: str(5000, 0),
+    }),
+    sources: { type: "array", items: object({
+      chunkId: id,
+      knowledgeEntryId: id,
+      sourceType: choice("knowledge", "business"),
+      title: str(200),
+      content: str(1200),
+    }) },
+    prompt: object({
+      messages: { type: "array", items: object({ role: choice("system", "user"), content: str(20000) }) },
+      responseFormat: object({
+        text: str(100),
+        sourceChunkIds: { type: "array", items: id },
+        insufficient: { type: "boolean" },
+      }),
+    }),
+  }),
   Error: object({
     error: object({
       code: str(),
@@ -274,6 +299,14 @@ export const routes = [
     { body: schemas.ShopCreate, status: 201 }
   ),
   route("GET", base, "getShop", "Read a shop", data(schemas.Shop)),
+  route(
+    "POST",
+    `${base}/ai/preview`,
+    "previewAiContext",
+    "Preview the shop data, selected evidence and prompt used for an answer",
+    data(schemas.AiPreview),
+    { body: schemas.AiPreviewRequest }
+  ),
   route(
     "PATCH",
     base,

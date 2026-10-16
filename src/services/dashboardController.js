@@ -11,6 +11,7 @@ import { fillBusinessHours, readBusinessHours, setupBusinessHoursForm } from "./
 import { CHATBOT_PERSONA_STYLES, parseChatbotPersona, formatChatbotPersona } from "../utils/chatbotPersona.js";
 import { fillBusinessProfile, readBusinessProfile, setupBusinessProfileForm } from "./dashboard/businessProfileForm.js";
 import { summarizeBusinessProfile } from "../utils/businessProfile.js";
+import { createAiPreview } from "./dashboard/aiPreview.js";
 
 const TOKEN_KEY = "smb_access_token";
 
@@ -29,6 +30,11 @@ const { loadLineConfig } = createLineSettings({
   setButtonLoading,
 });
 const { resetSimulator } = createLineSimulator({
+  apiRequest,
+  getSelectedShopId: () => selectedShopId,
+  setButtonLoading,
+});
+const { reset: resetAiPreview } = createAiPreview({
   apiRequest,
   getSelectedShopId: () => selectedShopId,
   setButtonLoading,
@@ -112,7 +118,10 @@ function showBusinessSettingsView() {
 
 // เก็บรหัสร้านและนำข้อมูลเดิมมาแสดงในแบบฟอร์ม
 function fillBusinessSettingsForm(shop) {
-  if (selectedShopId !== shop.id) resetSimulator();
+  if (selectedShopId !== shop.id) {
+    resetSimulator();
+    resetAiPreview();
+  }
   selectedShopId = shop.id;
   selectedShopRole = shop.member_role;
   elements.lineSimShopName.textContent = shop.name;
@@ -149,6 +158,7 @@ function saveSession(authData) {
 
 function clearSession() {
   resetSimulator();
+  resetAiPreview();
   knowledgeManager.reset();
   openShopVersion++;
   accessToken = "";
@@ -353,6 +363,7 @@ elements.businessSettingsForm.addEventListener("submit", async (event) => {
     );
 
     // ใช้ข้อมูลที่ server ตอบกลับเป็นค่าจริงหลังบันทึก
+    resetAiPreview();
     fillBusinessSettingsForm(shop);
 
     // โหลดรายการใหม่เพื่อให้ชื่อและรายละเอียดบนการ์ดเป็นปัจจุบัน

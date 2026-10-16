@@ -90,13 +90,13 @@ export function createLineSimulator({ apiRequest, getSelectedShopId, setButtonLo
         const methodLabels = {
           faq: "FAQ ตรงคำถาม",
           generator: "AI เลือกคำตอบจากข้อมูลที่ค้นได้",
-          extractive: "ค้นข้อมูลแล้วคัดข้อความหลักฐาน (ยังไม่ได้ต่อ AI)",
+          extractive: "คัดคำตอบจากข้อมูลร้านหรือคลังความรู้",
           no_evidence: "ไม่พบหลักฐานเพียงพอ",
         };
         const sourceIds = Array.isArray(result.reply_source_ids) ? result.reply_source_ids : [];
         appendSimulatorMessage("system", [
           `วิธีตอบ: ${methodLabels[result.reply_method] || "ไม่ระบุ"}`,
-          `แหล่งความรู้: ${sourceIds.length ? sourceIds.join(", ") : "ไม่มี"}`,
+          `แหล่งข้อมูล: ${sourceIds.length ? sourceIds.map(id => id.endsWith(":business-profile") ? "ข้อมูลธุรกิจ" : id).join(", ") : "ไม่มี"}`,
         ].join("\n"));
         elements.lineSimStatus.textContent = "ตอบกลับสำเร็จ";
       } else {

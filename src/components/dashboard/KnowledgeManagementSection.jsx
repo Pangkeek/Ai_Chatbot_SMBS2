@@ -1,3 +1,5 @@
+import AiContextPreview from "./AiContextPreview.jsx";
+
 export default function KnowledgeManagementSection() {
   return (
     <section
@@ -120,6 +122,8 @@ export default function KnowledgeManagementSection() {
                 <h3 id="knowledge-empty-title" className="mt-4 text-lg font-bold text-slate-900">ยังไม่มีข้อมูลความรู้</h3>
                 <p id="knowledge-empty-message" className="mt-2 text-sm leading-6 text-slate-500">เพิ่มข้อมูลแรกเพื่อให้ Chatbot เริ่มตอบจากข้อมูลของร้าน</p>
               </div>
+
+              <AiContextPreview />
 
               <div id="knowledge-list" className="grid gap-4"></div>
 
