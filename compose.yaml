@@ -1,0 +1,22 @@
+services:
+  app:
+    build: .
+    ports:
+      - "127.0.0.1:${PORT:-3000}:3000"
+    environment:
+      DATABASE_PATH: /app/data/chatbot.sqlite
+      RAG_GENERATOR_URL: ${RAG_GENERATOR_URL:-}
+      RAG_GENERATOR_TOKEN: ${RAG_GENERATOR_TOKEN:-}
+    volumes:
+      # เก็บ SQLite ไว้แม้ container ถูกสร้างใหม่
+      - chatbot_data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+
+volumes:
+  chatbot_data:

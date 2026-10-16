@@ -17,6 +17,24 @@ npm run dev
 
 เปิด **http://127.0.0.1:3000/** เพื่อเข้าสู่หน้าแนะนำ `/home` ก่อนล็อกอิน จากนั้นกด **เข้าสู่ระบบ** หรือ **จัดการร้านค้า** เพื่อไป `/app` กด **สมัครสมาชิก** เพื่อเปิดแบบฟอร์มสร้างบัญชีโดยตรง ส่วน **http://127.0.0.1:3000/docs** ใช้ API Console และ **http://127.0.0.1:3000/health** ใช้ตรวจการเชื่อมต่อฐานข้อมูล หยุด server ด้วย `Ctrl+C`
 
+## รันด้วย Docker Compose
+
+ติดตั้งและเปิด Docker Desktop ก่อน แล้วรันคำสั่งเดียวจากโฟลเดอร์โปรเจค:
+
+```powershell
+docker compose up --build -d
+```
+
+เปิด `http://localhost:3000` เพื่อใช้งาน ระบบ build แอปและรัน migration ให้อัตโนมัติเมื่อเริ่ม container ข้อมูล SQLite อยู่ใน Docker volume `chatbot_data` จึงยังอยู่เมื่อสั่ง `docker compose down` หากพอร์ต 3000 ถูกใช้งาน ให้กำหนด `PORT` ในไฟล์ `.env` แล้วเปิด URL ตามพอร์ตนั้น
+
+```powershell
+docker compose ps       # ดูสถานะ
+docker compose logs -f  # ดู log
+docker compose down     # หยุดระบบโดยไม่ลบฐานข้อมูล
+```
+
+Compose ใช้ `NODE_ENV=production` จึงไม่เติมบัญชี demo อัตโนมัติ ให้สมัครบัญชีใหม่ผ่านหน้าเว็บได้ทันที ถ้าต้องการข้อมูล demo สำหรับทดลองในเครื่อง ให้รัน `docker compose run --rm -e NODE_ENV=development app npm run db:seed` หลังจากระบบเริ่มแล้ว อย่าใช้บัญชี demo นี้กับระบบที่เปิดให้คนอื่นเข้าถึง
+
 เส้นทางหน้าเว็บของแดชบอร์ด:
 
 | URL | หน้า |

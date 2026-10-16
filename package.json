@@ -9,7 +9,7 @@
     "node": ">=24.19.0 <25"
   },
   "scripts": {
-    "start": "next start --hostname 127.0.0.1",
+    "start": "next start --hostname 0.0.0.0",
     "dev": "next dev --hostname 127.0.0.1",
     "build": "next build --webpack",
     "db:migrate": "node --env-file-if-exists=.env scripts/migrate.js",
