@@ -39,7 +39,7 @@ export default function CreateShopForm() {
 
                   <button
                     type="submit"
-                    className="w-full rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 disabled:opacity-60"
+                    className="app-primary-button w-full rounded-xl px-5 py-3 text-sm font-semibold"
                   >
                     สร้างร้านค้า
                   </button>

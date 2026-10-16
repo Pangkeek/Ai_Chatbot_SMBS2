@@ -21,13 +21,13 @@ function element(tag, className, text) {
 export function createKnowledgeCard(entry, { isOwner, openForm, toggleStatus, openDelete }) {
   const card = element(
     "article",
-    "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-violet-200 hover:shadow-md"
+    "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-blue-200 hover:shadow-md"
   );
   const header = element("div", "flex flex-wrap items-start justify-between gap-3");
   const badges = element("div", "flex flex-wrap gap-2");
   const kind = element(
     "span",
-    "rounded-full bg-violet-50 px-3 py-1 text-xs font-semibold text-violet-700",
+    "rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700",
     kindLabels[entry.kind]
   );
   const published = entry.status === "published";

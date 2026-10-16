@@ -92,7 +92,7 @@ export default function BusinessDetailsSection() {
 
                   <button
                     type="submit"
-                    className="rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 disabled:opacity-60"
+                    className="app-primary-button rounded-xl px-6 py-3 text-sm font-semibold"
                   >
                     บันทึกการตั้งค่า
                   </button>

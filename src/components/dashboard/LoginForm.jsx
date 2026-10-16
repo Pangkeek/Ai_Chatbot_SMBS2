@@ -43,22 +43,11 @@ export default function LoginForm() {
 
               <button
                 type="submit"
-                className="w-full rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 px-5 py-3.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:-translate-y-0.5 hover:shadow-xl disabled:translate-y-0 disabled:opacity-60"
+                className="app-primary-button w-full rounded-xl px-5 py-3.5 text-sm font-semibold"
               >
                 เข้าสู่ระบบ
               </button>
 
-              <div className="rounded-xl border border-blue-100 bg-blue-50 p-4">
-                <p className="text-xs font-semibold text-blue-800">
-                  บัญชีทดลอง
-                </p>
-
-                <p className="mt-1 text-xs leading-5 text-blue-700">
-                  coffee@example.test
-                  <br />
-                  DemoPass!2026
-                </p>
-              </div>
             </form>
   );
 }

@@ -121,7 +121,7 @@ export default function LineIntegrationSection() {
                     <button
                       id="save-line-btn"
                       type="submit"
-                      className="rounded-xl bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 disabled:opacity-60"
+                      className="app-primary-button rounded-xl px-6 py-2.5 text-sm font-semibold"
                     >
                       บันทึกการเชื่อมต่อ LINE
                     </button>

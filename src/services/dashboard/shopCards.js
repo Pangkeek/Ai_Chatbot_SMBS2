@@ -8,9 +8,8 @@ function createShopCard(shop) {
 
   card.type = "button";
   card.className = [
-    "group rounded-3xl border border-slate-200 bg-white p-5 text-left",
-    "shadow-sm transition hover:-translate-y-1 hover:border-blue-200",
-    "hover:shadow-xl hover:shadow-blue-900/5",
+    "app-shop-card group rounded-3xl border bg-white p-5 text-left",
+    "transition hover:-translate-y-1",
   ].join(" ");
 
   const top = document.createElement("div");
@@ -19,14 +18,14 @@ function createShopCard(shop) {
   const icon = document.createElement("div");
   icon.className = [
     "flex size-12 items-center justify-center rounded-2xl",
-    "bg-gradient-to-br from-blue-100 to-cyan-100 text-2xl",
+    "bg-[#e1f8f4] text-2xl text-[#3855b8]",
   ].join(" ");
   icon.innerHTML = icons.store;
 
   const arrow = document.createElement("span");
   arrow.className = [
-    "text-lg text-slate-300 transition",
-    "group-hover:translate-x-1 group-hover:text-blue-600",
+    "text-lg text-[#93a8d7] transition",
+    "group-hover:translate-x-1 group-hover:text-[#3855b8]",
   ].join(" ");
   arrow.innerHTML = icons.arrow;
 
@@ -47,7 +46,7 @@ function createShopCard(shop) {
 
   const role = document.createElement("span");
   role.className =
-    "rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700";
+    "rounded-full bg-[#eef3ff] px-3 py-1 text-xs font-semibold text-[#3855b8]";
   role.textContent = shop.member_role === "owner" ? "เจ้าของร้าน" : "เจ้าหน้าที่";
 
   const action = document.createElement("span");

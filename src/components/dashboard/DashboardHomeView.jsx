@@ -5,10 +5,12 @@ export default function DashboardHomeView() {
           id="dashboard-home-view"
           className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8"
         >
-          <section className="overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-blue-950 to-blue-800 p-6 text-white shadow-xl sm:p-8">
-            <div className="flex flex-col justify-between gap-6 md:flex-row md:items-center">
+          <section className="app-dashboard-hero relative overflow-hidden rounded-[30px] p-6 text-white sm:p-8">
+            <div aria-hidden="true" className="pointer-events-none absolute -right-12 -top-16 size-52 rounded-full border-[34px] border-white/10" />
+            <div aria-hidden="true" className="pointer-events-none absolute -bottom-28 left-1/3 size-64 rounded-full bg-[#a4f0e4]/10 blur-2xl" />
+            <div className="relative flex flex-col justify-between gap-6 md:flex-row md:items-center">
               <div>
-                <p className="text-sm font-medium text-blue-200">ภาพรวมบัญชี</p>
+                <p className="text-sm font-medium text-blue-100">ภาพรวมบัญชี</p>
 
                 <h1 className="mt-2 text-3xl font-bold">
                   <span className="inline-flex items-center gap-2">
@@ -19,7 +21,7 @@ export default function DashboardHomeView() {
                       fill="none"
                       stroke="currentColor"
                       strokeWidth="1.8"
-                      className="size-6 text-cyan-200"
+                      className="size-6 text-[#a4f0e4]"
                     >
                       <path
                         strokeLinecap="round"
@@ -30,13 +32,13 @@ export default function DashboardHomeView() {
                   </span>
                 </h1>
 
-                <p className="mt-3 max-w-xl text-sm leading-6 text-slate-300">
+                <p className="mt-3 max-w-xl text-sm leading-6 text-blue-50">
                   เลือกร้านที่ต้องการจัดการ หรือสร้างร้านใหม่เพื่อเริ่มต้นใช้งาน
                 </p>
               </div>
 
               <div className="rounded-2xl bg-white/10 px-6 py-4 backdrop-blur">
-                <p className="text-xs text-blue-200">ร้านที่ดูแล</p>
+                <p className="text-xs text-blue-100">ร้านที่ดูแล</p>
 
                 <p className="mt-1 text-3xl font-bold">
                   <span id="shop-count">0</span>

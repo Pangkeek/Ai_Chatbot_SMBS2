@@ -28,3 +28,96 @@ html, body, button, input, select, textarea, pre, code {
     linear-gradient(90deg, rgba(57, 92, 139, 0.055) 1px, transparent 1px);
   background-size: 24px 24px;
 }
+
+/* สีของหน้า /app ใช้ชุดเดียวกับหน้าแนะนำ แต่แยก scope เพื่อไม่เปลี่ยนหน้าอื่น */
+.app-page {
+  --app-blue: #4564c9;
+  --app-blue-dark: #3855b8;
+  --app-mint: #a4f0e4;
+  --app-ink: #18345c;
+  min-height: 100vh;
+  color: var(--app-ink);
+}
+
+.app-auth-shell {
+  background-color: var(--app-blue);
+  background-image:
+    radial-gradient(circle at 95% 18%, rgba(141, 187, 255, .27), transparent 25%),
+    radial-gradient(circle at 6% 95%, rgba(164, 240, 228, .14), transparent 24%);
+}
+
+.app-auth-card {
+  box-shadow: 0 30px 65px -22px rgba(15, 32, 88, .38);
+}
+
+.app-dashboard-header,
+.app-dashboard-hero {
+  background-color: var(--app-blue);
+}
+
+.app-dashboard-hero {
+  box-shadow: 0 24px 45px -25px rgba(56, 85, 184, .65);
+}
+
+.app-graph-paper {
+  background-color: #f8fbff;
+  background-image:
+    linear-gradient(rgba(57, 92, 139, .045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(57, 92, 139, .045) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.app-auth-tab,
+.app-settings-tab {
+  border-radius: .75rem;
+  padding: .65rem 1rem;
+  font-size: .875rem;
+  font-weight: 600;
+  transition: background-color .2s, color .2s, box-shadow .2s;
+}
+
+.app-auth-tab { color: #64748b; }
+.app-auth-tab:hover { color: var(--app-blue-dark); }
+.app-auth-tab--active {
+  background: white;
+  color: var(--app-blue-dark);
+  box-shadow: 0 3px 10px rgba(56, 85, 184, .12);
+}
+.app-auth-tab:focus-visible,
+.app-settings-tab:focus-visible,
+.app-primary-button:focus-visible,
+.app-shop-card:focus-visible {
+  outline: 3px solid var(--app-mint);
+  outline-offset: 3px;
+}
+
+.app-settings-tab { flex-shrink: 0; color: #526687; }
+.app-settings-tab:hover { background: #eef3ff; }
+.app-settings-tab--active,
+.app-settings-tab--active:hover {
+  background: var(--app-blue);
+  color: white;
+  box-shadow: 0 5px 12px rgba(56, 85, 184, .2);
+}
+
+.app-primary-button {
+  background: var(--app-blue);
+  color: white;
+  box-shadow: 0 10px 20px -10px rgba(56, 85, 184, .8);
+  transition: background-color .2s, transform .2s, box-shadow .2s;
+}
+.app-primary-button:hover:not(:disabled) {
+  background: var(--app-blue-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 14px 24px -12px rgba(56, 85, 184, .75);
+}
+.app-primary-button:disabled { opacity: .6; }
+
+.app-shop-card {
+  border-color: #dbe5fb;
+  box-shadow: 0 8px 24px -16px rgba(33, 64, 134, .35);
+}
+.app-shop-card:hover {
+  border-color: var(--app-blue);
+  box-shadow: 0 18px 32px -18px rgba(33, 64, 134, .35);
+}

@@ -83,9 +83,9 @@ function activateSettingsTab(name) {
     const selected = item === active;
     item.section.classList.toggle("hidden", !selected);
     item.tab.setAttribute("aria-selected", String(selected));
-    item.tab.className = (selected
-      ? "shrink-0 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm"
-      : "shrink-0 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-100");
+    item.tab.className = selected
+      ? "app-settings-tab app-settings-tab--active"
+      : "app-settings-tab";
     item.tab.hidden = item === settingsContent.line && selectedShopRole !== "owner";
   }
   elements.settingsEyebrow.textContent = active.eyebrow;
@@ -171,12 +171,12 @@ function switchAuthTab(tab) {
   elements.registerForm.classList.toggle("hidden", loginSelected);
 
   elements.loginTab.className = loginSelected
-    ? "rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-blue-700 shadow-sm transition"
-    : "rounded-lg px-4 py-2.5 text-sm font-semibold text-slate-500 transition hover:text-slate-900";
+    ? "app-auth-tab app-auth-tab--active"
+    : "app-auth-tab";
 
   elements.registerTab.className = !loginSelected
-    ? "rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-blue-700 shadow-sm transition"
-    : "rounded-lg px-4 py-2.5 text-sm font-semibold text-slate-500 transition hover:text-slate-900";
+    ? "app-auth-tab app-auth-tab--active"
+    : "app-auth-tab";
 }
 
 async function openShop(shopId, tab = "business") {

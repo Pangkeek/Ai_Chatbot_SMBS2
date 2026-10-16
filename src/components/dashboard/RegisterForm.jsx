@@ -67,7 +67,7 @@ export default function RegisterForm() {
 
               <button
                 type="submit"
-                className="w-full rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 px-5 py-3.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:-translate-y-0.5 hover:shadow-xl disabled:translate-y-0 disabled:opacity-60"
+                className="app-primary-button w-full rounded-xl px-5 py-3.5 text-sm font-semibold"
               >
                 สร้างบัญชี
               </button>

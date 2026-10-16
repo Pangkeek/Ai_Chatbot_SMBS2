@@ -10,7 +10,7 @@ export default function Dashboard() {
   useDashboardController();
 
   return (
-    <>
+    <div className="app-page">
       <Notification />
 
       <AuthView />
@@ -20,6 +20,6 @@ export default function Dashboard() {
       <KnowledgeEditorModal />
 
       <KnowledgeDeleteModal />
-    </>
+    </div>
   );
 }

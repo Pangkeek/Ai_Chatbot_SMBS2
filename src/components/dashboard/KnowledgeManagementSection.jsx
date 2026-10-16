@@ -8,7 +8,7 @@ export default function KnowledgeManagementSection() {
               <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div>
-                    <p className="text-xs font-bold tracking-[0.16em] text-violet-600 uppercase">
+                    <p className="text-xs font-bold tracking-[0.16em] text-blue-600 uppercase">
                       Knowledge Base
                     </p>
                     <h2 id="knowledge-section-title" className="mt-2 text-2xl font-bold text-slate-900">
@@ -21,7 +21,7 @@ export default function KnowledgeManagementSection() {
                   <button
                     id="knowledge-add-button"
                     type="button"
-                    className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-violet-600/20 transition hover:bg-violet-700 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-violet-300 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="app-primary-button inline-flex shrink-0 items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-blue-300 disabled:cursor-not-allowed"
                   >
                     <span aria-hidden="true">＋</span>
                     เพิ่มข้อมูลความรู้
@@ -37,7 +37,7 @@ export default function KnowledgeManagementSection() {
                 </div>
 
                 <dl className="mt-6 grid gap-3 sm:grid-cols-3">
-                  <div className="rounded-2xl bg-slate-900 p-4 text-white">
+                  <div className="rounded-2xl bg-[#4564c9] p-4 text-white">
                     <dt className="text-xs text-slate-300">ทั้งหมด</dt>
                     <dd id="knowledge-total-count" className="mt-1 text-2xl font-bold">0</dd>
                   </div>
@@ -59,14 +59,14 @@ export default function KnowledgeManagementSection() {
                       type="search"
                       placeholder="ค้นหาหัวข้อหรือเนื้อหา…"
                       autoComplete="off"
-                      className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-violet-500 focus:ring-4 focus:ring-violet-100"
+                      className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                     />
                   </div>
                   <div>
                     <label htmlFor="knowledge-kind-filter" className="sr-only">กรองตามประเภท</label>
                     <select
                       id="knowledge-kind-filter"
-                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-violet-500 focus:ring-4 focus:ring-violet-100"
+                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                     >
                       <option value="all">ทุกประเภท</option>
                       <option value="faq">คำถามที่พบบ่อย</option>
@@ -79,7 +79,7 @@ export default function KnowledgeManagementSection() {
                     <label htmlFor="knowledge-status-filter" className="sr-only">กรองตามสถานะ</label>
                     <select
                       id="knowledge-status-filter"
-                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-violet-500 focus:ring-4 focus:ring-violet-100"
+                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                     >
                       <option value="all">ทุกสถานะ</option>
                       <option value="published">เผยแพร่แล้ว</option>
@@ -116,7 +116,7 @@ export default function KnowledgeManagementSection() {
                 id="knowledge-empty"
                 className="hidden rounded-3xl border-2 border-dashed border-slate-200 bg-white px-6 py-12 text-center"
               >
-                <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-violet-50 text-2xl text-violet-600" aria-hidden="true">?</div>
+                <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-blue-50 text-2xl text-blue-600" aria-hidden="true">?</div>
                 <h3 id="knowledge-empty-title" className="mt-4 text-lg font-bold text-slate-900">ยังไม่มีข้อมูลความรู้</h3>
                 <p id="knowledge-empty-message" className="mt-2 text-sm leading-6 text-slate-500">เพิ่มข้อมูลแรกเพื่อให้ Chatbot เริ่มตอบจากข้อมูลของร้าน</p>
               </div>
