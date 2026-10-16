@@ -1,5 +1,6 @@
 import BusinessHoursField from "./BusinessHoursField.jsx";
 import ChatbotPersonaField from "./ChatbotPersonaField.jsx";
+import BusinessProfileFields from "./BusinessProfileFields.jsx";
 
 export default function BusinessDetailsSection() {
   return (
@@ -24,28 +25,7 @@ export default function BusinessDetailsSection() {
                   />
                 </div>
 
-                <div>
-                  <label
-                    htmlFor="settings-description"
-                    className="mb-2 block text-sm font-semibold text-slate-700"
-                  >
-                    รายละเอียดธุรกิจ
-                  </label>
-
-                  <textarea
-                    id="settings-description"
-                    name="description"
-                    rows="5"
-                    maxLength="5000"
-                    placeholder="อธิบายว่าร้านขายสินค้าหรือให้บริการอะไร"
-                    className="w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-sm leading-6 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                  ></textarea>
-
-                  <p className="mt-2 text-xs text-slate-400">
-                    ตัวอย่าง: ร้านกาแฟและเบเกอรี
-                    มีบริการนั่งที่ร้านและซื้อกลับบ้าน
-                  </p>
-                </div>
+                <BusinessProfileFields />
 
                 <BusinessHoursField />
 

@@ -1,6 +1,7 @@
 import Router from 'next/router';
 import { shopRoute } from '../../utils/dashboardRoutes.js';
 import { elements, icons } from './elements.js';
+import { summarizeBusinessProfile } from '../../utils/businessProfile.js';
 
 // สร้างการ์ดร้านทีละใบ โดยใช้ textContent กับข้อมูลที่มาจาก API
 function createShopCard(shop) {
@@ -38,7 +39,7 @@ function createShopCard(shop) {
   const description = document.createElement("p");
   description.className =
     "mt-2 line-clamp-2 min-h-10 text-sm leading-5 text-slate-500";
-  description.textContent = shop.description || "ยังไม่ได้เพิ่มรายละเอียดร้าน";
+  description.textContent = summarizeBusinessProfile(shop.description);
 
   const footer = document.createElement("div");
   footer.className =

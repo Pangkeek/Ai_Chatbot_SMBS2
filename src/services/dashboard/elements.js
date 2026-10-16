@@ -9,7 +9,6 @@ export const elements = {
   settingsBackButton: document.querySelector("#settings-back-button"),
   businessSettingsForm: document.querySelector("#business-settings-form"),
   settingsName: document.querySelector("#settings-name"),
-  settingsDescription: document.querySelector("#settings-description"),
   settingsPersonaStyle: document.querySelector("#settings-persona-style"),
   settingsPersonaDetails: document.querySelector("#settings-persona-details"),
   settingsPersonaHint: document.querySelector("#settings-persona-hint"),

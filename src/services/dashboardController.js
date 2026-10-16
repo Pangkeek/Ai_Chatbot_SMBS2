@@ -9,6 +9,8 @@ import { createLineSimulator } from './dashboard/lineSimulator.js';
 import { parseDashboardRoute, shopRoute } from "../utils/dashboardRoutes.js";
 import { fillBusinessHours, readBusinessHours, setupBusinessHoursForm } from "./dashboard/businessHoursForm.js";
 import { CHATBOT_PERSONA_STYLES, parseChatbotPersona, formatChatbotPersona } from "../utils/chatbotPersona.js";
+import { fillBusinessProfile, readBusinessProfile, setupBusinessProfileForm } from "./dashboard/businessProfileForm.js";
+import { summarizeBusinessProfile } from "../utils/businessProfile.js";
 
 const TOKEN_KEY = "smb_access_token";
 
@@ -115,7 +117,7 @@ function fillBusinessSettingsForm(shop) {
   selectedShopRole = shop.member_role;
   elements.lineSimShopName.textContent = shop.name;
   elements.settingsName.value = shop.name;
-  elements.settingsDescription.value = shop.description || "";
+  fillBusinessProfile(elements.businessSettingsForm, shop.description);
   fillBusinessHours(elements.businessSettingsForm, shop.opening_hours);
   const persona = parseChatbotPersona(shop.persona);
   elements.settingsPersonaStyle.value = persona.style;
@@ -135,7 +137,7 @@ function fillBusinessSettingsForm(shop) {
   // อัปเดตข้อมูลส่วนสรุปเดิมให้ตรงกับค่าล่าสุดด้วย
   elements.selectedShopName.textContent = shop.name;
   elements.selectedShopDescription.textContent =
-    shop.description || "ยังไม่ได้เพิ่มรายละเอียดร้าน";
+    summarizeBusinessProfile(shop.description);
   elements.selectedShopHours.textContent =
     shop.opening_hours || "ยังไม่ได้กำหนดเวลาเปิดให้บริการ";
 }
@@ -172,6 +174,7 @@ const knowledgeManager = createKnowledgeManager({
 });
 
 setupBusinessHoursForm(elements.businessSettingsForm);
+setupBusinessProfileForm(elements.businessSettingsForm);
 
 function updatePersonaHint() {
   const selected = CHATBOT_PERSONA_STYLES.find(([style]) => style === elements.settingsPersonaStyle.value);
@@ -339,7 +342,7 @@ elements.businessSettingsForm.addEventListener("submit", async (event) => {
         method: "PATCH",
         body: {
           name: readField("name"),
-          description: readField("description"),
+          description: readBusinessProfile(formElement),
           opening_hours: openingHours,
           // ถ้ายังไม่ได้แก้บุคลิก ให้คงข้อความเก่าไว้เมื่อบันทึกข้อมูลส่วนอื่น
           persona: formElement.dataset.personaChanged === "true" || !formElement.dataset.originalPersona
