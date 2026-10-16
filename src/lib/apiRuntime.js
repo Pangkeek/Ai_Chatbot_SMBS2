@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { rejectMaintenanceRequest } from './maintenance.js';
 import { createRequestHandler } from './app.js';
 import { getRuntimeDatabase, closeRuntimeDatabase } from './db.js';
 import { wakeLineRuntime, shutdownLineRuntime } from './lineRuntime.js';
@@ -7,6 +8,7 @@ const key = Symbol.for('smb.api.runtime.postgresql.v1');
 const state = globalThis[key] ??= { pending: null };
 
 export async function handleApiRequest(req, res) {
+  if (rejectMaintenanceRequest(req, res)) return;
   let handler;
   try {
     state.pending ??= getRuntimeDatabase().then(db => createRequestHandler(db, { worker: {

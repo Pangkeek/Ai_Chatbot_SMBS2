@@ -1,5 +1,6 @@
 import { getRuntimeDatabase, closeRuntimeDatabase } from './db.js';
 import { createLineWorker } from '../services/worker.js';
+import { maintenanceEnabled } from './maintenance.js';
 
 const key = Symbol.for('smb.line.runtime.v1');
 const state = globalThis[key] ??= { worker: null, pending: null, timer: null, stopping: false, registered: false };
@@ -19,7 +20,7 @@ export function registerLineRuntime() {
       shutdownLineRuntime().finally(() => { clearTimeout(deadline); process.exit(code); });
     });
   }
-  if (process.env.LINE_WORKER_ENABLED !== 'true') return;
+  if (maintenanceEnabled() || process.env.LINE_WORKER_ENABLED !== 'true') return;
   // Retry startup without needing incoming traffic, including when DB is briefly down.
   const initialize = async () => {
     if (state.stopping || state.pending || state.worker) return;

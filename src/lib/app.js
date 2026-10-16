@@ -5,6 +5,7 @@ import { tokenHash } from "./auth.js";
 import { ApiError, validate } from "../utils/validation.js";
 import { createService } from "../services/service.js";
 import { serializeDates } from './postgresql-schema.js';
+import { rejectMaintenanceRequest } from './maintenance.js';
 
 const bodyLimit = 128 * 1024;
 const compiled = routes.map((route) => ({
@@ -93,6 +94,7 @@ export function createRequestHandler(
   const service = createService(db, { worker, ...serviceOptions });
   const authAttempts = new Map();
   const handler = async (req, res) => {
+    if (rejectMaintenanceRequest(req, res)) return;
     const requestId = randomUUID();
     res.setHeader("X-Request-Id", requestId);
     res.setHeader("X-Content-Type-Options", "nosniff");

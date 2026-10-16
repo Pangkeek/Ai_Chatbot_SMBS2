@@ -69,6 +69,7 @@ npm exec --yes --package=npm@11.19.0 -- npm run check:toolchain && npm exec --ye
 | DB_CONNECT_TIMEOUT_MS | 5000 |
 | DB_QUERY_TIMEOUT_MS | 10000 |
 | LINE_WORKER_ENABLED | false จนกว่าจะพร้อมทดสอบ channel แยก |
+| APP_MAINTENANCE_MODE | false ระหว่าง smoke test; true ระหว่าง cutover ตาม production-cutover.md |
 
 ปล่อย PORT ให้ Render กำหนด Start launcher เรียก Next CLI ใน process เดียว ใช้ 0.0.0.0 และอ่าน PORT จาก environment ไม่คัดลอก PORT=3000 จาก .env.example ไม่มี SQLite path/TEST_DATABASE_URL ใน Render runtime และไม่ตั้ง DATABASE_URL/credentials เป็น NEXT_PUBLIC_* Build wrapper บังคับ consumer=false เฉพาะ child build; pre-deploy ไม่เริ่ม consumer
 

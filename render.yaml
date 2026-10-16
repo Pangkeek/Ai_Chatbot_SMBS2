@@ -38,6 +38,8 @@ services:
       # Enable only after data verification; staging LINE tests need an isolated channel.
       - key: LINE_WORKER_ENABLED
         value: 'false'
+      - key: APP_MAINTENANCE_MODE
+        value: 'false'
 databases:
   - name: smb-chatbot-db
     databaseName: smb_chatbot
