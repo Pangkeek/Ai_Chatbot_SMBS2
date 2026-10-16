@@ -139,7 +139,8 @@ test('LINE worker creates conversation, persists messages, and handles reply', a
   assert.equal(msgs[0].role, 'customer');
   assert.equal(msgs[0].content, 'เปิดกี่โมงครับ');
   assert.equal(msgs[1].role, 'assistant');
-  assert.match(msgs[1].content, /เปิดกี่โมงครับ/);
+  assert.match(msgs[1].content, /08:00-18:00/);
+  assert.deepEqual(result.sourceKnowledgeIds, ['shop-coffee-kb-1']);
 
   // 2. Second message from same user reuses the same conversation
   const result2 = await worker.handleMessageEvent({

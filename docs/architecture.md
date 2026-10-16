@@ -10,27 +10,27 @@ flowchart LR
     Dashboard[Dashboard ระยะถัดไป] -.-> API
     API --> Auth[Session และ shop membership]
     Auth --> Service[Service และกฎบทสนทนา]
-    Service --> DB[(SQLite พร้อม migrations)]
-    LINE[LINE webhook ระยะถัดไป] -.-> Queue[Queue และ event deduplication]
-    Queue -.-> Worker[Chat worker]
-    Worker -.-> KB[Tenant-scoped retrieval]
-    KB -.-> DB
-    Worker -.-> Gateway[Gemini / OpenAI gateway]
-    Worker -.-> Delivery[LINE delivery]
+    Service --> DB[(PostgreSQL 18 พร้อม migrations)]
+    LINE[LINE webhook] --> Queue[PostgreSQL durable jobs และ event deduplication]
+    Queue --> Worker[Chat worker]
+    Worker --> KB[Tenant-scoped retrieval]
+    KB --> DB
+    Worker -.-> Gateway[AI generator endpoint / Gemini / OpenAI]
+    Worker --> Delivery[LINE delivery]
 ```
 
-เส้นทึบคือส่วนที่ทำงานใน repository นี้ เส้นประคือจุดออกแบบสำหรับพัฒนาต่อ
+เส้นทึบคือส่วนที่ทำงานใน repository นี้ เส้นประคือจุดเชื่อม AI ที่เป็นทางเลือกและ provider เฉพาะที่ยังต้องพัฒนาต่อ
 
 ## การตัดสินใจทางเทคนิค
 
 | เรื่อง | การเลือกและเหตุผล | ข้อจำกัด/แผนต่อยอด |
 |---|---|---|
-| Runtime | Node.js 24.19.x แบบ ESM, Next.js Pages Router และ API Routes พร้อม SQLite/test จาก Node.js | schema validator รองรับเฉพาะ subset ที่ใช้ใน contract นี้ |
-| Database | SQLite แบบ WAL, STRICT tables, foreign_keys เปิดทุก connection | เหมาะกับทีมเริ่มต้นและหนึ่ง server process; ยังไม่ใช่ shared database หลาย instance |
+| Runtime | Node.js 24.19.x แบบ ESM, Next.js Pages Router และ API Routes พร้อม pg; SQLite ใช้เฉพาะ backup/import tooling | schema validator รองรับเฉพาะ subset ที่ใช้ใน contract นี้ |
+| Database | PostgreSQL 18, async queries, transactions และ composite foreign keys | แยก test schemas; migrations และ knowledge indexing เป็นขั้นตอน explicit ก่อน start |
 | API | REST JSON, `/api/v1`, OpenAPI 3.1 จาก route registry | เพิ่ม contract ก่อนให้ frontend ใช้ endpoint ใหม่ |
-| Tenant boundary | membership check + shop-scoped query + composite foreign key | SQLite ไม่มี RLS; ต้องตรวจ scope ในทุก service ใหม่ |
+| Tenant boundary | membership check + shop-scoped query + composite foreign key | ยังไม่ได้เปิด PostgreSQL RLS; ต้องตรวจ scope ในทุก service ใหม่ |
 | Authentication | salted scrypt; opaque bearer token; เก็บเฉพาะ token hash | ยังไม่มี email verification, reset password, MFA และ refresh session |
-| Test | integration ผ่าน HTTP จริงและฐานข้อมูลแยกจากข้อมูลพัฒนา | มี CI config พร้อมใช้ แต่ต้องนำขึ้น remote จึงจะรัน CI บนบริการได้ |
+| Test | integration ผ่าน HTTP จริงและฐานข้อมูลแยกจากข้อมูลพัฒนา | CI ตรวจ runtime, import, migrations, build, LINE lifecycle, production smoke และ Docker Compose |
 
 เปิด localhost เป็นค่าเริ่มต้นและไม่มี CORS สำหรับ origin อื่น Next.js, API Console และ API ทำงานจากเซิร์ฟเวอร์และ origin เดียวกัน
 
@@ -61,7 +61,13 @@ Gemini เป็น provider หลักและ OpenAI เป็นสำร�
 
 เมื่อทีมต้องใช้ฐานข้อมูลร่วมกันหรือเพิ่ม vector search ให้ย้าย persistence ไป PostgreSQL โดยคง API contract เดิม แปลงเวลาเป็น `timestamptz`, เลือก UUID/opaque ID ให้สอดคล้องกับ migration ข้อมูล seed, เพิ่ม tenant RLS และ transaction context, แล้วรัน tenant isolation tests กับ database ใหม่ด้วย
 
-ความรู้ยังเป็นข้อความธรรมดาในระยะนี้ ไม่ใส่ embedding column ที่ยังไม่มี pipeline เมื่อทำ RAG ให้เพิ่มตาราง knowledge_chunks ซึ่งมี shop_id, knowledge_entry_id, content, embedding version และ composite foreign key เพื่อป้องกัน cross-tenant references
+งานข้อ 7 เพิ่ม `knowledge_chunks` พร้อม local embedding version, `shop_id`, `knowledge_entry_id` และ composite foreign key แล้ว Index ถูกอัปเดตใน transaction ของ CRUD และมี `npm run rag:reindex` สำหรับข้อมูลเดิม `message_sources` เก็บรหัสและข้อความหลักฐานที่ใช้ตอบเพื่อ audit แม้ลบ entry ภายหลัง การค้นเริ่มจาก `shop_id` และ `published` ในฐานข้อมูล ก่อนจัดอันดับด้วย embedding และคำที่ตรงกัน ส่วน AI generator เป็น interface ที่ฉีดเข้า worker ได้; provider จริงและ failover อยู่ในงานข้อ 8
+
+## ข้อมูลที่ใช้ตอบและการดูตัวอย่าง
+
+ข้อมูลธุรกิจจาก `shops` ถูกแปลงเป็นหลักฐานรายหัวข้อเมื่อค้นคำตอบ จึงเห็นข้อมูลใหม่ได้ทันทีโดยไม่ต้องทำดัชนีใหม่ ความรู้จาก `knowledge_entries` ใช้เฉพาะสถานะ `published` และต้องอยู่ในร้านเดียวกัน FAQ ที่ตรงกับคำถามมาก่อนผลค้นอื่น ส่วนบุคลิกใช้กำหนดโทนคำตอบ ไม่ใช่แหล่งข้อเท็จจริง
+
+`prepareAnswerContext` ใช้ร่วมกันระหว่าง worker และ API `POST /api/v1/shops/{shopId}/ai/preview` เพื่อให้ข้อมูลที่เห็นในหน้าตัวอย่างตรงกับข้อมูลที่ใช้ตอบจริง API นี้ต้องผ่าน session และสิทธิ์ของร้าน prompt แยกคำสั่งระบบออกจากคำถาม ข้อมูลร้าน และหลักฐาน ข้อความที่เจ้าของร้านกรอกถือเป็นข้อมูล ไม่ใช่คำสั่งให้โมเดลเปลี่ยนกติกา ผลจาก AI ภายนอกต้องเป็นข้อความตรงจากหลักฐานหนึ่งรายการพร้อมรหัสแหล่งข้อมูล หากตรวจไม่ผ่านจะใช้คำตอบแบบคัดข้อความหรือแจ้งว่าไม่มีข้อมูล
 
 ## ก่อนใช้กับข้อมูลจริง
 

@@ -6,6 +6,8 @@ Contract ที่อ่านด้วยเครื่อง: [openapi.json](
 
 Runtime ใช้ PostgreSQL; timestamp ใน response ยังเป็น ISO UTC และ `meta.total` เป็น number ตาม contract เดิม `/api/health` และ `/health` ตรวจ DB จริง หาก connection/schema ไม่พร้อมคืน HTTP 503 `DATABASE_UNAVAILABLE` โดยไม่เปิดเผย SQL หรือ credentials
 
+เมื่อ `APP_MAINTENANCE_MODE=true` business API รวม webhook ตอบ HTTP 503 `MAINTENANCE_MODE` ก่อน DB/auth/body พร้อม `Retry-After: 60`, `Cache-Control: no-store` และ request ID; health ยังคงตรวจ DB ตั้งค่า environment แล้ว restart ทุก process เพื่อเข้า/ออก maintenance และรอ writers เก่าหยุดก่อน snapshot
+
 LINE webhook บันทึก event กับ text job ใน transaction เดียวและตอบสำเร็จหลัง commit `processed_count` คือจำนวน jobs ใหม่ ไม่ใช่จำนวนคำตอบที่ส่งแล้ว ทุก event ต้องมี webhookEventId หรือ message.id; text ต้องมี userId และข้อความที่ไม่ว่าง หาก event ID ชนกับร้านอื่นคืน 409 `LINE_EVENT_COLLISION` โดยไม่เปิดเผยร้านเดิม ประเภทที่ไม่รองรับเก็บ ignored ไม่มี job ดู [นโยบาย delivery/recovery](line-jobs.md)
 
 `POST /api/v1/shops/{shopId}/line/simulate` ใช้เฉพาะ development/staging; เมื่อ `NODE_ENV=production` คืน 404 ก่อนตรวจ auth/body และไม่สร้าง event/message บัญชี demo ต้อง seed เองใน local; seed ถูกปิดใน production

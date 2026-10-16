@@ -12,6 +12,7 @@ import { withTestSchema } from '../integration/postgresql-fixture.js';
 import { migratePostgresql } from '../scripts/postgresql/migrations.js';
 import { createService } from '../src/services/service.js';
 import { tokenHash } from '../src/lib/auth.js';
+import { answerQuestion } from '../src/services/rag.js';
 
 async function withSource(action, change) {
   const dir = mkdtempSync(join(tmpdir(), 'sqlite-import-'));
@@ -24,6 +25,7 @@ async function withSource(action, change) {
     db.prepare('INSERT INTO line_channels VALUES (?,?,?,?,?,?,?)').run('shop-coffee', null, 'secret-never-log', 'token-never-log', null, '2026-10-06T00:00:00.000Z', '2026-10-06T00:00:00.000Z');
     db.prepare('INSERT INTO line_events VALUES (?,?,?,?,?,?)').run('unresolved-old-event', 'shop-coffee', 'message', 'reply-never-log', 'processing', '2026-10-06T00:00:00.000Z');
     db.prepare("UPDATE messages SET content=? WHERE id='shop-coffee-message-1'").run('ไทย 🌺\n' + 'ยาว'.repeat(3000));
+    db.prepare('INSERT INTO message_sources VALUES (?,?,?,?,?)').run('shop-coffee','shop-coffee-message-2','shop-coffee-kb-1','shop-coffee-kb-1:0','Historical evidence');
     await change?.(db);
     const backup = await backupSqlite({ source: join(dir, 'original.sqlite'), outputDir: join(dir, 'backups') });
     db.close(); db = null;
@@ -54,6 +56,8 @@ test('dry-run makes no target writes; import/verify preserve rows, Unicode, secr
   assert.equal((await db.query('SELECT * FROM line_jobs')).rowCount, 0);
   const channel = (await db.query("SELECT * FROM line_channels WHERE shop_id='shop-coffee'")).rows[0];
   assert.equal(channel.channel_secret, 'secret-never-log'); assert.equal(channel.channel_id, null);
+  assert.equal((await db.query("SELECT source_excerpt FROM message_sources WHERE message_id='shop-coffee-message-2'")).rows[0].source_excerpt,'Historical evidence');
+  assert.equal((await answerQuestion(db,{shopId:'shop-coffee',query:'ร้านเปิดกี่โมงครับ'})).method,'faq');
   const originalHash = (await db.query("SELECT password_hash FROM users WHERE id='user-coffee'")).rows[0].password_hash;
   const service = createService(db);
   assert.equal((await service.login({ body: { email: 'COFFEE@example.test', password: 'DemoPass!2026' } })).data.user.id, 'user-coffee');
@@ -143,3 +147,14 @@ test('concurrent import commits once; live sources, WAL snapshots and target che
   assert.match(runs.find(run => run.status === 'rejected').reason.message, /Target must have empty/);
   assert.equal((await db.query('SELECT count(*) FROM users')).rows[0].count, '2');
 })));
+
+test('legacy SQLite with three migrations imports without RAG tables and rebuilds published knowledge', async () => withSource(source => withTestSchema(async ({db,config}) => {
+  await migratePostgresql({config});
+  const options={config,sourcePath:source.sourcePath,outputDir:join(source.dir,'legacy-reports')};
+  await transferSqlite({...options,mode:'import'});
+  assert.equal((await transferSqlite({...options,mode:'verify'})).manifest.status,'passed');
+  assert.equal((await answerQuestion(db,{shopId:'shop-coffee',query:'ร้านเปิดกี่โมงครับ'})).method,'faq');
+  assert.equal((await db.query('SELECT count(*) FROM message_sources')).rows[0].count,'0');
+}), db => {
+  db.exec("DROP TABLE message_sources; DROP TABLE knowledge_chunks; DROP INDEX knowledge_shop_id_unique; DROP INDEX messages_shop_id_unique; DELETE FROM schema_migrations WHERE version='004_rag.sql';");
+}));

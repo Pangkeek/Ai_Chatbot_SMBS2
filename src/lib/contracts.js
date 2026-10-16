@@ -175,6 +175,33 @@ export const schemas = {
     replied: { type: "boolean" },
     reply_message_id: { anyOf: [id, { type: "null" }] },
     reply_text: { anyOf: [str(10000), { type: "null" }] },
+    reply_method: { anyOf: [choice("faq", "generator", "extractive", "no_evidence"), { type: "null" }] },
+    reply_source_ids: { type: "array", items: id },
+  }),
+  AiPreviewRequest: object({ question: str(500) }),
+  AiPreview: object({
+    aiConfigured: { type: "boolean" },
+    shop: object({
+      name: str(120),
+      description: str(5000, 0),
+      opening_hours: str(1000, 0),
+      persona: str(5000, 0),
+    }),
+    sources: { type: "array", items: object({
+      chunkId: id,
+      knowledgeEntryId: id,
+      sourceType: choice("knowledge", "business"),
+      title: str(200),
+      content: str(1200),
+    }) },
+    prompt: object({
+      messages: { type: "array", items: object({ role: choice("system", "user"), content: str(20000) }) },
+      responseFormat: object({
+        text: str(100),
+        sourceChunkIds: { type: "array", items: id },
+        insufficient: { type: "boolean" },
+      }),
+    }),
   }),
   Error: object({
     error: object({
@@ -273,6 +300,14 @@ export const routes = [
     { body: schemas.ShopCreate, status: 201 }
   ),
   route("GET", base, "getShop", "Read a shop", data(schemas.Shop)),
+  route(
+    "POST",
+    `${base}/ai/preview`,
+    "previewAiContext",
+    "Preview the shop data, selected evidence and prompt used for an answer",
+    data(schemas.AiPreview),
+    { body: schemas.AiPreviewRequest }
+  ),
   route(
     "PATCH",
     base,
@@ -421,7 +456,7 @@ const errorDescriptions = {
   422: "Schema validation failed",
   429: "Authentication rate limit exceeded",
   500: "Internal error",
-  503: "Database unavailable or schema not initialized",
+  503: "Database unavailable, schema not initialized, or service in maintenance (MAINTENANCE_MODE; Retry-After: 60)",
 };
 // Reuse named schemas in the exported document instead of duplicating them per endpoint.
 function referenceSchema(value) {

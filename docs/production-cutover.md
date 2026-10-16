@@ -15,6 +15,12 @@ LINE_WORKER_ENABLED=false
 
 Flag มีผลกับ process ที่เริ่มใหม่ ไม่หยุด request/job ที่เริ่มก่อนหน้า รอ deploy/restart และ shutdown ของ process เก่าจบทุกตัวก่อน backup ห้ามถือว่าเปลี่ยน environment แล้ว writers เก่าหยุดทันที อย่าเปิด consumer สองระบบที่ใช้ channel จริงเดียวกัน
 
+## เงื่อนไขก่อน merge
+
+ยังไม่ยืนยัน Render Dashboard ว่าตั้ง auto-deploy จาก master ไว้หรือไม่ แม้ render.yaml ปิดไว้ ผู้ใช้ต้องตรวจ Dashboard ก่อน merge; หาก merge กระตุ้น production deployment ต้องผ่าน gate production ด้านล่างก่อน
+
+Release นี้เพิ่ม PostgreSQL migration 004_rag.sql สำหรับ knowledge_chunks, message_sources และหลักฐานคำตอบใน durable jobs อย่าแก้ migrations 001–003 ที่ apply แล้ว รัน db:migrate ด้วย release ใหม่ให้สำเร็จรวม knowledge indexing ก่อน start รองรับ SQLite snapshot ทั้ง 3 และ 4 migrations โดยรักษา message_sources เมื่อมี และสร้างดัชนี published ใหม่ระหว่าง import; ไม่ส่ง LINE history ซ้ำ
+
 ## Gate ก่อนใช้งานจริง
 
 - บันทึก release commit, ชื่อ DB/service, URL และผู้รับผิดชอบ โดยไม่บันทึก credentials

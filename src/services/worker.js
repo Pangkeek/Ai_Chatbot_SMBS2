@@ -1,6 +1,7 @@
+import { prepareReply, saveReplySources } from './replyEvidence.js';
 import { randomUUID } from 'node:crypto';
 import { transaction } from '../lib/db.js';
-import { generateDefaultReply, sendLineReply } from './line.js';
+import { sendLineReply } from './line.js';
 import { createLineSimulator } from './simulator.js';
 import { messageId, recordLineEvents } from './lineJobs.js';
 
@@ -114,13 +115,15 @@ export function createLineWorker(db, options = {}) {
       if (!job.reply_text) {
         const shop = (await db.query('SELECT * FROM shops WHERE id=$1', [job.shop_id])).rows[0];
         const conversation = (await db.query('SELECT * FROM conversations WHERE shop_id=$1 AND id=$2', [job.shop_id, job.conversation_id])).rows[0];
-        const reply = await (options.generateReply ? options.generateReply({ shop, conversation, messageText: job.payload.message.text })
-          : generateDefaultReply({ shop, messageText: job.payload.message.text }));
+        const answer = await prepareReply(db, { shop, conversation, messageText: job.payload.message.text }, options);
+        const reply = answer.text;
         await transaction(db, async tx => {
           await owned(tx, job);
-          await tx.query('UPDATE line_jobs SET reply_text=$2,updated_at=clock_timestamp() WHERE job_id=$1', [job.job_id, reply]);
+          await tx.query('UPDATE line_jobs SET reply_text=$2,reply_sources=$3,reply_method=$4,updated_at=clock_timestamp() WHERE job_id=$1', [job.job_id, reply, JSON.stringify(answer.sources), answer.method]);
         });
         job.reply_text = reply;
+        job.reply_sources = answer.sources;
+        job.reply_method = answer.method;
       }
       if (lost || stopped) throw new LeaseLost();
       // Credentials are read fresh; never stored in job payload or captured at webhook time.
@@ -153,6 +156,7 @@ export function createLineWorker(db, options = {}) {
           VALUES ($1,$2,$3,'assistant',$4,NULL,clock_timestamp()) ON CONFLICT (id) DO NOTHING`,
         [id, job.shop_id, job.conversation_id, job.reply_text]);
         await tx.query('UPDATE conversations SET updated_at=clock_timestamp() WHERE shop_id=$1 AND id=$2', [job.shop_id, job.conversation_id]);
+        await saveReplySources(tx, job.shop_id, id, job.reply_sources);
         await tx.query('UPDATE line_jobs SET reply_message_id=$2 WHERE job_id=$1', [job.job_id, id]);
         await terminal(tx, current, 'completed', null, 'sent');
         job.reply_message_id = id;
@@ -209,13 +213,14 @@ export function createLineWorker(db, options = {}) {
   }
   async function handleMessageEvent(input) {
     if (input.simulated) return simulator.handleMessageEvent(input);
-    const event = { ...input.event, type: 'message', message: { ...input.event.message, type: 'text' } };
+    const event = { ...input.event, webhookEventId: input.event.webhookEventId || input.event.message?.id || randomUUID(), type: 'message', message: { ...input.event.message, type: 'text' } };
     await transaction(db, tx => recordLineEvents(tx, input.shopId, [event]));
     const job = (await db.query('SELECT job_id FROM line_jobs WHERE shop_id=$1 AND event_id=$2', [input.shopId, event.webhookEventId || event.message.id])).rows[0];
     await runOnce(job.job_id);
     const result = (await db.query('SELECT * FROM line_jobs WHERE job_id=$1', [job.job_id])).rows[0];
     return { conversationId: result.conversation_id, customerMsgId: result.customer_message_id,
-      replied: result.delivery_state === 'sent', ...(result.reply_message_id ? { replyMsgId: result.reply_message_id, replyText: result.reply_text } : {}),
+      replied: result.delivery_state === 'sent', replyMethod: result.reply_method,
+      sourceKnowledgeIds: [...new Set(result.reply_sources.map(source => source.knowledge_entry_id))], ...(result.reply_message_id ? { replyMsgId: result.reply_message_id, replyText: result.reply_text } : {}),
       reason: result.last_error_code === 'BOT_INACTIVE' ? (await db.query('SELECT bot_mode FROM conversations WHERE id=$1', [result.conversation_id])).rows[0]?.bot_mode : undefined };
   }
   return { workerId, runOnce, renew, wake, handleMessageEvent, start() { if (!started) { started = true; schedule(0); } }, stop,

@@ -55,3 +55,7 @@ Logs มีเพียง error code/job ID ไม่มี payload, reply text
 `npm test` ทดสอบ producer, concurrency, leases, delivery failures, crash/recovery และ retention กับ PostgreSQL จริง หลัง `npm run build` รัน `npm run test:line:runtime` เพื่อทดสอบ Next startup โดยไม่มี request แรก, worker flag, health และ shutdown Tests ใช้ schema สุ่มใน chatbot_test และ fixture/mock LINE ไม่ส่งข้อความจริง
 
 บน Windows lifecycle test ส่ง Node signal event ผ่าน IPC เพราะ OS ไม่ส่ง POSIX signals แบบ Linux; CI Linux ส่ง SIGTERM/SIGINT จริง ต้องตรวจ deploy/restart และ LINE channel ทดสอบบน Render อีกครั้งในระยะ G
+
+## RAG evidence และ restart
+
+Migration 004 เพิ่ม reply_sources/reply_method ลง line_jobs เก็บคำตอบและหลักฐานใน checkpoint ก่อนส่ง HTTP และบันทึก message_sources พร้อม assistant message หลังส่งสำเร็จ งานที่ recover ก่อนส่งใช้หลักฐานเดิมแม้ความรู้ถูกแก้หรือลบ ไม่ส่งซ้ำเมื่อ delivery เป็น unknown Retention ล้าง reply_sources ของ terminal jobs เก่าพร้อม payload/reply_text แต่เก็บ message_sources เป็น audit ตามบทสนทนา

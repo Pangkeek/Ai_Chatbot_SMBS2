@@ -7,6 +7,7 @@ import { databaseConfig } from '../../src/lib/db.js';
 import { assertSchemaReady, countToNumber, schemaName, timestampToIso } from '../../src/lib/postgresql-schema.js';
 import { inspectSnapshot, sha256 } from '../backup-sqlite.js';
 import { readMigrations } from '../postgresql/migrations.js';
+import { indexKnowledgeEntry } from '../../src/services/rag.js';
 
 export const tables = [
   { name: 'users', columns: ['id','email','name','password_hash','created_at'], keys: ['id'] },
@@ -18,6 +19,7 @@ export const tables = [
   { name: 'messages', columns: ['id','shop_id','conversation_id','role','content','author_user_id','created_at'], keys: ['id'] },
   { name: 'line_channels', columns: ['shop_id','channel_id','channel_secret','channel_access_token','destination_user_id','created_at','updated_at'], keys: ['shop_id'] },
   { name: 'line_events', columns: ['event_id','shop_id','event_type','reply_token','status','created_at'], keys: ['event_id'] },
+  { name: 'message_sources', columns: ['shop_id','message_id','knowledge_entry_id','chunk_id','source_excerpt'], keys: ['shop_id','message_id','chunk_id'] },
 ];
 const quote = value => `"${value.replaceAll('"', '""')}"`;
 const digest = value => createHash('sha256').update(value).digest('hex');
@@ -27,6 +29,7 @@ export class TransferError extends Error {
 }
 
 function sourceRows(db, table) {
+  if (table.name === 'message_sources' && !db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='message_sources'").get()) return [];
   const sql = `SELECT ${table.columns.map(quote).join(',')} FROM ${quote(table.name)} ORDER BY ${table.keys.map(key => `${quote(key)} COLLATE BINARY`).join(',')}`;
   return db.prepare(sql).iterate();
 }
@@ -97,6 +100,7 @@ async function openSource(path) {
     db.exec('BEGIN');
     for (const table of tables) {
       const columns = db.prepare(`PRAGMA table_info(${quote(table.name)})`).all().map(column => column.name);
+      if (table.name === 'message_sources' && !columns.length) continue;
       if (JSON.stringify(columns) !== JSON.stringify(table.columns)) throw new TransferError(`Unexpected SQLite columns: ${table.name}`);
     }
     // Scan field values first so invalid rows can be identified without logging secrets.
@@ -110,7 +114,8 @@ async function openSource(path) {
       });
       throw new TransferError('SQLite foreign key violations were found', issues);
     }
-    if (!inspection.valid || inspection.missingMigrations.length || inspection.migrations.length !== 3) throw new TransferError('SQLite integrity, foreign keys, timestamps, or baseline migrations are invalid');
+    const versions = inspection.migrations.map(row => row.version);
+    if (!inspection.valid || inspection.missingMigrations.some(version => version !== '004_rag.sql') || ![3,4].includes(versions.length) || versions.some((version,index) => version.slice(0,3) !== String(index+1).padStart(3,'0'))) throw new TransferError('SQLite integrity, foreign keys, timestamps, or baseline migrations are invalid');
     const ownerless = db.prepare("SELECT count(*) AS count FROM shops s WHERE NOT EXISTS (SELECT 1 FROM shop_memberships m WHERE m.shop_id=s.id AND m.role='owner')").get().count;
     if (ownerless) throw new TransferError('SQLite shops without an owner membership were found', db.prepare("SELECT id FROM shops s WHERE NOT EXISTS (SELECT 1 FROM shop_memberships m WHERE m.shop_id=s.id AND m.role='owner')").all().map(row => ({ table: 'shops', keySha256: digest(JSON.stringify([row.id])), reason: 'owner_membership_missing' })));
     return { db, path: source, sha256: checksum, stats, migrations: inspection.migrations, samples: inspection.shopFlows.map(row => ({ sample: row.sample, counts: row.counts })), unresolved: inspection.eventStatuses.filter(row => ['received','processing'].includes(row.status)).map(row => ({ ...row })) };
@@ -128,7 +133,7 @@ async function checkTarget(client, requireEmpty) {
   const migrations = (await client.query('SELECT version,checksum,applied_at FROM schema_migrations ORDER BY version')).rows;
   if (migrations.length !== expected.length || migrations.some((row,i) => row.version !== expected[i].version || row.checksum !== expected[i].checksum)) throw new TransferError('Target PostgreSQL migration checksums do not match this repository');
   const counts = {};
-  for (const table of [...tables.map(table => table.name), 'line_jobs']) {
+  for (const table of [...tables.map(table => table.name), 'line_jobs', 'knowledge_chunks']) {
     counts[table] = countToNumber((await client.query(`SELECT count(*) AS count FROM ${quote(table)}`)).rows[0].count);
   }
   if (requireEmpty && Object.values(counts).some(count => count !== 0)) throw new TransferError('Target must have empty business tables and line_jobs; no force/reset/upsert is supported');
@@ -169,6 +174,7 @@ const references = [
   ['messages','conversations',['shop_id','conversation_id'],['shop_id','id']],
   ['messages','shop_memberships',['shop_id','author_user_id'],['shop_id','user_id']],
   ['line_channels','shops',['shop_id'],['id']], ['line_events','shops',['shop_id'],['id']],
+  ['message_sources','messages',['shop_id','message_id'],['shop_id','id']],
 ];
 
 async function verifyRelationships(client) {
@@ -216,13 +222,17 @@ export async function transferSqlite({ sourcePath = process.env.SQLITE_SOURCE_PA
     if (mode === 'import') {
       await client.query('SELECT pg_advisory_xact_lock(1936548461,hashtext($1))', [schema]);
       await assertSchemaReady(client);
-      await client.query(`LOCK TABLE ${[...tables.map(table => table.name),'line_jobs'].map(table => `${quote(schema)}.${quote(table)}`).join(',')} IN SHARE ROW EXCLUSIVE MODE`);
+      await client.query(`LOCK TABLE ${[...tables.map(table => table.name),'line_jobs','knowledge_chunks'].map(table => `${quote(schema)}.${quote(table)}`).join(',')} IN SHARE ROW EXCLUSIVE MODE`);
     }
     const target = await checkTarget(client, mode !== 'verify');
     manifest.targetMigrations = target.migrations;
     manifest.targetCountsBefore = target.counts;
     await checkEmails(source, client, batchSize);
     if (mode === 'import') for (const table of tables) await insertTable(source, client, table, batchSize);
+    if (mode === 'import') {
+      const entries = (await client.query("SELECT shop_id,id FROM knowledge_entries WHERE status='published' ORDER BY shop_id,id")).rows;
+      for (const entry of entries) await indexKnowledgeEntry(client,entry.shop_id,entry.id);
+    }
     if (mode !== 'dry-run') {
       const stats = await targetStats(client, batchSize);
       manifest.targetTables = stats;

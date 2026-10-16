@@ -25,7 +25,7 @@ test('backup includes committed WAL data, preserves source, verifies and never o
     assert.deepEqual(await Promise.all([sha256(source), sha256(`${source}-wal`)]), before);
     assert.equal(await sha256(first.manifest.snapshot), first.manifest.sha256);
     assert.equal(first.manifest.counts.shops, 2);
-    assert.equal(first.manifest.migrations.length, 3);
+    assert.equal(first.manifest.migrations.length, 4);
     assert.equal(first.manifest.valid, true);
     assert.deepEqual(first.manifest.missingMigrations, []);
     const copy = new DatabaseSync(first.manifest.snapshot, { readOnly: true });

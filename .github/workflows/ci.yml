@@ -47,3 +47,19 @@ jobs:
       - run: npm run test:line:runtime
       - run: npm run test:production
       - run: npm run api:check
+  docker-smoke:
+    runs-on: ubuntu-latest
+    env:
+      PORT: '3100'
+      COMPOSE_PROJECT_NAME: chatbot-ci
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker compose config --quiet
+      - run: docker compose up --build --wait --wait-timeout 180
+      - run: curl --fail http://127.0.0.1:3100/health
+      - name: Container logs on failure
+        if: failure()
+        run: docker compose logs
+      - name: Remove CI containers and test volume
+        if: always()
+        run: docker compose down --volumes

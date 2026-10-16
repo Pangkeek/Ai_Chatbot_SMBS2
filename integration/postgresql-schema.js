@@ -24,25 +24,25 @@ test('fresh/concurrent/rerun migrations, checksum preflight, failed SQL atomicit
     await writeFile(first, sql.replaceAll('\n', '\r\n'));
     assert.equal((await migratePostgresql({ config, directory: dir })).applied.length, 0);
     await writeFile(first, sql + '\n-- changed\n');
-    await writeFile(join(dir, '004_probe.sql'), 'CREATE TABLE probe(id integer);');
+    await writeFile(join(dir, '005_probe.sql'), 'CREATE TABLE probe(id integer);');
     await assert.rejects(migratePostgresql({ config, directory: dir }), /Applied migration changed/);
     assert.equal((await db.query("SELECT to_regclass('probe') AS value")).rows[0].value, null);
     await writeFile(first, sql);
-    await writeFile(join(dir, '004_probe.sql'), 'CREATE TABLE probe(id integer); INSERT INTO probe VALUES (1); SELECT missing_column FROM probe;');
-    await assert.rejects(migratePostgresql({ config, directory: dir }), /migration failed: 004/);
+    await writeFile(join(dir, '005_probe.sql'), 'CREATE TABLE probe(id integer); INSERT INTO probe VALUES (1); SELECT missing_column FROM probe;');
+    await assert.rejects(migratePostgresql({ config, directory: dir }), /migration failed: 005/);
     assert.equal((await db.query("SELECT to_regclass('probe') AS value")).rows[0].value, null);
     assert.deepEqual((await db.query('SELECT * FROM schema_migrations ORDER BY version')).rows, before);
     // Retry acquires the lock after failure, and commits exactly once.
-    await writeFile(join(dir, '004_probe.sql'), 'CREATE TABLE probe(id integer);');
-    assert.deepEqual((await migratePostgresql({ config, directory: dir })).applied, ['004_probe.sql']);
+    await writeFile(join(dir, '005_probe.sql'), 'CREATE TABLE probe(id integer);');
+    assert.deepEqual((await migratePostgresql({ config, directory: dir })).applied, ['005_probe.sql']);
     // Failure while recording the migration must roll back its DDL as well.
     await db.query(`CREATE FUNCTION reject_migration_record() RETURNS trigger LANGUAGE plpgsql AS $$
-      BEGIN IF NEW.version = '005_record_failure.sql' THEN RAISE EXCEPTION 'fixture record failure'; END IF; RETURN NEW; END $$`);
+      BEGIN IF NEW.version = '006_record_failure.sql' THEN RAISE EXCEPTION 'fixture record failure'; END IF; RETURN NEW; END $$`);
     await db.query('CREATE TRIGGER reject_record BEFORE INSERT ON schema_migrations FOR EACH ROW EXECUTE FUNCTION reject_migration_record()');
-    await writeFile(join(dir, '005_record_failure.sql'), 'CREATE TABLE record_probe(id integer);');
-    await assert.rejects(migratePostgresql({ config, directory: dir }), /migration failed: 005/);
+    await writeFile(join(dir, '006_record_failure.sql'), 'CREATE TABLE record_probe(id integer);');
+    await assert.rejects(migratePostgresql({ config, directory: dir }), /migration failed: 006/);
     assert.equal((await db.query("SELECT to_regclass('record_probe') AS value")).rows[0].value, null);
-    assert.equal((await db.query("SELECT * FROM schema_migrations WHERE version = '005_record_failure.sql'")).rowCount, 0);
+    assert.equal((await db.query("SELECT * FROM schema_migrations WHERE version = '006_record_failure.sql'")).rowCount, 0);
     await db.query('DROP TRIGGER reject_record ON schema_migrations');
     assert.equal((await db.query("SELECT count(*) FROM pg_locks WHERE locktype = 'advisory' AND classid = 1936548461 AND objid::bigint = (hashtext($1)::bigint & 4294967295) AND database = (SELECT oid FROM pg_database WHERE datname = current_database())", [config.schema])).rows[0].count, '0');
   } finally { await rm(dir, { recursive: true, force: true }); }
@@ -60,6 +60,8 @@ async function seed(db) {
     await db.query('INSERT INTO line_channels VALUES ($1,NULL,$2,$3,NULL,$4,$4)', [`s-${suffix}`, 'fixture-secret', 'fixture-token', time]);
     await db.query('INSERT INTO line_events VALUES ($1,$2,$3,NULL,$4,$5)', [`e-${suffix}`, `s-${suffix}`, 'message', 'received', time]);
     await db.query('INSERT INTO line_jobs(job_id,shop_id,event_id,payload) VALUES ($1,$2,$3,$4)', [`j-${suffix}`, `s-${suffix}`, `e-${suffix}`, { type: 'message' }]);
+    await db.query('INSERT INTO knowledge_chunks VALUES ($1,$2,$3,0,$4,$5,$6,$7)', [`chunk-${suffix}`,`s-${suffix}`,`k-${suffix}`,'คำตอบ','[]','fixture',time]);
+    await db.query('INSERT INTO message_sources VALUES ($1,$2,$3,$4,$5)', [`s-${suffix}`,`m-${suffix}`,`k-${suffix}`,`chunk-${suffix}`,'คำตอบ']);
   }
   await db.query('INSERT INTO sessions VALUES ($1,$2,$3,$3)', ['a'.repeat(64), 'u-a', time]);
 }

@@ -231,3 +231,22 @@ test('shutdown during an unconfirmed send marks unknown and fences the late send
   let sends=0;await worker(db,{sendReply:async()=>{sends++;}}).drain();assert.equal(sends,0);
   assert.equal((await job(e.webhookEventId)).reply_message_id,null);
 }));
+
+test('recovered pre-send jobs retain their original RAG evidence across a worker restart', async () => seeded(async ({db,submit,job}) => {
+  const e=event({message:{type:'text',id:randomUUID(),text:'ร้านเปิดกี่โมงครับ'}});
+  await submit([e]);
+  const source={knowledge_entry_id:'shop-coffee-kb-1',chunk_id:'shop-coffee-kb-1:0',content:'Original verified excerpt'};
+  await db.query(`UPDATE line_jobs SET reply_text='Original reply',reply_sources=$1,reply_method='faq',
+    status='processing',attempts=1,locked_by='previous-worker',locked_at=now()-interval '2 seconds',lease_until=now()-interval '1 second',
+    conversation_id='shop-coffee-conversation-1',customer_message_id='shop-coffee-message-1' WHERE event_id=$2`,[JSON.stringify([source]),e.webhookEventId]);
+  await db.query("DELETE FROM knowledge_entries WHERE id='shop-coffee-kb-1'");
+  let sends=0;
+  await createLineWorker(db,{sendReply:async({messages})=>{sends++;assert.equal(messages[0].text,'Original reply');},
+    generateReply:async()=>{throw new Error('Persisted reply must not be regenerated');},logErrors:false}).drain();
+  assert.equal(sends,1);
+  const result=await job(e.webhookEventId);
+  assert.equal(result.status,'completed');
+  const audit=(await db.query('SELECT * FROM message_sources WHERE message_id=$1',[result.reply_message_id])).rows;
+  assert.equal(audit.length,1);
+  assert.equal(audit[0].source_excerpt,source.content);
+}));

@@ -4,11 +4,11 @@
 
 ## รันครั้งแรก
 
-> สถานะระยะ G: โค้ด/CI, render.yaml และ production rehearsal ในเครื่องพร้อมแล้ว ยังไม่ได้สร้าง/deploy Render หรือทดสอบ live LINE บน staging ข้อมูลยังไม่ได้ import ลงฐานพัฒนา/production ผู้ใช้ดำเนินการส่วน Render ตาม [คู่มือ staging](docs/render-staging.md)
+> สถานะก่อน merge: รวมงานหน้าเว็บและ RAG จาก master เข้ากับ PostgreSQL แล้ว ดูผลตรวจล่าสุดที่ [pre-merge review](docs/pre-merge-review.md) ผู้ใช้รายงาน staging/LINE ผ่าน แต่ยังต้องยืนยันหลักฐาน DB, backup/restore และ production cutover ตาม [คู่มือ production](docs/production-cutover.md)
 
 ### PostgreSQL สำหรับพัฒนา
 
-ใช้ PostgreSQL 18 แยก `chatbot_dev` และ `chatbot_test` หากมี Docker ให้เปิดด้วย `docker compose up -d postgres` ซึ่งเก็บข้อมูลใน named volume และ bind เฉพาะ `127.0.0.1:55432` ค่ารหัสผ่านใน Compose เป็นตัวอย่างสำหรับ local เท่านั้น SQL init สร้าง test DB เฉพาะครั้งแรกที่ volume ว่าง
+ใช้ PostgreSQL 18 แยก `chatbot_dev` และ `chatbot_test` หากมี Docker ให้เปิดด้วย `docker compose up -d postgres` ซึ่งเก็บข้อมูลใน named volume และเปิดฐานข้อมูลที่ `127.0.0.1:55432` พร้อมพอร์ตเว็บที่ `127.0.0.1:${PORT:-3000}` ค่ารหัสผ่านใน Compose เป็นตัวอย่างสำหรับ local เท่านั้น SQL init สร้าง test DB เฉพาะครั้งแรกที่ volume ว่าง
 
 เพิ่มค่า PostgreSQL จาก `.env.example` ลง `.env` โดยรักษาค่าเดิมไว้ จากนั้นรัน:
 
@@ -26,7 +26,7 @@ Scripts โหลด `.env` ผ่าน `--env-file-if-exists` และ fail �
 
 `openDatabase()` ตรวจ connection เท่านั้น ไม่ migrate/seed; scripts ต้อง `await db.close()` ใน `finally` ส่วน runtime ใช้ `getRuntimeDatabase()`/`closeRuntimeDatabase()` เพื่อแชร์ initialization promise และ pool ต่อ process รวม hot reload ภายใน `transaction(db, async tx => ...)` ใช้เฉพาะ `tx.query` ไม่เรียก pool เดิมซ้ำ และไม่ถือ transaction ระหว่าง hash password หรือเรียก LINE/AI
 
-`db:migrate` และ `db:migrate:postgres` ใช้ PostgreSQL runner เดียวกัน ล็อกด้วย advisory lock บน connection เดียวตลอดการรัน ตรวจ checksum ก่อน apply และ commit แยกต่อไฟล์ เมื่อไฟล์ใดผิดจะ rollback ไฟล์นั้นพร้อม migration record แต่ไฟล์ก่อนหน้าที่สำเร็จยังอยู่ แก้ด้วย migration ใหม่ ห้ามแก้ไฟล์ที่ apply แล้ว ไม่มี down migration อัตโนมัติ ใช้ npm/package-lock.json เป็นมาตรฐาน
+`db:migrate` และ `db:migrate:postgres` ใช้ PostgreSQL runner เดียวกัน ล็อกด้วย advisory lock บน connection เดียวตลอดการรัน ตรวจ checksum ก่อน apply และ commit แยกต่อไฟล์ เมื่อไฟล์ใดผิดจะ rollback ไฟล์นั้นพร้อม migration record แต่ไฟล์ก่อนหน้าที่สำเร็จยังอยู่ แก้ด้วย migration ใหม่ ห้ามแก้ไฟล์ที่ apply แล้ว ไม่มี down migration อัตโนมัติ หลัง migrations สำเร็จ CLI จะ rebuild ดัชนีความรู้ก่อนเปิด release; หาก indexing ล้มเหลวให้รันคำสั่งเดิมซ้ำและห้ามเริ่ม release ใช้ npm/package-lock.json เป็นมาตรฐาน
 
 `getRuntimeDatabase()` ตรวจ schema/required migration versions แบบ read-only และ fail เมื่อยังไม่พร้อม ให้รัน migration ก่อนเปิด runtime ไม่สร้างตารางระหว่างรับ request ใช้ schema `public` โดย default; `DB_SCHEMA` ใช้เลือก schema ที่สร้างไว้แล้ว โดย tests สร้าง schema สุ่มแยกต่อ suite และ cleanup เฉพาะของตัวเอง ดู [รีวิวระยะ C](PLAN/phase-c-review.md)
 
@@ -46,7 +46,50 @@ npm run db:seed
 npm run dev
 ```
 
-เปิด **http://127.0.0.1:3000/app** เพื่อใช้แดชบอร์ด, **http://127.0.0.1:3000/docs** เพื่อใช้ API Console และ **http://127.0.0.1:3000/health** เพื่อตรวจการเชื่อมต่อฐานข้อมูล หยุด server ด้วย `Ctrl+C`
+เปิด **http://127.0.0.1:3000/** เพื่อเข้าสู่หน้าแนะนำ `/home` ก่อนล็อกอิน จากนั้นกด **เข้าสู่ระบบ** หรือ **จัดการร้านค้า** เพื่อไป `/app` กด **สมัครสมาชิก** เพื่อเปิดแบบฟอร์มสร้างบัญชีโดยตรง ส่วน **http://127.0.0.1:3000/docs** ใช้ API Console และ **http://127.0.0.1:3000/health** ใช้ตรวจการเชื่อมต่อฐานข้อมูล หยุด server ด้วย `Ctrl+C`
+
+## รันด้วย Docker Compose
+
+ติดตั้งและเปิด Docker Desktop ก่อน แล้วรันคำสั่งเดียวจากโฟลเดอร์โปรเจค:
+
+```powershell
+docker compose up --build -d
+```
+
+เปิด `http://localhost:3000` เพื่อใช้งาน ระบบ build แอปและรัน migration ให้อัตโนมัติเมื่อเริ่ม container ข้อมูล SQLite อยู่ใน Docker volume `postgres_data` จึงยังอยู่เมื่อสั่ง `docker compose down` หากพอร์ต 3000 ถูกใช้งาน ให้กำหนด `PORT` ในไฟล์ `.env` แล้วเปิด URL ตามพอร์ตนั้น
+
+```powershell
+docker compose ps       # ดูสถานะ
+docker compose logs -f  # ดู log
+docker compose down     # หยุดระบบโดยไม่ลบฐานข้อมูล
+```
+
+Compose ให้ app แชร์ network namespace กับ PostgreSQL เพื่อใช้ loopback ภายใน container และคงนโยบาย TLS ของ runtime ข้อมูลอยู่ใน volume `postgres_data` ห้ามใช้ `down --volumes` หากต้องเก็บข้อมูล
+
+Compose ใช้ `NODE_ENV=production` จึงไม่เติมบัญชี demo อัตโนมัติ ให้สมัครบัญชีใหม่ผ่านหน้าเว็บได้ทันที ถ้าต้องการข้อมูล demo สำหรับทดลองในเครื่อง ให้รัน `docker compose run --rm -e NODE_ENV=development app npm run db:seed` หลังจากระบบเริ่มแล้ว อย่าใช้บัญชี demo นี้กับระบบที่เปิดให้คนอื่นเข้าถึง
+
+เส้นทางหน้าเว็บของแดชบอร์ด:
+
+| URL | หน้า |
+|---|---|
+| `/` | ส่งต่อไปหน้าแนะนำ `/home` |
+| `/home` | หน้าแนะนำระบบสำหรับผู้เยี่ยมชม |
+| `/app` | ร้านค้าทั้งหมดของบัญชี |
+| `/app/shops/:shopId/settings` | ข้อมูลธุรกิจของร้าน |
+| `/app/shops/:shopId/knowledge` | FAQ และคลังความรู้ |
+| `/app/shops/:shopId/line` | การเชื่อมต่อ LINE และ simulator |
+| `/docs` | API Console |
+
+ในหน้า FAQ และคลังความรู้มีช่อง **ดูข้อมูลที่ Chatbot ใช้ตอบ** สำหรับลองคำถาม แล้วตรวจข้อมูลร้าน หลักฐานที่ระบบเลือก และโครงสร้าง prompt ที่จะส่งให้บริการ AI ได้ ระบบนำชื่อร้าน ประเภทธุรกิจ สินค้าหรือบริการ รูปแบบบริการ เวลาเปิด และรายละเอียดเพิ่มเติมมาเป็นหลักฐานโดยตรง ส่วน FAQ และความรู้อื่นจะใช้เฉพาะรายการที่เผยแพร่แล้ว FAQ ที่ตรงคำถามมีลำดับก่อนข้อมูลอื่น
+
+ก่อนส่งคำตอบ ระบบตรวจว่าข้อความที่บริการ AI เลือกเป็นข้อความตรงจากหลักฐานของร้านนั้น หากไม่มีหลักฐานหรือบริการ AI ไม่พร้อม ระบบจะตอบด้วยข้อความจากหลักฐานที่ค้นได้หรือแจ้งว่าไม่มีข้อมูลยืนยัน คำตอบและรหัสแหล่งข้อมูลถูกเก็บไว้กับบทสนทนา บริการ AI ภายนอกเป็นทางเลือกที่ตั้งผ่าน `RAG_GENERATOR_URL` และ `RAG_GENERATOR_TOKEN`; หากไม่ตั้งค่า ระบบยังตอบแบบคัดข้อความจากหลักฐานได้
+
+ลิงก์จากหน้าแนะนำพาไป `/app` เพื่อใช้ขั้นตอนเข้าสู่ระบบเดิมของแดชบอร์ด หากยังไม่มีบัญชีให้ไป `/app?mode=register` เพื่อเปิดแท็บสมัครสมาชิก หน้าข้อมูลร้านและการเชื่อมต่อ LINE ต้องเลือกจากร้านที่บัญชีมีสิทธิ์เข้าถึง
+
+หน้า `/home` อธิบายฟีเจอร์และเส้นทางที่ใช้งานได้ในปัจจุบัน พร้อมแยกหน้า **บทสนทนาและสถิติ** และ **แอดมินรับช่วงตอบ** เป็นแผนพัฒนาตาม [หน้าโครงการใน Notion](https://app.notion.com/p/AI-Chatbot-SMBs-3d8d1e39ec9c81158d17e529e229f350) โดยยังไม่มีลิงก์ไปยังหน้าที่ไม่ได้สร้าง
+ภาพอินโฟกราฟิก, FAQ, LINE และ Webhook ที่ใช้ในหน้าแรกอยู่ใน `public/assets/home/` ส่วนสีและลายพื้นหลังของหน้าแรกกำหนดไว้ใน `src/styles/globals.css` ภายใต้ `.home-page` เพื่อไม่กระทบหน้าแดชบอร์ด
+
+เปิด URL ของร้านโดยตรงหรือรีเฟรชหน้าได้ ระบบจะให้เข้าสู่ระบบก่อนหากยังไม่มี session และตรวจสิทธิ์ร้านผ่าน API ก่อนแสดงข้อมูล
 
 สำหรับ production ให้รัน `npm run build` แล้วจึง `npm start` Next.js จะสร้างหน้าเว็บและ Tailwind CSS ในขั้น build หน้าเว็บและ REST API ให้บริการจาก origin เดียวกัน สไตล์ของหน้าเว็บอยู่ใน utility classes ของ JSX โดย `src/styles/globals.css` มีเพียงการนำเข้า Tailwind และตั้งค่าฟอนต์
 
@@ -100,7 +143,7 @@ src/
   hooks/                 ผูกการทำงานของหน้าเว็บฝั่ง browser
   layouts/               layout ร่วมของหน้าเว็บ
   lib/                   routing, auth, database, contract และข้อมูลตัวอย่าง
-  pages/                 Pages Router: /, /app, /docs และ API routes
+  pages/                 Pages Router: /, /home, /app, /app/shops/:shopId/*, /docs และ API routes
     api/v1/              REST API เดิมบน Next.js API Routes
   services/              business rules, LINE worker และตัวควบคุม UI
   styles/                Tailwind entry และการตั้งค่าฟอนต์
@@ -114,6 +157,22 @@ tests/                   HTTP integration และ database tests
 docs/                    ERD, API, architecture, OpenAPI
 data/                    ฐานข้อมูล local (ไม่เก็บใน Git)
 ```
+
+## เริ่มอ่านโค้ดจากตรงไหน
+
+| ต้องการแก้อะไร | เปิดไฟล์/โฟลเดอร์ |
+|---|---|
+| หน้าแนะนำระบบ | `src/pages/home.jsx` ประกอบ `src/components/home/` |
+| หน้าแดชบอร์ด | `src/pages/app/[[...path]].jsx` ประกอบ `src/components/dashboard/` |
+| หน้า API Console | `src/pages/docs.jsx` ประกอบ `src/components/api-console/` |
+| การแสดงผลและคลิกในแดชบอร์ด | `src/services/dashboardController.js` และตัวช่วยใน `src/services/dashboard/` |
+| การตั้งค่า LINE และตัวจำลองแชต | `src/services/dashboard/lineSettings.js` และ `lineSimulator.js` |
+| การจัดการ FAQ และคลังความรู้ | `src/services/knowledgeManager.js` ประกอบตัวช่วยใน `src/services/knowledge/` |
+| API ฝั่ง server | `src/lib/app.js` จับคู่ route จาก `src/lib/contracts.js` กับคำสั่งใน `src/services/api/` |
+
+แต่ละไฟล์ใน `src/components/` ดูแลหน้าตาและ markup ส่วน `src/services/dashboard/` ดูแลการเรียก API และเหตุการณ์จากปุ่ม/ฟอร์ม รหัส `id` ใน component ยังถูก controller ใช้เชื่อมกับ DOM จึงควรแก้ทั้งสองจุดพร้อมกันเมื่อเปลี่ยนชื่อ `id`
+
+เส้นทาง `/app/shops/:shopId/*` ใช้ไฟล์หน้า `src/pages/app/[[...path]].jsx` ร่วมกัน เพื่อให้การเปลี่ยนแท็บยังใช้แดชบอร์ดชุดเดิม ส่วนเนื้อหาของแต่ละแท็บแยกใน `src/components/dashboard/` แล้ว
 
 ## Configuration
 
@@ -155,7 +214,17 @@ Webhook URL ต้องเป็น HTTPS ที่ LINE เข้าถึง�
 
 ระบบรับ webhook ตรวจลายเซ็นจาก raw body และบันทึก event/job ใน PostgreSQL transaction เดียวก่อนตอบสำเร็จ Worker เริ่มจาก instrumentation ตอน server startup และกู้ pending/expired leases โดยไม่ต้องรอ request แรก ต้องตั้ง `LINE_WORKER_ENABLED=true` ใน server process ที่ต้องการให้ตอบ LINE หากตั้ง false จะยังรับและเก็บ jobs แต่ไม่ประมวลผล ข้อความที่ค้างเกิน reply cutoff จะเก็บข้อความลูกค้าและจบเป็น failed
 
-งานต่อยอด: RAG/embedding, Gemini/OpenAI gateway และ failover การเปลี่ยน `bot_mode` ตอนนี้เป็นการบันทึกสถานะและตรวจเงื่อนไขเจ้าหน้าที่ตอบ ยังไม่มี AI worker ที่ทำงานเบื้องหลัง Endpoint บันทึกข้อความไม่ใช่หลักฐานว่าส่งถึง LINE แล้ว
+## ค้นความรู้และตอบ LINE (งานข้อ 7)
+
+ความรู้สถานะ `published` จะถูกแบ่งและทำ local embedding ลง `knowledge_chunks` เมื่อสร้างหรือแก้ผ่าน API/หน้า **FAQ/ข้อมูลความรู้** การเปลี่ยนเป็น `draft` และการลบจะเอาออกจาก index ทันที ตัวค้นกรอง `shop_id` และสถานะ `published` ใน SQL ก่อนจัดอันดับ คำถาม FAQ ที่ตรงชัดเจนใช้คำตอบเดิม ส่วนคำถามอื่นใช้ข้อความจากส่วนที่เกี่ยวข้อง ถ้าไม่พบหลักฐานจะตอบขอให้ติดต่อเจ้าหน้าที่
+
+หลังอัปเกรดฐานข้อมูลเดิม ให้สร้าง index ครั้งแรกด้วย `npm run rag:reindex` (รันซ้ำได้) หรือ `npm run db:seed` สำหรับข้อมูล demo หากมีการแก้ข้อมูลด้วย SQL โดยตรง ให้รัน `npm run rag:reindex` อีกครั้ง เพราะทางลัดนี้ไม่ผ่านกลไกอัปเดต index ของ API
+
+ทดลองได้ในหน้า **LINE Simulator** หรือ `POST /api/v1/shops/{shopId}/line/simulate` โดยใช้บัญชีเจ้าของร้าน หน้า Simulator แสดงวิธีตอบและรหัสแหล่งความรู้ใต้คำตอบ ปุ่ม **ค้นข้อมูลสินค้า** ใช้คำถามที่ไม่ตรง FAQ เพื่อให้เห็นขั้นค้น chunks (`shop-coffee`: ลาเต้เย็นราคาเท่าไหร่; `shop-flower`: ช่อกุหลาบราคาเท่าไหร่) ผล API มี `reply_method` (`faq`, `extractive`, `generator`, `no_evidence`) และ `reply_source_ids` ส่วนข้อความ LINE จริงบันทึกหลักฐานไว้ใน `message_sources` (`shop_id`, `message_id`, `knowledge_entry_id`, `chunk_id`, `source_excerpt`) แม้ภายหลังลบความรู้นั้นไปแล้ว คำตอบที่ส่งไม่สำเร็จจะไม่ถูกบันทึกเป็นข้อความผู้ช่วย
+
+หากมีบริการ AI ของตนเอง ตั้ง `RAG_GENERATOR_URL` และ `RAG_GENERATOR_TOKEN` ใน `.env` เพื่อให้ worker ส่ง `POST` JSON `{ shopId, query, context, instruction }` ไปยังบริการนั้น `context` มีเฉพาะ chunk ของร้านที่เกี่ยวข้อง บริการต้องตอบ JSON เช่น `{ "text": "จัดส่งภายในเมือง ค่าจัดส่ง 50 บาท", "sourceChunkIds": ["shop-flower-kb-3:0"] }` โดย `text` ต้องคัดตรงจากเนื้อหา chunk ที่อ้างอิง หรือ `{ "insufficient": true }` เมื่อหลักฐานไม่พอ หากผลไม่ผ่านการตรวจ ระบบใช้ข้อความหลักฐานโดยตรงแทน จุด `generator.generate(...)` ยังฉีด implementation อื่นได้ **ถ้าไม่ได้ตั้ง URL ระบบทำเฉพาะ retrieval และตอบแบบคัดข้อความหลักฐาน จึงยังไม่มีขั้นสร้างคำตอบด้วย AI จริง** การเชื่อม Gemini/OpenAI, retry หรือ circuit breaker อยู่ในงานข้อ 8 Local embedding เป็น character n-gram hashing จึงไม่มีค่า API แต่ความแม่นยำด้านความหมายมีข้อจำกัด ควรตรวจคำถามตัวอย่างของร้านก่อนใช้งานจริง
+
+การเปลี่ยน `bot_mode` จะถูกตรวจอีกครั้งหลังเตรียมคำตอบและก่อนส่ง LINE Endpoint บันทึกข้อความไม่ใช่หลักฐานว่าส่งถึง LINE แล้ว
 
 ดู [รีวิวระยะ G](PLAN/phase-g-review.md), [คู่มือ Render staging](docs/render-staging.md) และ [วิธีดูแลคิว LINE](docs/line-jobs.md) ต้องผ่าน staging จริงก่อน cutover H ส่วนการตั้งค่าและ deploy Render ผู้ใช้ดำเนินการเอง
 

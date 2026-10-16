@@ -1,5 +1,6 @@
 import { hashPassword } from "./auth.js";
 import { transaction } from "./db.js";
+import { rebuildKnowledgeIndex } from "../services/rag.js";
 
 export const demoPassword = "DemoPass!2026";
 export const demoShops = [
@@ -61,7 +62,7 @@ export async function seedDemo(db) {
   const hashes = await Promise.all(
     demoShops.map(() => hashPassword(demoPassword))
   );
-  return transaction(db, async tx => {
+  await transaction(db, async tx => {
     for (const [index, shop] of demoShops.entries()) {
       const collision = (await tx.query("SELECT id FROM users WHERE lower(email) = lower($1)", [shop.email])).rows[0];
       if (collision && collision.id !== shop.userId)
@@ -110,4 +111,5 @@ export async function seedDemo(db) {
       }
     }
   });
+  await rebuildKnowledgeIndex(db);
 }

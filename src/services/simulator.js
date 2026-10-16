@@ -1,5 +1,6 @@
+import { prepareReply, saveReplySources } from './replyEvidence.js';
 import { randomUUID } from 'node:crypto';
-import { generateDefaultReply, sendLineReply } from './line.js';
+import { sendLineReply } from './line.js';
 import { transaction } from '../lib/db.js';
 
 const now = () => new Date().toISOString();
@@ -38,9 +39,8 @@ export function createLineSimulator(db, options = {}) {
     }
     const shop = (await db.query('SELECT * FROM shops WHERE id=$1', [shopId])).rows[0];
     // No checked-out transaction client is held during generation or HTTP delivery.
-    const replyText = await (options.generateReply
-      ? options.generateReply({ shop, conversation, messageText })
-      : generateDefaultReply({ shop, messageText }));
+    const answer = await prepareReply(db, { shop, conversation, messageText }, options);
+    const replyText = answer.text;
     const latest = (await db.query('SELECT status,bot_mode FROM conversations WHERE shop_id=$1 AND id=$2', [shopId, conversation.id])).rows[0];
     if (!latest || latest.status !== 'open' || latest.bot_mode !== 'active') {
       await updateEvent(db, shopId, event.webhookEventId, 'completed');
@@ -64,9 +64,11 @@ export function createLineSimulator(db, options = {}) {
       await tx.query(`INSERT INTO messages (id,shop_id,conversation_id,role,content,author_user_id,created_at)
         VALUES ($1,$2,$3,'assistant',$4,NULL,$5)`, [replyMsgId, shopId, conversation.id, replyText, time]);
       await tx.query('UPDATE conversations SET updated_at=$1 WHERE shop_id=$2 AND id=$3', [time, shopId, conversation.id]);
+      await saveReplySources(tx, shopId, replyMsgId, answer.sources);
       await updateEvent(tx, shopId, event.webhookEventId, 'completed');
     });
-    return { ...base, replyMsgId, replyText, replied: true };
+    return { ...base, replyMsgId, replyText, replied: true, replyMethod: answer.method,
+      sourceKnowledgeIds: [...new Set(answer.sources.map(source => source.knowledge_entry_id))] };
   }
   return { handleMessageEvent };
 }

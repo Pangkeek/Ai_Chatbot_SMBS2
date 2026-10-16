@@ -74,6 +74,8 @@ test('seed is repeatable and preserves edited content and row counts', async () 
   }
   assert.equal((await db.query("SELECT title FROM knowledge_entries WHERE id = 'shop-coffee-kb-1'", [])).rows[0].title, 'Edited');
   assert.equal((await db.query("SELECT password_hash FROM users WHERE id='user-coffee'")).rows[0].password_hash, oldHash);
+  await db.query("UPDATE knowledge_entries SET title = 'เวลาเปิดร้าน' WHERE id = 'shop-coffee-kb-1'");
+  await seedDemo(db);
 });
 
 test('registration, session revocation, expiry, duplicate emails and private user fields', async () => {
@@ -259,6 +261,21 @@ test('invalid inputs, body size, protected fields, auth and query boundaries', a
   assert.equal((await request('POST', '/api/v1/shops/shop-coffee/conversations/shop-coffee-conversation-1/messages', { role: 'assistant', content: 'forged' }, coffee)).status, 422);
   assert.equal((await request('DELETE', '/api/v1/shops', undefined, coffee)).status, 405);
   assert.equal((await request('GET', '/api/v1/shops/%ZZ', undefined, coffee)).status, 400);
+});
+
+test('AI preview shows only this shop data, evidence and prompt', async () => {
+  const preview = await request('POST', '/api/v1/shops/shop-coffee/ai/preview',
+    { question: 'ร้านเปิดกี่โมงครับ' }, coffee);
+  assert.equal(preview.status, 200);
+  assert.equal(preview.payload.data.shop.name, 'บ้านกาแฟ');
+  assert.equal(typeof preview.payload.data.aiConfigured, 'boolean');
+  assert.ok(preview.payload.data.sources.length);
+  assert.ok(preview.payload.data.sources.every(source => source.chunkId.startsWith('shop-coffee')));
+  assert.ok(preview.payload.data.prompt.messages[0].content.includes('หลักฐาน'));
+  assert.equal((await request('POST', '/api/v1/shops/shop-flower/ai/preview',
+    { question: 'ร้านขายอะไร' }, coffee)).status, 404);
+  assert.equal((await request('POST', '/api/v1/shops/shop-coffee/ai/preview',
+    { question: '' }, coffee)).status, 422);
 });
 
 test('every declared endpoint has a successful HTTP contract check', () => {

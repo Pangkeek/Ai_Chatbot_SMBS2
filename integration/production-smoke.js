@@ -12,13 +12,14 @@ import { openDatabase as openSqlite } from '../scripts/sqlite/database.js';
 import { seedDemo as seedSqlite, demoPassword } from '../tests/fixtures/sqlite-seed.js';
 import { backupSqlite, sha256 } from '../scripts/backup-sqlite.js';
 import { transferSqlite } from '../scripts/sqlite/transfer.js';
+import { seedDemo } from '../src/lib/seed.js';
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 async function freePort(){const s=createServer();s.listen(0,'127.0.0.1');await once(s,'listening');const p=s.address().port;await new Promise(r=>s.close(r));return p;}
-async function start(config){
+async function start(config, overrides = {}, readiness = { path: '/api/health', status: 200 }){
   const port=await freePort();let logs='';
   const child=fork(new URL('./fixtures/production-server.js',import.meta.url),[],{
     env:{...process.env,DATABASE_URL:config.connectionString,DB_SCHEMA:config.schema,DB_SSL_MODE:'disable',
-      NODE_ENV:'production',LINE_WORKER_ENABLED:'false',PORT:String(port)},stdio:['ignore','pipe','pipe','ipc'],
+      NODE_ENV:'production',LINE_WORKER_ENABLED:'false',APP_MAINTENANCE_MODE:'false',PORT:String(port),...overrides},stdio:['ignore','pipe','pipe','ipc'],
   });
   child.stdout.on('data',chunk=>{logs+=chunk;});child.stderr.on('data',chunk=>{logs+=chunk;});
   const base=`http://127.0.0.1:${port}`;
@@ -32,7 +33,7 @@ async function start(config){
   try{
     const deadline=Date.now()+12000;
     for(;;){if(child.exitCode!==null)throw new Error('Production server exited before health');
-      try{if((await fetch(base+'/api/health',{signal:AbortSignal.timeout(1000)})).status===200)break;}catch{}
+      try{if((await fetch(base+readiness.path,{signal:AbortSignal.timeout(1000)})).status===readiness.status)break;}catch{}
       if(Date.now()>deadline)throw new Error('Production health timeout');await sleep(50);
     }
     return {base,stop,logs:()=>logs};
@@ -96,4 +97,50 @@ test('production CLI uses PORT, preserves imported accounts and API writes acros
     for(const secret of [config.connectionString,demoPassword,token,owner])assert.ok(!(logs+server.logs()).includes(secret));
     assert.equal((await db.query('SELECT count(*) FROM line_jobs')).rows[0].count,'0');
   }finally{await server?.stop();sqlite?.close();rmSync(dir,{recursive:true,force:true});}
+}));
+
+test('production maintenance preserves health, blocks malformed APIs and worker startup, and clears after restart', async () => withTestSchema(async ({db, config}) => {
+  await migratePostgresql({config});
+  await seedDemo(db);
+  await db.query("INSERT INTO line_events VALUES ('maintenance-event','shop-coffee','message',NULL,'received',now())");
+  await db.query("INSERT INTO line_jobs(job_id,shop_id,event_id,payload) VALUES ('maintenance-job','shop-coffee','maintenance-event',$1)",
+    [{source:{userId:'maintenance-customer'},message:{text:'ร้านเปิดกี่โมง'},replyToken:'test-only'}]);
+  let server;
+  try {
+    server = await start(config, {APP_MAINTENANCE_MODE:'true',LINE_WORKER_ENABLED:'true'});
+    for (const path of ['/health','/api/health']) {
+      const response = await fetch(server.base+path);
+      assert.equal(response.status,200);
+      assert.equal((await response.json()).data.database,'ok');
+    }
+    for (const [method,path] of [['POST','/api/v1/auth/register'],['POST','/api/v1/shops/shop-coffee/line/webhook'],['POST','/api/v1/shops/shop-coffee/line/simulate'],['GET','/api/v1/shops'],['DELETE','/api/v1/shops/shop-coffee'],['OPTIONS','/api/v1/shops']]) {
+      const response=await fetch(server.base+path,{method,headers:{'Content-Type':'application/json'},...(method==='POST'?{body:'{bad'}:{})});
+      assert.equal(response.status,503,path);
+      assert.equal(response.headers.get('retry-after'),'60');
+      const body=await response.json();
+      assert.equal(body.error.code,'MAINTENANCE_MODE');
+      assert.equal(body.request_id,response.headers.get('x-request-id'));
+      assert.equal(response.headers.get('cache-control'),'no-store');
+    }
+    await sleep(1200);
+    const job=(await db.query("SELECT status,attempts FROM line_jobs WHERE job_id='maintenance-job'")).rows[0];
+    assert.deepEqual(job,{status:'pending',attempts:0});
+    assert.equal((await db.query('SELECT count(*) FROM users')).rows[0].count,'2');
+    assert.equal((await db.query('SELECT count(*) FROM messages')).rows[0].count,'4');
+    await server.stop(); server=null;
+    server=await start(config);
+    assert.equal((await fetch(server.base+'/api/v1/shops')).status,401);
+    const login=await fetch(server.base+'/api/v1/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:'coffee@example.test',password:demoPassword})});
+    assert.equal(login.status,200);
+    await server.stop(); server=null;
+    server=await start(config,{APP_MAINTENANCE_MODE:'true',LINE_WORKER_ENABLED:'true',DATABASE_URL:''},{path:'/api/v1/shops',status:503});
+    const blocked=await fetch(server.base+'/api/v1/shops');
+    assert.equal((await blocked.json()).error.code,'MAINTENANCE_MODE');
+    for(const path of ['/health','/api/health']) {
+      const response=await fetch(server.base+path);
+      assert.equal(response.status,503);
+      assert.equal((await response.json()).error.code,'DATABASE_UNAVAILABLE');
+    }
+    assert.ok(!server.logs().includes('RUNTIME_UNAVAILABLE'));
+  } finally { await server?.stop(); }
 }));
