@@ -7,6 +7,7 @@ import { renderShops } from './dashboard/shopCards.js';
 import { createLineSettings } from './dashboard/lineSettings.js';
 import { createLineSimulator } from './dashboard/lineSimulator.js';
 import { parseDashboardRoute, shopRoute } from "../utils/dashboardRoutes.js";
+import { fillBusinessHours, readBusinessHours, setupBusinessHoursForm } from "./dashboard/businessHoursForm.js";
 
 const TOKEN_KEY = "smb_access_token";
 
@@ -114,7 +115,7 @@ function fillBusinessSettingsForm(shop) {
   elements.lineSimShopName.textContent = shop.name;
   elements.settingsName.value = shop.name;
   elements.settingsDescription.value = shop.description || "";
-  elements.settingsOpeningHours.value = shop.opening_hours || "";
+  fillBusinessHours(elements.businessSettingsForm, shop.opening_hours);
   elements.settingsPersona.value = shop.persona || "";
   elements.settingsShopId.textContent = `รหัสร้าน: ${shop.id}`;
   const owner = shop.member_role === "owner";
@@ -163,6 +164,8 @@ const knowledgeManager = createKnowledgeManager({
     showNotification("error", "กรุณาเข้าสู่ระบบใหม่", error.message);
   },
 });
+
+setupBusinessHoursForm(elements.businessSettingsForm);
 
 function switchAuthTab(tab) {
   const loginSelected = tab === "login";
@@ -300,6 +303,14 @@ elements.businessSettingsForm.addEventListener("submit", async (event) => {
   // ตัดช่องว่างหัวท้ายก่อนส่งข้อมูลไปยัง API
   const readField = (name) => String(form.get(name) || "").trim();
 
+  let openingHours;
+  try {
+    openingHours = readBusinessHours(formElement);
+  } catch (error) {
+    showNotification("error", "ตรวจสอบเวลาเปิดให้บริการ", error.message);
+    return;
+  }
+
   setButtonLoading(button, true, "กำลังบันทึก...");
 
   try {
@@ -310,7 +321,7 @@ elements.businessSettingsForm.addEventListener("submit", async (event) => {
         body: {
           name: readField("name"),
           description: readField("description"),
-          opening_hours: readField("opening_hours"),
+          opening_hours: openingHours,
           persona: readField("persona"),
         },
       }

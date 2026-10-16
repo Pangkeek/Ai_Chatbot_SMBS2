@@ -10,7 +10,6 @@ export const elements = {
   businessSettingsForm: document.querySelector("#business-settings-form"),
   settingsName: document.querySelector("#settings-name"),
   settingsDescription: document.querySelector("#settings-description"),
-  settingsOpeningHours: document.querySelector("#settings-opening-hours"),
   settingsPersona: document.querySelector("#settings-persona"),
   settingsShopId: document.querySelector("#settings-shop-id"),
   settingsEyebrow: document.querySelector("#settings-eyebrow"),

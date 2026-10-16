@@ -1,3 +1,5 @@
+import BusinessHoursField from "./BusinessHoursField.jsx";
+
 export default function BusinessDetailsSection() {
   return (
     <section id="business-settings-section" className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
@@ -44,23 +46,7 @@ export default function BusinessDetailsSection() {
                   </p>
                 </div>
 
-                <div>
-                  <label
-                    htmlFor="settings-opening-hours"
-                    className="mb-2 block text-sm font-semibold text-slate-700"
-                  >
-                    เวลาเปิดให้บริการ
-                  </label>
-
-                  <textarea
-                    id="settings-opening-hours"
-                    name="opening_hours"
-                    rows="3"
-                    maxLength="1000"
-                    placeholder="เช่น จันทร์-อาทิตย์ 08:00-18:00"
-                    className="w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-sm leading-6 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                  ></textarea>
-                </div>
+                <BusinessHoursField />
 
                 <div>
                   <label
