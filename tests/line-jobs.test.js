@@ -82,10 +82,15 @@ test('heartbeat keeps lease alive; revoked ownership blocks stale worker checkpo
   const e = event(); await submit([e]);
   let release, generated = false, sent = 0;
   const barrier = new Promise(resolve => { release = resolve; });
-  const a = worker(db, { leaseMs: 250, heartbeatMs: 30, generateReply: async () => { generated = true; await barrier; return 'reply'; }, sendReply: async () => { sent++; } });
-  const running = a.runOnce(); await until(() => generated); await sleep(450);
+  const a = worker(db, { leaseMs: 5000, heartbeatMs: 500, generateReply: async () => { generated = true; await barrier; return 'reply'; }, sendReply: async () => { sent++; } });
+  const running = a.runOnce(); await until(() => generated);
+  const initial = await job(e.webhookEventId);
+  // รอเกิน lease แรกจริง แต่เผื่อ scheduler ของ CI; ใช้ DB clock ตัดสินความเป็นเจ้าของ
+  await sleep(5500);
   const current = await job(e.webhookEventId);
-  assert.ok(current.lease_until > new Date());
+  assert.ok(current.lease_until > initial.lease_until);
+  const timing = (await db.query('SELECT clock_timestamp()>$1::timestamptz AS elapsed,lease_until>clock_timestamp() AS alive FROM line_jobs WHERE job_id=$2', [initial.lease_until,current.job_id])).rows[0];
+  assert.deepEqual(timing, { elapsed: true, alive: true });
   assert.equal(await worker(db).runOnce(), false);
   await db.query("UPDATE line_jobs SET locked_by='replacement' WHERE job_id=$1", [current.job_id]);
   release(); await running;

@@ -8,7 +8,8 @@
 - รวม origin/master ถึง 8c5d987 แล้ว รักษางาน frontend/session/account ใหม่ แก้ CI/CONTRIBUTING/npm lockfile โดยคง PostgreSQL และ Docker checks; ลบ pnpm lockfile ที่กลับมาเพราะโปรเจกต์กำหนด npm และเพิ่ม dashboard-session tests ใน runtime group
 - ผล local บนผลรวม: npm ci --include=dev และ check:toolchain ผ่าน; SQLite 3, runtime 78, import 8, PostgreSQL 2, schema 3, LINE lifecycle 1, production smoke 2 รวม 97 tests ผ่าน ไม่มี skip; build ผ่านขณะ DATABASE_URL ว่างและ parent worker=true; api:check, Docker Compose config, secret-pattern scan และ git diff --check ผ่าน
 - npm ci รายงาน dependency audit warnings (2 high, 1 critical) ใน dependency set ที่ pin อยู่ ยังไม่ได้ตรวจ advisory หรืออัปเกรดนอกขอบเขตงาน P1 นี้
-- ถัดไป: push PR #6 และตรวจ CI ของ commit ล่าสุด ห้าม merge/deploy ในรอบนี้ ผล CI รอบก่อนยังใช้ยืนยัน commit ใหม่นี้ไม่ได้
+- CI ของ ddb4f10: รอบ PR 39036314694 ผ่านทั้งหมดรวม Docker; รอบ push 39036312489 ล้มเฉพาะ test heartbeat เดิมที่ lease 250ms (crash regression ค่า default จริงผ่าน ส่งที่ 18.1s) จึงแก้ test heartbeat เป็น lease 5s/heartbeat 0.5s รอเกิน lease แรกและเทียบกับ DB clock เพื่อทน scheduler ของ CI โดยยังตรวจ keepalive/fencing ครบ
+- ทดสอบ heartbeat/fencing ที่แก้ผ่านในเครื่อง ขั้นต่อไป push commit test fix และตรวจ CI ของ head ใหม่ ห้าม merge/deploy ในรอบนี้
 - Render auto-deploy, backup/restore และ production cutover ยังต้องยืนยันโดยผู้ใช้ตาม docs/production-cutover.md
 
 ## งานล่าสุด: แก้ GitHub Actions ที่ล้มเหลวตอนติดตั้งแพ็กเกจ
