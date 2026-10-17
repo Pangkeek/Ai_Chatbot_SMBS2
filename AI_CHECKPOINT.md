@@ -1,5 +1,19 @@
 # จุดพักงานล่าสุด
 
+## ข้อ 11 — ชุดทดสอบอัตโนมัติ/รายงานเสร็จ และข้อจำกัดที่ต้องตรวจจริง
+
+- ทำต่อบน branch task11-integration-testing จาก task10-human-handover; ข้อ 10 มี commits 89e1ab8 (API) และ 34bbe04 (UI) ส่วนข้อ 11 แยกแก้ RAG 55a3983 และ UI 69822c7 แล้ว หน่วยเครื่องมือ/รายงาน/patch dependencies บันทึกต่อใน commit นี้ ไม่มี push/merge
+- อัปเดต Next 16.3.5→16.3.8, sharp 0.35.4→0.35.5, source-map-js 1.2.1→1.2.2 ตาม advisory และ lockfile เพิ่ม Playwright สำหรับ QA เท่านั้น; audit จาก Critical 1/High 2 packages เหลือ 0 ไม่ใช้ audit fix --force และไม่ได้อ้างว่าเคย exploit แอปได้
+- npm run test:evaluation ผ่าน 3 tests: gold 28/28 (correctness/relevance/grounded/tenant ทุกมิติ 28), AI boundary/failover 7/7, handover 7/7 เวลา local webhook→worker→DB p50 114.35ms / p95 157.9ms / max 174.04ms ตาม results.json รอบที่เก็บ ไม่ใช่ production SLA
+- npm run test:browser ผ่าน 1 test / 11 ขั้นตอนบน Chrome headless production frontend ทั้ง 1440px/390px ไม่มี page error และไม่มี document overflow ตรวจภาพแล้ว; API browser ถูกส่งต่อไป real HTTP/PG service ที่ฉีด LINE test transport ผล production API/CLI แยกตรวจใน smoke
+- runtime ล่าสุด 99/99 ผ่าน; schema/PostgreSQL/import/backup/production/LINE lifecycle รวม 19/19 ผ่าน; build Next 16.3.8, api:check, check:toolchain, diff --check ผ่าน
+- Docker smoke rebuild รุ่นล่าสุดใน project task10-smoke แยกพอร์ต 3110/55510 สำเร็จ app/PG healthy, HTTP health database ok และ container ยืนยัน next@16.3.8 ใช้เฉพาะ test volume ไม่แตะ runtime เดิม
+- หลักฐานอยู่ docs/task11-review.md และ reports/task11/: expected/actual JSON+Markdown, baseline 27/28 ก่อนแก้, before/after audit, browser/network/screenshot และ CSV คะแนนมนุษย์ว่าง 28 แถว ตรวจไฟล์/JSON/จำนวน/ลิงก์ภาพมีจริงแล้ว
+- เพิ่ม CI evaluation/browser/audit gates และ artifact ใน reports/ci-task11 แยกจากรายงาน Git เพื่อไม่เอาผลเก่าไปแทนรอบ CI ที่ยังไม่ได้รัน ยังไม่ได้ยืนยัน remote CI เพราะไม่ได้ push
+- ค่า LINE/AI ภายนอกรอบ fixtures เป็น 0 เพราะไม่มีการเรียกจริง; billable tokens/ค่า hosting/ค่า production ยังไม่วัด ไม่สร้างตัวเลขแทนสิ่งที่ไม่ทราบ
+- งานที่ยังต้องยืนยันด้วยคน/บัญชีที่ได้รับอนุญาตก่อนข้อ 12: คะแนนมนุษย์ใน human-review.csv, LINE bot→human push→Pause/Resume ถึงอุปกรณ์จริง, provider/model/token/ราคาและเวลาเครือข่ายจริง รวมถึงสิทธิ์ Vercel/Render และ remote checks ของ commit ที่จะรวม
+- รันซ้ำใช้ TEST_DATABASE_URL แบบ loopback chatbot_test แยกจาก runtime; browser ต้อง build ก่อนและมี Chrome หรือ PLAYWRIGHT_CHANNEL=chromium หลังติดตั้ง browser ที่เข้ากัน ไม่อ่าน credentials หรือ deploy เพื่อทดสอบ
+
 ## ข้อ 11 — แก้หน้าจอและตรวจ Chrome
 
 - พบ Chrome flow กรอก Secret เร็วแล้ว GET โหลด LINE config ที่ช้าล้างค่าทิ้ง จนฟอร์มไม่ส่ง PUT และ signed webhook ตอบ 404; สร้าง deferred GET regression ให้ล้มก่อนแก้

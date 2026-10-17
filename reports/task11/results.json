@@ -1,0 +1,768 @@
+{
+  "generated_at": "2026-10-17T19:23:43.031Z",
+  "fixture": "seedDemo + isolated PostgreSQL schema",
+  "evidence_level": "real HTTP + PostgreSQL + durable worker; LINE transport/local AI boundary are test doubles",
+  "cases": [
+    {
+      "id": "coffee-hours",
+      "shop_id": "shop-coffee",
+      "query": "ร้านเปิดกี่โมงครับ",
+      "expected_fragments": [
+        "08:00-18:00"
+      ],
+      "expected_sources": [
+        "shop-coffee-kb-1"
+      ],
+      "actual": "ยินดีครับ ร้านบ้านกาแฟเปิดทุกวัน 08:00-18:00",
+      "method": "faq",
+      "source_ids": [
+        "shop-coffee-kb-1"
+      ],
+      "correctness": true,
+      "relevance": true,
+      "grounded": true,
+      "tenant_safe": true,
+      "elapsed_ms": 174.04,
+      "passed": true
+    },
+    {
+      "id": "coffee-hours-paraphrase",
+      "shop_id": "shop-coffee",
+      "query": "เวลาทำการ",
+      "expected_fragments": [
+        "08:00-18:00"
+      ],
+      "expected_sources": [
+        "shop-coffee-kb-1",
+        "shop-coffee:business-profile"
+      ],
+      "actual": "ยินดีครับ เวลาเปิดให้บริการ: ทุกวัน 08:00-18:00",
+      "method": "extractive",
+      "source_ids": [
+        "shop-coffee:business-profile"
+      ],
+      "correctness": true,
+      "relevance": true,
+      "grounded": true,
+      "tenant_safe": true,
+      "elapsed_ms": 145.31,
+      "passed": true
+    },
+    {
+      "id": "coffee-hours-close",
+      "shop_id": "shop-coffee",
+      "query": "ร้านปิดกี่โมง",
+      "expected_fragments": [
+        "08:00-18:00"
+      ],
+      "expected_sources": [
+        "shop-coffee-kb-1",
+        "shop-coffee:business-profile"
+      ],
+      "actual": "ยินดีครับ เวลาเปิดให้บริการ: ทุกวัน 08:00-18:00",
+      "method": "extractive",
+      "source_ids": [
+        "shop-coffee:business-profile"
+      ],
+      "correctness": true,
+      "relevance": true,
+      "grounded": true,
+      "tenant_safe": true,
+      "elapsed_ms": 127.81,
+      "passed": true
+    },
+    {
+      "id": "coffee-menu",
+      "shop_id": "shop-coffee",
+      "query": "เมนูแนะนำ",
+      "expected_fragments": [
+        "60 บาท",
+        "75 บาท",
+        "85 บาท"
+      ],
+      "expected_sources": [
+        "shop-coffee-kb-2"
+      ],
+      "actual": "ยินดีครับ อเมริกาโนเย็น 60 บาท ลาเต้เย็น 75 บาท ครัวซองต์ 85 บาท",
+      "method": "extractive",
+      "source_ids": [
+        "shop-coffee-kb-2"
+      ],
+      "correctness": true,
+      "relevance": true,
+      "grounded": true,
+      "tenant_safe": true,
+      "elapsed_ms": 114.35,
+      "passed": true
+    },
+    {
+      "id": "coffee-americano",
+      "shop_id": "shop-coffee",
+      "query": "อเมริกาโนเย็นราคาเท่าไหร่",
+      "expected_fragments": [
+        "อเมริกาโนเย็น 60 บาท"
+      ],
+      "expected_sources": [
+        "shop-coffee-kb-2"
+      ],
+      "actual": "ยินดีครับ อเมริกาโนเย็น 60 บาท ลาเต้เย็น 75 บาท ครัวซองต์ 85 บาท",
+      "method": "extractive",
+      "source_ids": [
+        "shop-coffee-kb-2"
+      ],
+      "correctness": true,
+      "relevance": true,
+      "grounded": true,
+      "tenant_safe": true,
+      "elapsed_ms": 130.54,
+      "passed": true
+    },
+    {
+      "id": "coffee-croissant",
+      "shop_id": "shop-coffee",
+      "query": "ครัวซองต์ราคาเท่าไหร่",
+      "expected_fragments": [
+        "ครัวซองต์ 85 บาท"
+      ],
+      "expected_sources": [
+        "shop-coffee-kb-2"
+      ],
+      "actual": "ยินดีครับ อเมริกาโนเย็น 60 บาท ลาเต้เย็น 75 บาท ครัวซองต์ 85 บาท",
+      "method": "extractive",
+      "source_ids": [
+        "shop-coffee-kb-2"
+      ],
+      "correctness": true,
+      "relevance": true,
+      "grounded": true,
+      "tenant_safe": true,
+      "elapsed_ms": 112.54,
+      "passed": true
+    },
+    {
+      "id": "coffee-delivery",
+      "shop_id": "shop-coffee",
+      "query": "มีบริการจัดส่งไหม",
+      "expected_fragments": [
+        "รับสินค้าที่ร้านเท่านั้น",
+        "ยังไม่มีบริการจัดส่ง"
+      ],
+      "expected_sources": [
+        "shop-coffee-kb-3"
+      ],
+      "actual": "ยินดีครับ รับสินค้าที่ร้านเท่านั้น ยังไม่มีบริการจัดส่ง",
+      "method": "extractive",
+      "source_ids": [
+        "shop-coffee-kb-3"
+      ],
+      "correctness": true,
+      "relevance": true,
+      "grounded": true,
+      "tenant_safe": true,
+      "elapsed_ms": 111.19,
+      "passed": true
+    },
+    {
+      "id": "coffee-pickup",
+      "shop_id": "shop-coffee",
+      "query": "รับสินค้าที่ร้านได้ไหม",
+      "expected_fragments": [
+        "รับสินค้าที่ร้านเท่านั้น"
+      ],
+      "expected_sources": [
+        "shop-coffee-kb-3"
+      ],
+      "actual": "ยินดีครับ รับสินค้าที่ร้านเท่านั้น ยังไม่มีบริการจัดส่ง",
+      "method": "extractive",
+      "source_ids": [
+        "shop-coffee-kb-3"
+      ],
+      "correctness": true,
+      "relevance": true,
+      "grounded": true,
+      "tenant_safe": true,
+      "elapsed_ms": 105.92,
+      "passed": true
+    },
+    {
+      "id": "coffee-name",
+      "shop_id": "shop-coffee",
+      "query": "ร้านชื่ออะไร",
+      "expected_fragments": [
+        "บ้านกาแฟ"
+      ],
+      "expected_sources": [
+        "shop-coffee:business-profile"
+      ],
+      "actual": "ยินดีครับ ชื่อร้าน: บ้านกาแฟ",
+      "method": "extractive",
+      "source_ids": [
+        "shop-coffee:business-profile"
+      ],
+      "correctness": true,
+      "relevance": true,
+      "grounded": true,
+      "tenant_safe": true,
+      "elapsed_ms": 127.42,
+      "passed": true
+    },
+    {
+      "id": "coffee-parking",
+      "shop_id": "shop-coffee",
+      "query": "มีที่จอดรถไหม",
+      "expect_unknown": true,
+      "actual": "ขออภัย ยังไม่มีข้อมูลที่ยืนยันคำตอบนี้ได้ กรุณาติดต่อเจ้าหน้าที่",
+      "method": "no_evidence",
+      "source_ids": [],
+      "correctness": true,
+      "relevance": true,
+      "grounded": true,
+      "tenant_safe": true,
+      "elapsed_ms": 113.81,
+      "passed": true
+    },
+    {
+      "id": "coffee-jobs",
+      "shop_id": "shop-coffee",
+      "query": "รับสมัครงานไหม",
+      "expect_unknown": true,
+      "actual": "ขออภัย ยังไม่มีข้อมูลที่ยืนยันคำตอบนี้ได้ กรุณาติดต่อเจ้าหน้าที่",
+      "method": "no_evidence",
+      "source_ids": [],
+      "correctness": true,
+      "relevance": true,
+      "grounded": true,
+      "tenant_safe": true,
+      "elapsed_ms": 131.29,
+      "passed": true
+    },
+    {
+      "id": "coffee-payment",
+      "shop_id": "shop-coffee",
+      "query": "รับโอนธนาคารอะไร",
+      "expect_unknown": true,
+      "actual": "ขออภัย ยังไม่มีข้อมูลที่ยืนยันคำตอบนี้ได้ กรุณาติดต่อเจ้าหน้าที่",
+      "method": "no_evidence",
+      "source_ids": [],
+      "correctness": true,
+      "relevance": true,
+      "grounded": true,
+      "tenant_safe": true,
+      "elapsed_ms": 127.25,
+      "passed": true
+    },
+    {
+      "id": "coffee-promotion",
+      "shop_id": "shop-coffee",
+      "query": "โปรโมชั่นเดือนหน้า",
+      "expect_unknown": true,
+      "actual": "ขออภัย ยังไม่มีข้อมูลที่ยืนยันคำตอบนี้ได้ กรุณาติดต่อเจ้าหน้าที่",
+      "method": "no_evidence",
+      "source_ids": [],
+      "correctness": true,
+      "relevance": true,
+      "grounded": true,
+      "tenant_safe": true,
+      "elapsed_ms": 157.9,
+      "passed": true
+    },
+    {
+      "id": "coffee-draft",
+      "shop_id": "shop-coffee",
+      "query": "ส่วนลดลับ",
+      "expect_unknown": true,
+      "actual": "ขออภัย ยังไม่มีข้อมูลที่ยืนยันคำตอบนี้ได้ กรุณาติดต่อเจ้าหน้าที่",
+      "method": "no_evidence",
+      "source_ids": [],
+      "correctness": true,
+      "relevance": true,
+      "grounded": true,
+      "tenant_safe": true,
+      "elapsed_ms": 122.65,
+      "passed": true
+    },
+    {
+      "id": "coffee-cross-shop-rose",
+      "shop_id": "shop-coffee",
+      "query": "ช่อกุหลาบราคาเท่าไหร่",
+      "expect_unknown": true,
+      "actual": "ขออภัย ยังไม่มีข้อมูลที่ยืนยันคำตอบนี้ได้ กรุณาติดต่อเจ้าหน้าที่",
+      "method": "no_evidence",
+      "source_ids": [],
+      "correctness": true,
+      "relevance": true,
+      "grounded": true,
+      "tenant_safe": true,
+      "elapsed_ms": 113.3,
+      "passed": true
+    },
+    {
+      "id": "flower-hours",
+      "shop_id": "shop-flower",
+      "query": "ร้านเปิดกี่โมงคะ",
+      "expected_fragments": [
+        "09:00-19:00",
+        "ปิดวันอาทิตย์"
+      ],
+      "expected_sources": [
+        "shop-flower-kb-1"
+      ],
+      "actual": "ยินดีครับ ร้านบ้านดอกไม้เปิดจันทร์-เสาร์ 09:00-19:00 และปิดวันอาทิตย์",
+      "method": "faq",
+      "source_ids": [
+        "shop-flower-kb-1"
+      ],
+      "correctness": true,
+      "relevance": true,
+      "grounded": true,
+      "tenant_safe": true,
+      "elapsed_ms": 119.55,
+      "passed": true
+    },
+    {
+      "id": "flower-hours-paraphrase",
+      "shop_id": "shop-flower",
+      "query": "เวลาทำการ",
+      "expected_fragments": [
+        "09:00-19:00",
+        "ปิดวันอาทิตย์"
+      ],
+      "expected_sources": [
+        "shop-flower-kb-1",
+        "shop-flower:business-profile"
+      ],
+      "actual": "ยินดีครับ เวลาเปิดให้บริการ: จันทร์-เสาร์ 09:00-19:00 ปิดวันอาทิตย์",
+      "method": "extractive",
+      "source_ids": [
+        "shop-flower:business-profile"
+      ],
+      "correctness": true,
+      "relevance": true,
+      "grounded": true,
+      "tenant_safe": true,
+      "elapsed_ms": 132.67,
+      "passed": true
+    },
+    {
+      "id": "flower-sunday",
+      "shop_id": "shop-flower",
+      "query": "วันอาทิตย์เปิดไหม",
+      "expected_fragments": [
+        "ปิดวันอาทิตย์"
+      ],
+      "expected_sources": [
+        "shop-flower-kb-1",
+        "shop-flower:business-profile"
+      ],
+      "actual": "ยินดีครับ ร้านบ้านดอกไม้เปิดจันทร์-เสาร์ 09:00-19:00 และปิดวันอาทิตย์",
+      "method": "extractive",
+      "source_ids": [
+        "shop-flower-kb-1"
+      ],
+      "correctness": true,
+      "relevance": true,
+      "grounded": true,
+      "tenant_safe": true,
+      "elapsed_ms": 105.41,
+      "passed": true
+    },
+    {
+      "id": "flower-rose",
+      "shop_id": "shop-flower",
+      "query": "ช่อกุหลาบราคาเท่าไหร่",
+      "expected_fragments": [
+        "ช่อกุหลาบเริ่มต้น 590 บาท"
+      ],
+      "expected_sources": [
+        "shop-flower-kb-2"
+      ],
+      "actual": "ยินดีครับ ช่อกุหลาบเริ่มต้น 590 บาท ช่อดอกไม้รวมเริ่มต้น 390 บาท",
+      "method": "extractive",
+      "source_ids": [
+        "shop-flower-kb-2"
+      ],
+      "correctness": true,
+      "relevance": true,
+      "grounded": true,
+      "tenant_safe": true,
+      "elapsed_ms": 110.07,
+      "passed": true
+    },
+    {
+      "id": "flower-bouquet",
+      "shop_id": "shop-flower",
+      "query": "ช่อดอกไม้รวมเริ่มต้นกี่บาท",
+      "expected_fragments": [
+        "ช่อดอกไม้รวมเริ่มต้น 390 บาท"
+      ],
+      "expected_sources": [
+        "shop-flower-kb-2"
+      ],
+      "actual": "ยินดีครับ ช่อกุหลาบเริ่มต้น 590 บาท ช่อดอกไม้รวมเริ่มต้น 390 บาท",
+      "method": "extractive",
+      "source_ids": [
+        "shop-flower-kb-2"
+      ],
+      "correctness": true,
+      "relevance": true,
+      "grounded": true,
+      "tenant_safe": true,
+      "elapsed_ms": 103.52,
+      "passed": true
+    },
+    {
+      "id": "flower-delivery",
+      "shop_id": "shop-flower",
+      "query": "ส่งดอกไม้ได้ไหมคะ",
+      "expected_fragments": [
+        "จัดส่งภายในเมือง",
+        "50 บาท"
+      ],
+      "expected_sources": [
+        "shop-flower-kb-3"
+      ],
+      "actual": "ยินดีครับ จัดส่งภายในเมือง ค่าจัดส่ง 50 บาท กรุณาสั่งล่วงหน้า 1 วัน",
+      "method": "extractive",
+      "source_ids": [
+        "shop-flower-kb-3"
+      ],
+      "correctness": true,
+      "relevance": true,
+      "grounded": true,
+      "tenant_safe": true,
+      "elapsed_ms": 115.85,
+      "passed": true
+    },
+    {
+      "id": "flower-delivery-price",
+      "shop_id": "shop-flower",
+      "query": "ค่าจัดส่งเท่าไร",
+      "expected_fragments": [
+        "50 บาท"
+      ],
+      "expected_sources": [
+        "shop-flower-kb-3"
+      ],
+      "actual": "ยินดีครับ จัดส่งภายในเมือง ค่าจัดส่ง 50 บาท กรุณาสั่งล่วงหน้า 1 วัน",
+      "method": "extractive",
+      "source_ids": [
+        "shop-flower-kb-3"
+      ],
+      "correctness": true,
+      "relevance": true,
+      "grounded": true,
+      "tenant_safe": true,
+      "elapsed_ms": 113.88,
+      "passed": true
+    },
+    {
+      "id": "flower-delivery-advance",
+      "shop_id": "shop-flower",
+      "query": "ต้องสั่งล่วงหน้ากี่วัน",
+      "expected_fragments": [
+        "ล่วงหน้า 1 วัน"
+      ],
+      "expected_sources": [
+        "shop-flower-kb-3"
+      ],
+      "actual": "ยินดีครับ จัดส่งภายในเมือง ค่าจัดส่ง 50 บาท กรุณาสั่งล่วงหน้า 1 วัน",
+      "method": "extractive",
+      "source_ids": [
+        "shop-flower-kb-3"
+      ],
+      "correctness": true,
+      "relevance": true,
+      "grounded": true,
+      "tenant_safe": true,
+      "elapsed_ms": 106.65,
+      "passed": true
+    },
+    {
+      "id": "flower-name",
+      "shop_id": "shop-flower",
+      "query": "ชื่อร้านอะไร",
+      "expected_fragments": [
+        "บ้านดอกไม้"
+      ],
+      "expected_sources": [
+        "shop-flower:business-profile"
+      ],
+      "actual": "ยินดีครับ ชื่อร้าน: บ้านดอกไม้",
+      "method": "extractive",
+      "source_ids": [
+        "shop-flower:business-profile"
+      ],
+      "correctness": true,
+      "relevance": true,
+      "grounded": true,
+      "tenant_safe": true,
+      "elapsed_ms": 106.14,
+      "passed": true
+    },
+    {
+      "id": "flower-parking",
+      "shop_id": "shop-flower",
+      "query": "มีที่จอดรถไหม",
+      "expect_unknown": true,
+      "actual": "ขออภัย ยังไม่มีข้อมูลที่ยืนยันคำตอบนี้ได้ กรุณาติดต่อเจ้าหน้าที่",
+      "method": "no_evidence",
+      "source_ids": [],
+      "correctness": true,
+      "relevance": true,
+      "grounded": true,
+      "tenant_safe": true,
+      "elapsed_ms": 102.63,
+      "passed": true
+    },
+    {
+      "id": "flower-refund",
+      "shop_id": "shop-flower",
+      "query": "รับคืนสินค้าไหม",
+      "expect_unknown": true,
+      "actual": "ขออภัย ยังไม่มีข้อมูลที่ยืนยันคำตอบนี้ได้ กรุณาติดต่อเจ้าหน้าที่",
+      "method": "no_evidence",
+      "source_ids": [],
+      "correctness": true,
+      "relevance": true,
+      "grounded": true,
+      "tenant_safe": true,
+      "elapsed_ms": 121.44,
+      "passed": true
+    },
+    {
+      "id": "flower-wifi",
+      "shop_id": "shop-flower",
+      "query": "มีไวไฟไหม",
+      "expect_unknown": true,
+      "actual": "ขออภัย ยังไม่มีข้อมูลที่ยืนยันคำตอบนี้ได้ กรุณาติดต่อเจ้าหน้าที่",
+      "method": "no_evidence",
+      "source_ids": [],
+      "correctness": true,
+      "relevance": true,
+      "grounded": true,
+      "tenant_safe": true,
+      "elapsed_ms": 128.4,
+      "passed": true
+    },
+    {
+      "id": "flower-cross-shop-coffee",
+      "shop_id": "shop-flower",
+      "query": "อเมริกาโนเย็นราคาเท่าไหร่",
+      "expect_unknown": true,
+      "actual": "ขออภัย ยังไม่มีข้อมูลที่ยืนยันคำตอบนี้ได้ กรุณาติดต่อเจ้าหน้าที่",
+      "method": "no_evidence",
+      "source_ids": [],
+      "correctness": true,
+      "relevance": true,
+      "grounded": true,
+      "tenant_safe": true,
+      "elapsed_ms": 109.71,
+      "passed": true
+    }
+  ],
+  "failover": [
+    {
+      "mode": "valid",
+      "expected_method": "generator",
+      "actual_method": "generator",
+      "actual": "ยินดีครับ จัดส่งภายในเมือง ค่าจัดส่ง 50 บาท กรุณาสั่งล่วงหน้า 1 วัน",
+      "elapsed_ms": 109.58,
+      "passed": true
+    },
+    {
+      "mode": "http503",
+      "expected_method": "extractive",
+      "actual_method": "extractive",
+      "actual": "ยินดีครับ จัดส่งภายในเมือง ค่าจัดส่ง 50 บาท กรุณาสั่งล่วงหน้า 1 วัน",
+      "elapsed_ms": 119.53,
+      "passed": true
+    },
+    {
+      "mode": "malformed",
+      "expected_method": "extractive",
+      "actual_method": "extractive",
+      "actual": "ยินดีครับ จัดส่งภายในเมือง ค่าจัดส่ง 50 บาท กรุณาสั่งล่วงหน้า 1 วัน",
+      "elapsed_ms": 129.97,
+      "passed": true
+    },
+    {
+      "mode": "unsupported",
+      "expected_method": "extractive",
+      "actual_method": "extractive",
+      "actual": "ยินดีครับ จัดส่งภายในเมือง ค่าจัดส่ง 50 บาท กรุณาสั่งล่วงหน้า 1 วัน",
+      "elapsed_ms": 125.37,
+      "passed": true
+    },
+    {
+      "mode": "foreign-source",
+      "expected_method": "extractive",
+      "actual_method": "extractive",
+      "actual": "ยินดีครับ จัดส่งภายในเมือง ค่าจัดส่ง 50 บาท กรุณาสั่งล่วงหน้า 1 วัน",
+      "elapsed_ms": 117.17,
+      "passed": true
+    },
+    {
+      "mode": "insufficient",
+      "expected_method": "no_evidence",
+      "actual_method": "no_evidence",
+      "actual": "ขออภัย ยังไม่มีข้อมูลที่ยืนยันคำตอบนี้ได้ กรุณาติดต่อเจ้าหน้าที่",
+      "elapsed_ms": 104.55,
+      "passed": true
+    },
+    {
+      "mode": "slow",
+      "expected_method": "extractive",
+      "actual_method": "extractive",
+      "actual": "ยินดีครับ จัดส่งภายในเมือง ค่าจัดส่ง 50 บาท กรุณาสั่งล่วงหน้า 1 วัน",
+      "elapsed_ms": 10125.96,
+      "passed": true
+    }
+  ],
+  "handover": [
+    {
+      "step": "takeover",
+      "elapsed_ms": 20.88,
+      "passed": true
+    },
+    {
+      "step": "no_bot_while_human",
+      "passed": true
+    },
+    {
+      "step": "agent_push_and_idempotency",
+      "elapsed_ms": 45.44,
+      "passed": true
+    },
+    {
+      "step": "resume_fresh_event",
+      "elapsed_ms": 104.74,
+      "passed": true
+    },
+    {
+      "step": "duplicate_webhook_no_resend",
+      "passed": true
+    },
+    {
+      "step": "pause_resume_cancels_pending_ai",
+      "passed": true
+    },
+    {
+      "step": "tenant_and_session_guards",
+      "passed": true
+    }
+  ],
+  "costs": {
+    "external_ai_requests": 0,
+    "external_line_requests": 0,
+    "external_api_cost_usd": 0,
+    "production_monthly_cost": null,
+    "billable_tokens": null,
+    "local_ai_boundary_requests": 8
+  },
+  "limitations": [
+    "Automatic fixture rubric, not a human quality score or production accuracy estimate",
+    "Local elapsed times include webhook, queue processing and DB checkpoint; exclude LINE network, device receipt and human thinking",
+    "This runner does not test browser rendering; see the separate browser-results.json. No real LINE or paid AI model test",
+    "Host electricity/hosting fees and production token/LINE billing were not measured"
+  ],
+  "source_revision": "34bbe04af8911485da2b82eb4c819e625df5c938",
+  "source_has_changes": true,
+  "runtime": {
+    "node": "v24.19.0",
+    "platform": "win32",
+    "next": "16.3.8",
+    "postgresql": "18.6 (Debian 18.6-1.pgdg13+2)"
+  },
+  "summary": {
+    "quality": {
+      "total": 28,
+      "passed": 28,
+      "failed": 0
+    },
+    "failover": {
+      "total": 7,
+      "passed": 7,
+      "failed": 0
+    },
+    "handover": {
+      "total": 7,
+      "passed": 7,
+      "failed": 0
+    },
+    "correctness_pass": 28,
+    "relevance_pass": 28,
+    "grounded_pass": 28,
+    "tenant_safe_pass": 28,
+    "local_latency_ms": {
+      "p50": 114.35,
+      "p95": 157.9,
+      "max": 174.04
+    }
+  },
+  "provider_requests": [
+    {
+      "mode": "valid",
+      "shop_id": "shop-flower",
+      "query": "ค่าจัดส่งเท่าไร",
+      "source_ids": [
+        "shop-flower-kb-3"
+      ]
+    },
+    {
+      "mode": "http503",
+      "shop_id": "shop-flower",
+      "query": "ค่าจัดส่งเท่าไร",
+      "source_ids": [
+        "shop-flower-kb-3"
+      ]
+    },
+    {
+      "mode": "malformed",
+      "shop_id": "shop-flower",
+      "query": "ค่าจัดส่งเท่าไร",
+      "source_ids": [
+        "shop-flower-kb-3"
+      ]
+    },
+    {
+      "mode": "unsupported",
+      "shop_id": "shop-flower",
+      "query": "ค่าจัดส่งเท่าไร",
+      "source_ids": [
+        "shop-flower-kb-3"
+      ]
+    },
+    {
+      "mode": "foreign-source",
+      "shop_id": "shop-flower",
+      "query": "ค่าจัดส่งเท่าไร",
+      "source_ids": [
+        "shop-flower-kb-3"
+      ]
+    },
+    {
+      "mode": "insufficient",
+      "shop_id": "shop-flower",
+      "query": "ค่าจัดส่งเท่าไร",
+      "source_ids": [
+        "shop-flower-kb-3"
+      ]
+    },
+    {
+      "mode": "slow",
+      "shop_id": "shop-flower",
+      "query": "ค่าจัดส่งเท่าไร",
+      "source_ids": [
+        "shop-flower-kb-3"
+      ]
+    },
+    {
+      "mode": "deferred",
+      "shop_id": "shop-flower",
+      "query": "ค่าจัดส่งเท่าไร",
+      "source_ids": [
+        "shop-flower-kb-3"
+      ]
+    }
+  ]
+}
