@@ -1,24 +1,29 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
+import { createHmac } from 'node:crypto';
 import { openDatabase } from '../src/lib/db.js';
 import { seedDemo, demoPassword } from '../src/lib/seed.js';
 import { createApp } from '../src/lib/app.js';
 import { schemas } from '../src/lib/contracts.js';
 import { validate } from '../src/utils/validation.js';
+import { createLineWorker } from '../src/services/worker.js';
 
-let db, server, base, token;
+let db, server, base, token, worker;
+const delivered = [];
 async function request(path, auth = token, options = {}) {
   const response = await fetch(base + path, { ...options, headers: {
     ...(auth ? { Authorization: `Bearer ${auth}` } : {}),
     ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+    ...options.headers,
   } });
   return { status: response.status, body: await response.json() };
 }
 before(async () => {
   db = openDatabase(':memory:');
   await seedDemo(db);
-  server = createApp(db, { logErrors: false });
+  worker = createLineWorker(db, { sendReply: async payload => { delivered.push(payload); return { status: 'ok' }; }, logErrors: false });
+  server = createApp(db, { logErrors: false, worker });
   server.listen(0, '127.0.0.1');
   await once(server, 'listening');
   base = `http://127.0.0.1:${server.address().port}`;
@@ -84,4 +89,33 @@ test('conversation filters apply before pagination and message order survives eq
   assert.equal(messages.body.meta.total, 2);
   assert.equal(messages.body.data[0].id, 'a-second');
   assert.equal((await request(basePath + '/shop-flower-conversation-1/messages')).status, 404);
+});
+
+test('signed LINE webhook history agrees with statistics and duplicate events do not inflate totals', async () => {
+  const prefix = '/api/v1/shops/shop-coffee';
+  const initial = (await request(prefix + '/statistics')).body.data;
+  const secret = 'test-conversations-secret';
+  assert.equal((await request(prefix + '/line/config', token, { method: 'PUT', body: JSON.stringify({ channel_secret: secret, channel_access_token: 'fake-test-token-only' }) })).status, 200);
+  const raw = JSON.stringify({ events: [{ type: 'message', webhookEventId: 'conversation-audit-line',
+    replyToken: 'test-reply-token', source: { type: 'user', userId: 'U-conversation-audit' },
+    message: { type: 'text', id: 'test-audit-message', text: 'ร้านเปิดกี่โมงครับ' } }] });
+  const signature = createHmac('sha256', secret).update(raw).digest('base64');
+  const send = () => request(prefix + '/line/webhook', null, { method: 'POST', body: raw, headers: { 'x-line-signature': signature } });
+  assert.equal((await send()).body.data.processed_count, 1);
+  await worker.drain();
+  assert.equal(delivered.length, 1);
+  const rooms = await request(prefix + '/conversations?search=U-conversation-audit');
+  assert.equal(rooms.body.meta.total, 1);
+  const messages = await request(prefix + '/conversations/' + rooms.body.data[0].id + '/messages');
+  assert.deepEqual(messages.body.data.map(row => row.role), ['customer', 'assistant']);
+  assert.equal(messages.body.data[0].content, 'ร้านเปิดกี่โมงครับ');
+  assert.equal(messages.body.data[1].content, delivered[0].messages[0].text);
+  const stats = (await request(prefix + '/statistics')).body.data;
+  assert.equal(stats.total_conversations, initial.total_conversations + 1);
+  assert.equal(stats.total_messages, initial.total_messages + 2);
+  assert.equal(stats.line_conversations, initial.line_conversations + 1);
+  assert.equal((await send()).body.data.processed_count, 0);
+  await worker.drain();
+  assert.equal((await request(prefix + '/statistics')).body.data.total_messages, stats.total_messages);
+  assert.equal(delivered.length, 1);
 });

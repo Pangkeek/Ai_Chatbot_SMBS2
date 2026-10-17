@@ -1,6 +1,7 @@
 import LineIntegrationSection from './LineIntegrationSection.jsx';
 import KnowledgeManagementSection from './KnowledgeManagementSection.jsx';
 import BusinessDetailsSection from './BusinessDetailsSection.jsx';
+import ConversationsSection from './ConversationsSection.jsx';
 export default function BusinessSettingsView() {
   return (
     <main
@@ -75,6 +76,15 @@ export default function BusinessSettingsView() {
           >
             การเชื่อมต่อ LINE
           </button>
+          <button
+            id="settings-conversations-tab"
+            type="button"
+            className="app-settings-tab"
+            aria-controls="conversations-section"
+            aria-selected="false"
+          >
+            บทสนทนาและสถิติ
+          </button>
         </nav>
 
         <div className="mt-6">
@@ -84,6 +94,8 @@ export default function BusinessSettingsView() {
             <KnowledgeManagementSection />
 
             <LineIntegrationSection />
+
+            <ConversationsSection />
           </div>
         </div>
       </main>
