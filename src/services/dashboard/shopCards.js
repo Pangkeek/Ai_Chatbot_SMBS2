@@ -9,7 +9,7 @@ function createShopCard(shop) {
 
   card.type = "button";
   card.className = [
-    "charcoal-panel app-shop-card group rounded-3xl border bg-white p-5 text-left",
+    "outlined-panel app-shop-card group rounded-3xl border bg-white p-5 text-left",
     "transition hover:-translate-y-1",
   ].join(" ");
 

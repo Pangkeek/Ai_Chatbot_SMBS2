@@ -45,7 +45,7 @@ export default function BusinessSettingsView() {
         </div>
 
         <nav
-          className="charcoal-panel mt-7 flex gap-2 overflow-x-auto rounded-2xl border border-[#dbe5fb] bg-white p-1.5 shadow-sm"
+          className="outlined-panel mt-7 flex gap-2 overflow-x-auto rounded-2xl border border-[#dbe5fb] bg-white p-1.5 shadow-sm"
           aria-label="เมนูจัดการร้าน"
         >
           <button

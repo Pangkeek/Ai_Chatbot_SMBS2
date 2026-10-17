@@ -7,7 +7,7 @@ export default function KnowledgeManagementSection() {
               className="hidden space-y-6"
               aria-labelledby="knowledge-section-title"
             >
-              <div className="charcoal-panel rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+              <div className="outlined-panel rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <p className="text-xs font-bold tracking-[0.16em] text-blue-600 uppercase">
@@ -99,7 +99,7 @@ export default function KnowledgeManagementSection() {
 
               <div
                 id="knowledge-error"
-                className="charcoal-panel hidden rounded-3xl border border-red-200 bg-white px-6 py-10 text-center shadow-sm"
+                className="outlined-panel hidden rounded-3xl border border-red-200 bg-white px-6 py-10 text-center shadow-sm"
                 role="alert"
               >
                 <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-red-50 text-xl text-red-600" aria-hidden="true">!</div>
@@ -116,7 +116,7 @@ export default function KnowledgeManagementSection() {
 
               <div
                 id="knowledge-empty"
-                className="charcoal-panel hidden rounded-3xl border-2 border-dashed border-slate-200 bg-white px-6 py-12 text-center"
+                className="outlined-panel hidden rounded-3xl border-2 border-dashed border-slate-200 bg-white px-6 py-12 text-center"
               >
                 <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-blue-50 text-2xl text-blue-600" aria-hidden="true">?</div>
                 <h3 id="knowledge-empty-title" className="mt-4 text-lg font-bold text-slate-900">ยังไม่มีข้อมูลความรู้</h3>
@@ -129,7 +129,7 @@ export default function KnowledgeManagementSection() {
 
               <footer
                 id="knowledge-pagination"
-                className="charcoal-panel hidden flex-col gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                className="outlined-panel hidden flex-col gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
               >
                 <p id="knowledge-results-summary" className="text-xs text-slate-500" aria-live="polite"></p>
                 <div className="flex gap-2">

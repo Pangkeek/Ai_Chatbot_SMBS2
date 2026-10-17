@@ -7,7 +7,7 @@ export default function KnowledgeEditorModal() {
         aria-modal="true"
         aria-labelledby="knowledge-modal-title"
       >
-        <div className="charcoal-panel max-h-[94vh] w-full max-w-2xl overflow-y-auto rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl">
+        <div className="outlined-panel max-h-[94vh] w-full max-w-2xl overflow-y-auto rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl">
           <div className="flex items-start justify-between border-b border-slate-100 px-5 py-5 sm:px-7">
             <div>
               <p className="text-xs font-bold tracking-[0.16em] text-blue-600 uppercase">Knowledge editor</p>

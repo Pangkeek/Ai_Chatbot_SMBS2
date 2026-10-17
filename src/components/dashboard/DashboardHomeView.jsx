@@ -91,7 +91,7 @@ export default function DashboardHomeView() {
 
               <div
                 id="empty-shops"
-                className="charcoal-panel hidden rounded-3xl border-2 border-dashed border-slate-200 bg-white px-6 py-14 text-center"
+                className="outlined-panel hidden rounded-3xl border-2 border-dashed border-slate-200 bg-white px-6 py-14 text-center"
               >
                 <div className="mx-auto flex size-16 items-center justify-center rounded-2xl bg-blue-50 text-3xl">
                   <svg
@@ -126,7 +126,7 @@ export default function DashboardHomeView() {
 
               <section
                 id="shop-detail"
-                className="charcoal-panel mt-8 hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"
+                className="outlined-panel mt-8 hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"
               >
                 <div className="flex items-start justify-between gap-4">
                   <div>
@@ -173,7 +173,7 @@ export default function DashboardHomeView() {
 
             {/* คง form ไว้ใน DOM เพื่อให้ controller ผูก submit ได้ตั้งแต่เปิดหน้า */}
             <aside id="create-shop-panel" hidden={!createShopOpen} aria-labelledby="create-shop-title">
-              <div className="charcoal-panel sticky top-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="outlined-panel sticky top-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
                 <div className="flex size-12 items-center justify-center rounded-2xl bg-blue-50 text-2xl">
                   <svg
                     aria-hidden="true"

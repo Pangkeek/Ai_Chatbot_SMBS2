@@ -21,7 +21,7 @@ function element(tag, className, text) {
 export function createKnowledgeCard(entry, { isOwner, openForm, toggleStatus, openDelete }) {
   const card = element(
     "article",
-    "charcoal-panel rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-blue-200 hover:shadow-md"
+    "outlined-panel rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-blue-200 hover:shadow-md"
   );
   const header = element("div", "flex flex-wrap items-start justify-between gap-3");
   const badges = element("div", "flex flex-wrap gap-2");

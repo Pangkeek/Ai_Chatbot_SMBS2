@@ -130,73 +130,8 @@ html, body, body * {
   box-shadow: 0 18px 32px -18px rgba(33, 64, 134, .35);
 }
 
-/* กล่องสี #333 เฉพาะหน้าที่เลือก ไม่เปลี่ยนพื้นหลังเว็บหรือสีสถานะแจ้งเตือน */
-.charcoal-panel {
-  background-color: #333;
-  color: #f5f5f5;
-  border-color: #626262;
-  color-scheme: dark;
+/* ใช้ #333 เฉพาะเส้นกรอบกล่อง โดยคงพื้นหลัง ข้อความ และช่องกรอกสีเดิม */
+.outlined-panel {
+  border: 1px solid #333;
 }
-.charcoal-panel[class~="border-t-4"] { border-top-color: #4564c9; }
-
-.charcoal-panel :where(.text-slate-700, .text-slate-800, .text-slate-900, [class~="text-[#18345c]"]) {
-  color: #f5f5f5;
-}
-.charcoal-panel :where(.text-slate-400, .text-slate-500, .text-slate-600) {
-  color: #d4d4d4;
-}
-.charcoal-panel :where(.text-blue-600, .text-blue-700, .text-blue-800, [class~="text-[#4564c9]"]) {
-  color: #a5c7ff;
-}
-.charcoal-panel:hover [class~="group-hover:text-[#3855b8]"] { color: #a5c7ff; }
-.charcoal-panel :where(.bg-white, .bg-slate-50, .bg-slate-100):not(:where(#line-sim-result *)) {
-  background-color: #3d3d3d;
-}
-.charcoal-panel :where(.bg-blue-50, .bg-blue-100, [class~="bg-[#eaf1ff]"]) {
-  background-color: #263b56;
-}
-.charcoal-panel :where(.border-slate-100, .border-slate-200, .border-blue-100, .border-blue-200) {
-  border-color: #626262;
-}
-.charcoal-panel :where(.divide-slate-100) > :not(:last-child) { border-color: #626262; }
-
-.charcoal-panel :where(input:not([type="checkbox"]):not([type="radio"]), textarea, select) {
-  background-color: #262626;
-  color: #f5f5f5;
-  border-color: #777;
-}
-.charcoal-panel :where(input, textarea)::placeholder { color: #bdbdbd; }
-.charcoal-panel :where(input, textarea, select):focus-visible {
-  border-color: #a5c7ff;
-  outline: 2px solid #a5c7ff;
-  outline-offset: 2px;
-}
-.charcoal-panel :where(input[type="checkbox"], input[type="radio"]) { accent-color: #a5c7ff; }
-.charcoal-panel :where(.hover\:bg-slate-50, .hover\:bg-slate-100):hover {
-  background-color: #484848;
-  color: #fff;
-}
-.charcoal-panel a:hover { color: #fff; }
-.charcoal-panel .app-settings-tab { color: #d4d4d4; }
-.charcoal-panel .app-settings-tab--active { color: #fff; }
-.charcoal-panel .app-settings-tab:not(.app-settings-tab--active):hover {
-  background-color: #484848;
-  color: #fff;
-}
-
-/* คงสีพื้นแชตและข้อความในบับเบิลของ LINE เพื่อแยกลูกค้ากับบอทเหมือนเดิม */
-.charcoal-panel #line-sim-result { color-scheme: light; }
-.charcoal-panel :where(.text-green-700):not(:where(.bg-green-50, .bg-green-100, .bg-green-50 *, .bg-green-100 *)) {
-  color: #86efac;
-}
-.charcoal-panel :where(.text-red-500, .text-red-600):not(:where(.bg-red-50, .bg-red-100, .bg-red-50 *, .bg-red-100 *)) {
-  color: #fca5a5;
-}
-.charcoal-panel :where(.hover\:bg-green-50, .hover\:bg-emerald-50):hover {
-  background-color: #234337;
-  color: #a7f3d0;
-}
-.charcoal-panel :where(.hover\:bg-red-50, .hover\:bg-amber-50):hover {
-  background-color: #57352d;
-  color: #fed7aa;
-}
+.outlined-panel:hover { border-color: #333; }
