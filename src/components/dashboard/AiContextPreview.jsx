@@ -1,6 +1,6 @@
 export default function AiContextPreview() {
   return (
-    <section className="rounded-3xl border border-blue-100 bg-white p-5 shadow-sm sm:p-7" aria-labelledby="ai-preview-title">
+    <section className="charcoal-panel rounded-3xl border border-blue-100 bg-white p-5 shadow-sm sm:p-7" aria-labelledby="ai-preview-title">
       <h3 id="ai-preview-title" className="text-xl font-bold text-slate-900">ดูข้อมูลที่ Chatbot ใช้ตอบ</h3>
       <p className="mt-2 text-sm leading-6 text-slate-600">
         ลองพิมพ์คำถามลูกค้าเพื่อดูข้อมูลร้าน หลักฐานที่ค้นพบ และ prompt ที่เตรียมส่งให้บริการ AI โดยใช้เฉพาะความรู้ที่เผยแพร่แล้ว
