@@ -1,5 +1,15 @@
 # จุดพักงานล่าสุด
 
+## งานล่าสุด: แก้ P1 ของ PR #7 ให้รวมกับ PostgreSQL master ได้
+
+- รวม master e695be7 เข้า branch task9-chat-page แบบ local และแก้ conflict โดยคงระบบ PostgreSQL/durable LINE worker ของ master พร้อมฟีเจอร์ข้อ 9 ไม่ได้ merge PR, push หรือ deploy
+- ทำซ้ำอาการบน PostgreSQL 18 จริง: statistics endpoint เดิมตอบ 500 แทน 200 เพราะใช้ SQLite API; แก้เป็น async db.query พร้อม $1 และ countToNumber ให้ count(*)/message_count เป็นจำนวนเต็มตาม HTTP contract ไม่ใช่ int8/string
+- รายการห้องยังค้น/กรองก่อนนับและแบ่งหน้า ใช้ strpos กับ bound parameters แทน instr และใช้ created_at,id เป็นลำดับคงที่ตาม master แทน rowid (เวลาเท่ากันเรียง id ไม่ใช่ลำดับ INSERT)
+- ย้าย tests/conversation-api.test.js และ tests/conversation-dashboard.test.js ไปใช้ PostgreSQL fixture/migrations จริง แยก random schema ในฐาน chatbot_test บน loopback; เพิ่มเข้า test:runtime ที่ CI ใช้จริง ไม่ทำ SQLite compatibility adapter
+- production smoke ตรวจ statistics/list filters/message_count/last_message ด้วย session จริงบน production CLI, การกันข้ามร้าน/401, agent access และยอดคงเดิมหลัง restart
+- ตรวจบน Node 24.19.0 + npm 11.19.0: runtime 85 tests ผ่าน, SQLite backup 3, import 8, PostgreSQL 2, schema 3, LINE runtime 1 และ production smoke 2 ผ่าน; build ผ่านขณะ DATABASE_URL ว่างและ parent worker=true, check:toolchain ผ่าน
+- ใช้ container ทดสอบเฉพาะ task9-review-postgres ที่พอร์ต 55439 ไม่แตะฐาน runtime หรือทำ production cutover; คำขอปรับปุ่มหน้าแรกหลัง login จะทำต่อเป็นอีกหน่วยงานแยก
+
 ## งานล่าสุด: ข้อ 9 หน้าบทสนทนาและสถิติ — implementation เสร็จบน task9-chat-page
 
 - ย้ายงานทั้งหน่วย API และหน้าจอไป branch `task9-chat-page` ตามคำสั่งระหว่างทำงาน ไม่ได้ push/merge หรือเปลี่ยน remote; ตอนตรวจสุดท้าย master/origin/master อยู่ที่ 8c5d987 (แก้ CONTRIBUTING.md) โดยงานข้อ 9 ยังคงแยกใน feature branch
@@ -28,6 +38,17 @@
 - ข้อความเรียง created_at และ rowid เพื่อคงลำดับรับเมื่อเวลาเท่ากัน; ทุก endpoint ตรวจสมาชิกและ shop_id ตามเดิม
 - เขียนเทสต์ให้ล้มก่อนเพิ่ม endpoint/filters แล้วแก้จนผ่าน รวม 105 ห้อง, อักขระ %, ห้องว่าง, ข้อความเวลาเดียวกัน และการแยกร้าน
 - `npm test` ผ่าน 56 รายการ; สร้าง OpenAPI ใหม่แล้ว ส่วน UI และการตรวจ Docker จะทำต่อในหน่วยงานถัดไป ยังไม่ถือว่าข้อ 9 เสร็จครบ
+## แก้ P1: LINE crash recovery ก่อน reply cutoff — 17 ตุลาคม 2026
+
+- ลด default lease จาก 60 เป็น 15 วินาที และ heartbeat จาก 15 เป็น 3 วินาที คง poll 1 วินาที/cutoff 45 วินาที/HTTP timeout 10 วินาที เพื่อมีเวลากู้ สร้างคำตอบ และส่งหลัง worker ล่มก่อน sending
+- เปลี่ยน crash regression ให้ใช้ค่า default จริง รอ heartbeat ก่อน SIGKILL แล้วกู้ผ่าน polling โดยไม่แก้ timestamp หรือบังคับ lease หมดอายุใน DB ตรวจ customer checkpoint เดิม/assistant ไม่ซ้ำและส่งก่อน cutoff; kill ระหว่าง sending ต้อง unknown และไม่ส่งซ้ำ
+- ตรวจด้วย Node 24.19.0/npm 11.19.0 และ PostgreSQL 18 บน loopback chatbot_test/schema สุ่ม: test LINE jobs ผ่าน 13/13, natural recovery ส่งหนึ่งครั้งที่อายุงาน 18.5 วินาที; sending recovery เป็น unknown ส่ง 0 ครั้ง; git diff --check ผ่าน
+- รวม origin/master ถึง 8c5d987 แล้ว รักษางาน frontend/session/account ใหม่ แก้ CI/CONTRIBUTING/npm lockfile โดยคง PostgreSQL และ Docker checks; ลบ pnpm lockfile ที่กลับมาเพราะโปรเจกต์กำหนด npm และเพิ่ม dashboard-session tests ใน runtime group
+- ผล local บนผลรวม: npm ci --include=dev และ check:toolchain ผ่าน; SQLite 3, runtime 78, import 8, PostgreSQL 2, schema 3, LINE lifecycle 1, production smoke 2 รวม 97 tests ผ่าน ไม่มี skip; build ผ่านขณะ DATABASE_URL ว่างและ parent worker=true; api:check, Docker Compose config, secret-pattern scan และ git diff --check ผ่าน
+- npm ci รายงาน dependency audit warnings (2 high, 1 critical) ใน dependency set ที่ pin อยู่ ยังไม่ได้ตรวจ advisory หรืออัปเกรดนอกขอบเขตงาน P1 นี้
+- CI ของ ddb4f10: รอบ PR 39036314694 ผ่านทั้งหมดรวม Docker; รอบ push 39036312489 ล้มเฉพาะ test heartbeat เดิมที่ lease 250ms (crash regression ค่า default จริงผ่าน ส่งที่ 18.1s) จึงแก้ test heartbeat เป็น lease 5s/heartbeat 0.5s รอเกิน lease แรกและเทียบกับ DB clock เพื่อทน scheduler ของ CI โดยยังตรวจ keepalive/fencing ครบ
+- ทดสอบ heartbeat/fencing ที่แก้ผ่านในเครื่อง ขั้นต่อไป push commit test fix และตรวจ CI ของ head ใหม่ ห้าม merge/deploy ในรอบนี้
+- Render auto-deploy, backup/restore และ production cutover ยังต้องยืนยันโดยผู้ใช้ตาม docs/production-cutover.md
 
 ## งานล่าสุด: แก้ GitHub Actions ที่ล้มเหลวตอนติดตั้งแพ็กเกจ
 

@@ -124,6 +124,7 @@ export const schemas = {
   }),
   LineWebhook: {
     type: "object",
+    description: "Each event requires webhookEventId or message.id. Text messages also require nonblank source.userId and message.text. Events and new text jobs commit atomically before success; unsupported events are ignored and cross-shop event ID collisions return 409.",
     properties: {
       destination: { anyOf: [str(100), { type: "null" }] },
       events: {
@@ -157,7 +158,7 @@ export const schemas = {
     },
     required: ["events"],
   },
-  LineWebhookResult: object({ status: str(50), processed_count: integer() }),
+  LineWebhookResult: object({ status: str(50), processed_count: { ...integer(), description: "New text jobs committed durably; duplicates do not count. This does not confirm LINE reply delivery." } }),
   LineSimulate: object(
     {
       user_id: str(100, 1),
@@ -447,7 +448,7 @@ export const routes = [
     "POST",
     `${base}/line/webhook`,
     "lineWebhook",
-    "Receive LINE Messaging API webhook events",
+      "Persist LINE webhook events and new text jobs before acknowledging delivery",
     data(schemas.LineWebhookResult),
     { auth: false, body: schemas.LineWebhook }
   ),
@@ -455,7 +456,7 @@ export const routes = [
     "POST",
     `${base}/line/simulate`,
     "simulateLineMessage",
-    "Simulate an incoming LINE message event for testing (owner)",
+    "Simulate an incoming LINE message event for testing (owner; returns 404 in production)",
     data(schemas.LineSimulateResult),
     { body: schemas.LineSimulate, owner: true }
   ),
@@ -467,12 +468,13 @@ const errorDescriptions = {
   403: "Owner role required",
   404: "Resource missing or inaccessible",
   405: "Method not allowed",
-  409: "Duplicate email or conversation state conflict",
+    409: "Duplicate email, conversation state conflict, or LINE event ID collision",
   413: "Body exceeds 128 KiB",
   415: "Expected application/json",
   422: "Schema validation failed",
   429: "Authentication rate limit exceeded",
   500: "Internal error",
+  503: "Database unavailable, schema not initialized, or service in maintenance (MAINTENANCE_MODE; Retry-After: 60)",
 };
 // Reuse named schemas in the exported document instead of duplicating them per endpoint.
 function referenceSchema(value) {

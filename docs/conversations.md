@@ -32,13 +32,14 @@
 - `search` ค้นชื่อลูกค้า/รหัสลูกค้าแบบข้อความตรงตัว ไม่ใช้ `%`/`_` เป็น wildcard; กรองใน SQL ก่อนนับ `meta.total` และแบ่งหน้า
 - รายการห้องเพิ่ม `message_count` และ `last_message` (null เมื่อยังไม่มีข้อความ)
 - `GET /api/v1/shops/{shopId}/conversations/{conversationId}` อ่านสถานะห้องล่าสุด
-- `GET /api/v1/shops/{shopId}/conversations/{conversationId}/messages?limit=50&offset=0` อ่านข้อความเรียง created_at แล้ว rowid เพื่อรักษาลำดับรับเมื่อเวลาตรงกัน
+- `GET /api/v1/shops/{shopId}/conversations/{conversationId}/messages?limit=50&offset=0` อ่านข้อความเรียง created_at แล้ว id แบบคงที่ตาม PostgreSQL ของ master; เมื่อเวลาเท่ากันจะเรียงตาม id ไม่ใช่ลำดับ INSERT และไม่ใช้ rowid/ctid
 - query ที่ไม่รู้จัก ค่าซ้ำ หรือ filter ไม่ถูกต้อง ตอบ 400; ไม่มี session ตอบ 401; ข้ามร้านหรือผสมรหัสห้องอีกร้านตอบ 404
 
 ## ขอบเขตและการตรวจ
 
 - หน้านี้อ่านประวัติ/สถานะและสถิติเท่านั้น ปุ่มรับช่วง พิมพ์ตอบ และ Pause/Resume อยู่ในงานข้อ 10 ไม่แสดงปุ่มที่บันทึกข้อความแต่ยังไม่ส่งจริง
 - `tests/conversation-api.test.js`: ตรวจยอดที่ทราบแน่นอน ห้องว่าง แยกร้าน กรองก่อนแบ่งหน้ามากกว่า 100 ห้อง ลำดับข้อความ และ signed webhook ที่ใช้ตัวส่ง LINE จำลอง
-- `tests/conversation-dashboard.test.js`: ใช้ component/controller จริงกับ HTTP API และ SQLite ชั่วคราว ตรวจค้นหา/แบ่งหน้า XSS เปิดใหม่ซ้ำ สลับร้านระหว่างรอ API ล้มเหลว/401 และ polling/visibility
+- `tests/conversation-dashboard.test.js`: ใช้ component/controller จริงกับ HTTP API และ PostgreSQL schema ชั่วคราว ตรวจค้นหา/แบ่งหน้า XSS เปิดใหม่ซ้ำ สลับร้านระหว่างรอ API ล้มเหลว/401 และ polling/visibility
+- ชุดทดสอบทั้งสองไฟล์ใช้ `integration/postgresql-fixture.js` และ migrations เดียวกับ master ต้องตั้ง `TEST_DATABASE_URL` เป็นฐาน `chatbot_test` บน loopback โดยแยกจาก runtime; ลงทะเบียนใน `npm run test:runtime` ซึ่ง CI เรียกจริง ไม่มีการ skip หรือใช้ SQLite adapter
 - การทดสอบข้างต้นไม่ใช่การส่งข้อความกับบัญชี LINE จริง และ DOM integration ไม่ใช่การตรวจภาพหน้าจอด้วยเบราว์เซอร์จริง
 - ตรวจภาพแยกด้วย Chrome บน production build และฐานข้อมูลทดสอบที่พอร์ต 3109 แล้ว ทั้งจอปกติและมือถือ 390px: เลือกห้องอ่านประวัติได้ ตัวเลขตรงกับ fixture และเนื้อหาไม่ล้นแนวนอน ดูผลตรวจ/ข้อจำกัดใน `AI_CHECKPOINT.md`

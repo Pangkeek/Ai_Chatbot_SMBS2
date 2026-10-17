@@ -8,12 +8,9 @@ import { createAiPreviewOperations } from './api/aiPreview.js';
 import { createStatisticsOperations } from './api/statistics.js';
 
 export { publicUser } from './api/common.js';
-
 export function createService(db, options = {}) {
   const worker = options.worker || createLineWorker(db, options.workerOptions);
   const helpers = createDbHelpers(db);
-
-  // operationId ใน contracts.js ใช้ชื่อเดียวกับเมธอดที่รวมตรงนี้
   return {
     ...createAuthShopsOperations(db, helpers),
     ...createKnowledgeOperations(db, helpers),

@@ -4,7 +4,7 @@ WORKDIR /app
 
 # ติดตั้งจาก lockfile เพื่อให้ได้แพ็กเกจชุดเดิมทุกครั้ง
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm install --global npm@11.19.0 && npm ci --include=dev
 
 COPY . .
 RUN npm run build \

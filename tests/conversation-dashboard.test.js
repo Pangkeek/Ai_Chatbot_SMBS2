@@ -3,11 +3,13 @@ import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import { build } from 'esbuild';
 import { JSDOM } from 'jsdom';
-import { openDatabase } from '../src/lib/db.js';
+import { createTestDatabase } from '../integration/postgresql-fixture.js';
+import { migratePostgresql } from '../scripts/postgresql/migrations.js';
+import { insertConversation, insertMessage } from './fixtures/conversation-data.js';
 import { seedDemo, demoPassword } from '../src/lib/seed.js';
 import { createApp } from '../src/lib/app.js';
 
-// ทดสอบ component/controller จริงกับ HTTP API และฐานข้อมูลชั่วคราว ไม่ใช้ยอดจำลองแทน API
+// ทดสอบ component/controller จริงกับ HTTP API และ PostgreSQL schema แยก ไม่ใช้ยอดจำลองแทน API
 const bundle = await build({
   stdin: { contents: `
     import React, { act } from 'react';
@@ -34,18 +36,18 @@ const bundle = await build({
 });
 
 async function fixture() {
-  const db = openDatabase(':memory:');
+  const fixture = await createTestDatabase();
+  const db = fixture.db;
+  await migratePostgresql({ config: fixture.config });
   await seedDemo(db);
   const time = '2026-10-17T00:00:00.000Z';
-  const add = db.prepare('INSERT INTO conversations VALUES (?,?,?,?,?,?,?,?,?)');
   for (let index = 0; index < 25; index++) {
-    add.run(`ui-${String(index).padStart(3, '0')}`, 'shop-coffee', 'line', `U-${index}`, `ลูกค้า ${index}`, 'open', 'active', time, time);
+    await insertConversation(db, `ui-${String(index).padStart(3, '0')}`, 'shop-coffee', 'line', `U-${index}`, `ลูกค้า ${index}`, 'open', 'active', time, time);
   }
-  const message = db.prepare('INSERT INTO messages VALUES (?,?,?,?,?,?,?)');
   for (let index = 0; index < 60; index++) {
-    message.run(`ui-msg-${index}`, 'shop-coffee', 'ui-024', 'customer', `ข้อความ ${index}`, null, new Date(Date.parse(time) + index * 1000).toISOString());
+    await insertMessage(db, `ui-msg-${index}`, 'shop-coffee', 'ui-024', 'customer', `ข้อความ ${index}`, null, new Date(Date.parse(time) + index * 1000).toISOString());
   }
-  message.run('ui-xss', 'shop-coffee', 'ui-024', 'customer', '<img src=x onerror=alert(1)>', null, '2026-10-17T00:02:00.000Z');
+  await insertMessage(db, 'ui-xss', 'shop-coffee', 'ui-024', 'customer', '<img src=x onerror=alert(1)>', null, '2026-10-17T00:02:00.000Z');
   const server = createApp(db, { logErrors: false });
   server.listen(0, '127.0.0.1'); await once(server, 'listening');
   const base = `http://127.0.0.1:${server.address().port}`;
@@ -91,7 +93,7 @@ async function fixture() {
     assert.ok(check(), document.body.textContent.slice(-1800));
   }
   return { db, server, base, token, window, document, ui, errors, requests, controls, until, polls,
-    async close() { await ui.unmount(); dom.window.close(); server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); db.close(); } };
+    async close() { await ui.unmount(); dom.window.close(); server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); await server.drain(); await fixture.dispose(); } };
 }
 
 test('conversation screen reads real statistics, pages rooms and safely shows paged history after remount', async () => {
@@ -132,8 +134,8 @@ test('refresh recovers from failures and late responses cannot leak the previous
   let release;
   try {
     const time = '2026-10-17T00:00:00.000Z';
-    app.db.prepare("INSERT INTO shops VALUES ('empty-ui','ร้านว่าง','','','',?,?)").run(time, time);
-    app.db.prepare("INSERT INTO shop_memberships VALUES ('empty-ui','user-coffee','owner',?)").run(time);
+    await app.db.query("INSERT INTO shops (id,name,description,opening_hours,persona,created_at,updated_at) VALUES ('empty-ui','ร้านว่าง','','','',$1,$1)", [time]);
+    await app.db.query("INSERT INTO shop_memberships VALUES ('empty-ui','user-coffee','owner',$1)", [time]);
     await app.ui.mount();
     await app.until(() => app.document.querySelector('[data-stat="total_messages"]')?.textContent === '63');
     app.controls.fail = true;
@@ -171,8 +173,8 @@ test('polling reflects new messages and bot mode but stops when leaving or hidin
     await app.until(() => app.document.querySelector('[data-stat="total_messages"]')?.textContent === '63');
     await app.ui.click('conversation-room-ui-024');
     await app.until(() => app.document.getElementById('conversation-detail-meta').textContent.includes('บอทเปิดทำงาน'));
-    app.db.prepare("UPDATE conversations SET bot_mode = 'human' WHERE shop_id = 'shop-coffee' AND id = 'ui-024'").run();
-    app.db.prepare('INSERT INTO messages VALUES (?,?,?,?,?,?,?)').run('new-live', 'shop-coffee', 'ui-024', 'agent', 'ข้อความใหม่จากแอดมิน', 'user-coffee', '2026-10-17T01:00:00.000Z');
+    await app.db.query("UPDATE conversations SET bot_mode = 'human' WHERE shop_id = 'shop-coffee' AND id = 'ui-024'");
+    await insertMessage(app.db, 'new-live', 'shop-coffee', 'ui-024', 'agent', 'ข้อความใหม่จากแอดมิน', 'user-coffee', '2026-10-17T01:00:00.000Z');
     assert.equal(app.polls.size, 1);
     const [id, tick] = [...app.polls][0]; app.polls.delete(id); await tick();
     await app.until(() => app.document.querySelector('[data-stat="total_messages"]')?.textContent === '64');

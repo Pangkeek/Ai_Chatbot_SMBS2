@@ -4,6 +4,8 @@ import { routes, openapi } from "./contracts.js";
 import { tokenHash } from "./auth.js";
 import { ApiError, validate } from "../utils/validation.js";
 import { createService } from "../services/service.js";
+import { serializeDates } from './postgresql-schema.js';
+import { rejectMaintenanceRequest } from './maintenance.js';
 
 const bodyLimit = 128 * 1024;
 const compiled = routes.map((route) => ({
@@ -99,7 +101,8 @@ export function createRequestHandler(
 ) {
   const service = createService(db, { worker, ...serviceOptions });
   const authAttempts = new Map();
-  return async (req, res) => {
+  const handler = async (req, res) => {
+    if (rejectMaintenanceRequest(req, res)) return;
     const requestId = randomUUID();
     res.setHeader("X-Request-Id", requestId);
     res.setHeader("X-Content-Type-Options", "nosniff");
@@ -108,7 +111,7 @@ export function createRequestHandler(
       res.statusCode = status;
       if (status === 204) return res.end();
       res.setHeader("Content-Type", "application/json; charset=utf-8");
-      res.end(JSON.stringify(payload));
+      res.end(JSON.stringify(serializeDates(payload)));
     }
     try {
       const url = new URL(req.url, "http://localhost");
@@ -124,6 +127,9 @@ export function createRequestHandler(
           throw new ApiError(405, "METHOD_NOT_ALLOWED", "Method not allowed");
         }
         throw new ApiError(404, "NOT_FOUND", "Route not found");
+      }
+      if (route.operationId === 'simulateLineMessage' && process.env.NODE_ENV === 'production') {
+        throw new ApiError(404, 'NOT_FOUND', 'Route not found');
       }
       const rawParams = route.regex.exec(url.pathname).slice(1);
       let params;
@@ -173,20 +179,12 @@ export function createRequestHandler(
             "A valid bearer token is required"
           );
         context.sessionHash = tokenHash(match[1]);
-        context.user = db
-          .prepare(
-            `SELECT u.* FROM users u JOIN sessions s ON s.user_id = u.id
-          WHERE s.token_hash = ? AND s.expires_at > ?`
-          )
-          .get(context.sessionHash, new Date().toISOString());
+        context.user = (await db.query(`SELECT u.* FROM users u JOIN sessions s ON s.user_id = u.id
+          WHERE s.token_hash = $1 AND s.expires_at > $2`, [context.sessionHash, new Date().toISOString()])).rows[0];
         if (!context.user)
           throw new ApiError(401, "UNAUTHORIZED", "Session expired or invalid");
         if (params.shopId) {
-          const membership = db
-            .prepare(
-              "SELECT role FROM shop_memberships WHERE shop_id = ? AND user_id = ?"
-            )
-            .get(params.shopId, context.user.id);
+          const membership = (await db.query("SELECT role FROM shop_memberships WHERE shop_id = $1 AND user_id = $2", [params.shopId, context.user.id])).rows[0];
           if (!membership)
             throw new ApiError(404, "NOT_FOUND", "Resource not found");
           if (route.owner && membership.role !== "owner")
@@ -210,7 +208,7 @@ export function createRequestHandler(
       send(route.status, result);
     } catch (error) {
       if (!(error instanceof ApiError) && logErrors)
-        console.error(`[${requestId}]`, error);
+        console.error(`[${requestId}] Request failed`);
       const known = error instanceof ApiError;
       send(known ? error.status : 500, {
         error: {
@@ -222,11 +220,16 @@ export function createRequestHandler(
       });
     }
   };
+  handler.drain = () => service.worker.drain();
+  return handler;
 }
 
 export function createApp(db, options) {
-  return createServer(
+  const handler = createRequestHandler(db, options);
+  const server = createServer(
     { requestTimeout: 15000, headersTimeout: 10000 },
-    createRequestHandler(db, options)
+    handler
   );
+  server.drain = handler.drain;
+  return server;
 }
