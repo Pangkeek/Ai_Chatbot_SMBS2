@@ -1,5 +1,14 @@
 # จุดพักงานล่าสุด
 
+## ข้อ 10 — หน้าจอและคู่มือเสร็จ
+
+- เพิ่มรับช่วง/Pause/Resume ในห้องเดิม พร้อมช่องพิมพ์ ส่งไป LINE และผลการส่ง 20 รายการล่าสุด; disable ตามโหมด/สถานะห้อง/ระหว่างส่ง แสดง sent ว่า LINE รับแล้ว ไม่ใช่อ่านแล้ว
+- unknown คงร่างและ request ID ปุ่มตรวจสถานะไม่ส่ง LINE ซ้ำ ผลเก็บในฐานและอ่านหลัง remount ได้ สลับห้อง/ร้านไม่พาข้อมูลหรือผลคำขอเก่าไปทับห้องใหม่
+- tests/conversation-dashboard.test.js ผ่านทั้ง 5 tests กับ HTTP/PostgreSQL จริง รวม flow รับช่วง→ส่ง→Pause→Resume, XSS, remount, unknown, paging/filter, stale shop response และ visibility
+- README/docs/conversations.md อธิบาย API ใหม่ migration ลำดับ deploy ข้อจำกัดการส่ง และกรณี unknown; OpenAPI ตรงกับ runtime
+- บันทึกแยก API และ UI ตาม skill; ยังไม่ push/merge ทั้งสองหน่วย การทดสอบ LINE เป็น boundary จำลองและไม่มี browser สำหรับ visual QA ข้อ 10
+- ขั้นต่อไปข้อ 11 ตามคำสั่งผู้ใช้: สร้างชุดวัดผลซ้ำได้ เก็บ expected/actual/เวลา/ขอบเขตต้นทุน และรายงานช่องว่างจริง
+
 ## ข้อ 10 — API รับช่วงและส่งข้อความ (branch task10-human-handover)
 
 - เพิ่ม API `POST/GET .../conversations/{conversationId}/replies` ส่ง LINE Push ไปยังลูกค้าที่เก็บในห้อง ด้วย token ร้านเดียวกัน ไม่ใช้ API messages เดิมซึ่งบันทึกอย่างเดียว

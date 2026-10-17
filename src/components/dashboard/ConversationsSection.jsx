@@ -59,10 +59,23 @@ export default function ConversationsSection() {
         <div className="outlined-panel min-w-0 rounded-3xl bg-white p-4 sm:p-5">
           <h2 id="conversation-detail-title" className="break-words text-lg text-slate-900">เลือกห้องเพื่ออ่านประวัติ</h2>
           <p id="conversation-detail-meta" className="mt-1 break-all text-xs leading-6 text-slate-500" />
+          <div className="mt-3 flex flex-wrap gap-2" aria-label="ควบคุมบอท">
+            <button id="conversation-takeover" type="button" className="app-primary-button min-h-11 rounded-xl px-4 py-2 text-sm text-white disabled:opacity-40" disabled>รับช่วงสนทนา</button>
+            <button id="conversation-pause" type="button" className={button} disabled>Pause · พักบอท</button>
+            <button id="conversation-resume" type="button" className={button} disabled>Resume · เปิดบอท</button>
+          </div>
+          <p id="conversation-action-status" role="status" className="mt-2 text-sm leading-6 text-slate-600" />
           <p id="conversation-detail-error" role="alert" className="mt-3 hidden rounded-xl bg-red-50 p-3 text-sm text-red-700" />
           <p id="conversation-message-page" className="mt-4 text-center text-xs text-slate-500" role="status" />
           <div className="my-3 flex justify-between gap-2"><button id="conversation-messages-prev" type="button" className={button} disabled>ข้อความเก่ากว่า</button><button id="conversation-messages-next" type="button" className={button} disabled>ข้อความใหม่กว่า</button></div>
           <div id="conversation-messages" className="max-h-[36rem] min-h-48 space-y-3 overflow-y-auto rounded-2xl bg-slate-50 p-3" aria-label="ประวัติข้อความ" />
+          <form id="conversation-composer" className="mt-4 space-y-3" aria-label="ส่งข้อความแอดมิน">
+            <label className="block text-sm text-slate-700" htmlFor="conversation-reply">ข้อความจากแอดมิน</label>
+            <textarea id="conversation-reply" rows={3} maxLength={5000} required disabled className={`${input} w-full resize-y disabled:opacity-50`} placeholder="รับช่วงหรือพักบอทก่อนส่งข้อความไป LINE" />
+            <p id="conversation-composer-help" className="text-xs leading-5 text-slate-500">เลือกห้องสนทนาก่อนส่งข้อความ</p>
+            <button id="conversation-send" type="submit" className="app-primary-button min-h-11 rounded-xl px-5 py-2 text-sm text-white disabled:opacity-40" disabled>ส่งไป LINE</button>
+          </form>
+          <div id="conversation-deliveries" className="mt-4 space-y-2 text-xs leading-5 text-slate-600" aria-label="สถานะการส่งข้อความแอดมิน" />
         </div>
       </div>
     </section>
