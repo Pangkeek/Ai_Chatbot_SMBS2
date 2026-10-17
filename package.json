@@ -20,7 +20,7 @@
     "db:seed": "node --env-file-if-exists=.env scripts/seed.js",
     "test": "node --env-file-if-exists=.env --test",
     "test:sqlite": "node --env-file-if-exists=.env --test tests/backup-sqlite.test.js tests/database.test.js",
-    "test:runtime": "node --env-file-if-exists=.env --test tests/api.test.js tests/business-hours.test.js tests/business-profile.test.js tests/chatbot-context.test.js tests/chatbot-persona.test.js tests/dashboard-routes.test.js tests/knowledge-manager.test.js tests/line-jobs.test.js tests/line.test.js tests/maintenance.test.js tests/postgresql-api-regression.test.js tests/postgresql-config.test.js tests/postgresql-types.test.js tests/rag.test.js",
+    "test:runtime": "node --env-file-if-exists=.env --test tests/api.test.js tests/business-hours.test.js tests/business-profile.test.js tests/chatbot-context.test.js tests/chatbot-persona.test.js tests/dashboard-routes.test.js tests/dashboard-session.test.js tests/knowledge-manager.test.js tests/line-jobs.test.js tests/line.test.js tests/maintenance.test.js tests/postgresql-api-regression.test.js tests/postgresql-config.test.js tests/postgresql-types.test.js tests/rag.test.js",
     "test:import": "node --env-file-if-exists=.env --test tests/sqlite-import.test.js",
     "check:toolchain": "node scripts/check-toolchain.js",
     "test:production": "node --env-file-if-exists=.env --test integration/production-smoke.js",
@@ -35,6 +35,8 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",
+    "esbuild": "^0.28.2",
+    "jsdom": "^30.1.3",
     "tailwindcss": "^4.3.3"
   },
   "dependencies": {

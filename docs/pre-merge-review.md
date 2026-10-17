@@ -10,11 +10,15 @@
 
 LINE เก็บหลักฐานก่อน HTTP และสร้าง audit พร้อม assistant message หลังส่งสำเร็จ Recovery ก่อนส่งใช้คำตอบ/หลักฐานเดิมแม้ความรู้ถูกลบ งานส่งไม่แน่นอนคง unknown และไม่ส่งซ้ำ Retention ล้าง checkpoint เก่าพร้อม payload และ reply_text
 
+รอบแก้ P1 รวม origin/master เพิ่มอีก 10 commits โดยรักษา frontend/session/account changes และใช้ esbuild/jsdom ตาม npm lockfile ของ master แก้ CI/CONTRIBUTING/lockfiles ให้คง PostgreSQL checks และ npm เป็นมาตรฐาน เพิ่ม dashboard-session tests ใน runtime group
+
+แก้ default lease 60 → 15 วินาที และ heartbeat 15 → 3 วินาที เพราะ lease เดิมยาวกว่า reply cutoff 45 วินาที Crash regression รอ default heartbeat จริงก่อน kill แล้วกู้ด้วย polling โดยไม่ปรับเวลาใน DB; ทดสอบเฉพาะ LINE jobs ผ่าน 13 tests โดยก่อน sending กู้ส่งได้ที่อายุงาน 18.5 วินาที ส่วนระหว่าง sending เป็น unknown และไม่ส่งซ้ำ งานที่ crash ใกล้ cutoff หรือระบบหยุดนานยังอาจหมดเวลาตาม policy เดิม
+
 ## การตรวจ
 
 ใช้ Node 24.19.0 และ npm 11.19.0 จาก workspace cache โดยไม่เปลี่ยน npm global ใช้เฉพาะ loopback chatbot_test และ random schema ต่อ fixture ไม่แตะ runtime/staging/production database
 
-ผล local ผ่านครบ: check:toolchain; test:sqlite (3); test:runtime (66); test:import (8); test:postgres (2); test:postgres:schema (3); build โดย DATABASE_URL ว่างและ parent worker=true; test:line:runtime (1); test:production (2); api:check; git diff --check; Docker Compose config รวม 85 tests ไม่มี skip
+ผล local หลังแก้ P1 และรวม master: npm ci --include=dev, check:toolchain; test:sqlite (3); test:runtime (78); test:import (8); test:postgres (2); test:postgres:schema (3); build โดย DATABASE_URL ว่างและ parent worker=true; test:line:runtime (1); test:production (2); api:check; git diff --check; Docker Compose config ผ่านครบ รวม 97 tests ไม่มี skip ตรวจ CI ของ commit ใหม่ใน PR #6 ก่อนตัดสินความพร้อม
 
 Production smoke ตรวจ Next CLI จริง, PORT, import/login/tenant/owner/session, restart persistence และ maintenance: health สอง URL ตรวจ DB, malformed business/webhook/simulator ถูกปิด, worker=true ไม่ consume pending job, restart ออกจาก maintenance ใช้งานได้ และไม่มี DATABASE_URL ยังปิด business API ได้พร้อม health 503
 

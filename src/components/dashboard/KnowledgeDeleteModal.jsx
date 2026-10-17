@@ -8,7 +8,7 @@ export default function KnowledgeDeleteModal() {
         aria-labelledby="knowledge-delete-title"
         aria-describedby="knowledge-delete-description"
       >
-        <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl sm:p-7">
+        <div className="outlined-panel w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl sm:p-7">
           <div className="flex size-12 items-center justify-center rounded-full bg-red-50 text-xl text-red-600" aria-hidden="true">!</div>
           <h2 id="knowledge-delete-title" className="mt-5 text-xl font-bold text-slate-900">ลบข้อมูลความรู้นี้?</h2>
           <p id="knowledge-delete-description" className="mt-2 text-sm leading-6 text-slate-500"></p>

@@ -4,7 +4,7 @@ import BusinessProfileFields from "./BusinessProfileFields.jsx";
 
 export default function BusinessDetailsSection() {
   return (
-    <section id="business-settings-section" className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+    <section id="business-settings-section" className="outlined-panel rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
               <form id="business-settings-form" className="space-y-6">
                 <div>
                   <label

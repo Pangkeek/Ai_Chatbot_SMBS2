@@ -44,3 +44,7 @@ git push -u origin codex/postgresql-render-migration
 ```
 
 เลือก branch ให้ตรงกับงานที่ตั้งใจส่ง ไม่เปลี่ยน main อัตโนมัติ งานนี้ยังไม่ได้ commit/push หรือรัน GitHub Actions remote หลัง CI ผ่านผู้ใช้จึงเลือก release commit และดำเนินการ Render ตาม [คู่มือ staging](docs/render-staging.md)
+
+## Notin แผนงาน
+
+https://app.notion.com/p/AI-Chatbot-SMBs-3d8d1e39ec9c81158d17e529e229f350

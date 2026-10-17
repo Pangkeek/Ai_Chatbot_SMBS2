@@ -1,6 +1,6 @@
-export default function RegisterForm() {
+export default function RegisterForm({ hidden = true }) {
   return (
-    <form id="register-form" className="mt-8 hidden space-y-5">
+    <form id="register-form" hidden={hidden} className="mt-8 space-y-5">
               <div>
                 <label
                   htmlFor="register-name"

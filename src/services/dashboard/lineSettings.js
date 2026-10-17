@@ -1,7 +1,5 @@
-import { elements } from './elements.js';
-
 // ดูแลการตั้งค่า LINE ของร้านที่กำลังเปิดอยู่
-export function createLineSettings({ apiRequest, getSelectedShopId, showNotification, setButtonLoading }) {
+export function createLineSettings({ elements, listen, apiRequest, getSelectedShopId, showNotification, setButtonLoading }) {
   async function loadLineConfig(shopId) {
     try {
       const origin = window.location.origin;
@@ -98,10 +96,10 @@ export function createLineSettings({ apiRequest, getSelectedShopId, showNotifica
     }
   }
 
-  elements.verifyLineBtn.addEventListener("click", () => verifyLineForShop(getSelectedShopId()));
+  listen(elements.verifyLineBtn, "click", () => verifyLineForShop(getSelectedShopId()));
 
   if (elements.copyWebhookBtn) {
-    elements.copyWebhookBtn.addEventListener("click", async () => {
+    listen(elements.copyWebhookBtn, "click", async () => {
       if (!elements.lineWebhookUrl.value) return;
       try {
         await navigator.clipboard.writeText(elements.lineWebhookUrl.value);
@@ -118,7 +116,7 @@ export function createLineSettings({ apiRequest, getSelectedShopId, showNotifica
   }
 
   if (elements.lineSettingsForm) {
-    elements.lineSettingsForm.addEventListener("submit", async (event) => {
+    listen(elements.lineSettingsForm, "submit", async (event) => {
       event.preventDefault();
       if (!getSelectedShopId()) return;
 

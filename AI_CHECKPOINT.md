@@ -5,8 +5,122 @@
 - ลด default lease จาก 60 เป็น 15 วินาที และ heartbeat จาก 15 เป็น 3 วินาที คง poll 1 วินาที/cutoff 45 วินาที/HTTP timeout 10 วินาที เพื่อมีเวลากู้ สร้างคำตอบ และส่งหลัง worker ล่มก่อน sending
 - เปลี่ยน crash regression ให้ใช้ค่า default จริง รอ heartbeat ก่อน SIGKILL แล้วกู้ผ่าน polling โดยไม่แก้ timestamp หรือบังคับ lease หมดอายุใน DB ตรวจ customer checkpoint เดิม/assistant ไม่ซ้ำและส่งก่อน cutoff; kill ระหว่าง sending ต้อง unknown และไม่ส่งซ้ำ
 - ตรวจด้วย Node 24.19.0/npm 11.19.0 และ PostgreSQL 18 บน loopback chatbot_test/schema สุ่ม: test LINE jobs ผ่าน 13/13, natural recovery ส่งหนึ่งครั้งที่อายุงาน 18.5 วินาที; sending recovery เป็น unknown ส่ง 0 ครั้ง; git diff --check ผ่าน
-- ถัดไป: รวม origin/master ล่าสุดและแก้ conflict, รัน checks บนผลรวม แล้ว push PR #6 และตรวจ CI ของ commit ล่าสุด ห้าม merge/deploy ในรอบนี้
+- รวม origin/master ถึง 8c5d987 แล้ว รักษางาน frontend/session/account ใหม่ แก้ CI/CONTRIBUTING/npm lockfile โดยคง PostgreSQL และ Docker checks; ลบ pnpm lockfile ที่กลับมาเพราะโปรเจกต์กำหนด npm และเพิ่ม dashboard-session tests ใน runtime group
+- ผล local บนผลรวม: npm ci --include=dev และ check:toolchain ผ่าน; SQLite 3, runtime 78, import 8, PostgreSQL 2, schema 3, LINE lifecycle 1, production smoke 2 รวม 97 tests ผ่าน ไม่มี skip; build ผ่านขณะ DATABASE_URL ว่างและ parent worker=true; api:check, Docker Compose config, secret-pattern scan และ git diff --check ผ่าน
+- npm ci รายงาน dependency audit warnings (2 high, 1 critical) ใน dependency set ที่ pin อยู่ ยังไม่ได้ตรวจ advisory หรืออัปเกรดนอกขอบเขตงาน P1 นี้
+- ถัดไป: push PR #6 และตรวจ CI ของ commit ล่าสุด ห้าม merge/deploy ในรอบนี้ ผล CI รอบก่อนยังใช้ยืนยัน commit ใหม่นี้ไม่ได้
 - Render auto-deploy, backup/restore และ production cutover ยังต้องยืนยันโดยผู้ใช้ตาม docs/production-cutover.md
+
+## งานล่าสุด: แก้ GitHub Actions ที่ล้มเหลวตอนติดตั้งแพ็กเกจ
+
+- อ่าน GitHub Actions run `39019685168` ของ commit `36b3867f8eff475ca1d232cc637491d5045ffcec` พบล้มที่ `pnpm install --frozen-lockfile` ด้วยข้อความ `This project is configured to use npm`
+- ทำซ้ำด้วย `npx --yes pnpm@11.19.0 install --frozen-lockfile` แล้วล้มด้วยสาเหตุเดียวกัน ยืนยันว่าไม่ใช่เทสต์แอปหรือ build ล้ม
+- แก้ `.github/workflows/ci.yml` ให้ใช้ npm 11.19.0 ตาม packageManager, cache จาก package-lock.json และรัน npm ci / npm run build / npm test / npm run api:check โดยยังคง Node.js 24.19.0
+- ตรวจขั้นตอนทั้งหมดใน Docker สภาพแวดล้อมสะอาดบน Linux ด้วย Node.js 24.19.0 + npm 11.19.0: npm ci ผ่าน, build ผ่าน, เทสต์ 54 รายการผ่าน และ OpenAPI contract ผ่าน; ตรวจในเครื่องผ่านเช่นกัน และ git diff --check ผ่าน
+- การทดสอบ CI ใช้ image ชั่วคราว `smb-chatbot-ci-check:local` ไม่ได้เปลี่ยนคอนเทนเนอร์แอปพอร์ต 3000
+
+### งานค้างและข้อจำกัดของ CI/Deployment
+
+- ยังไม่ได้ push commit แก้ไข จึงยังไม่อ้างว่า GitHub Actions รอบใหม่ผ่าน; run ของ commit 36b3867 ที่ตรวจยังเป็น failure
+- Vercel เป็นอีก check แยกกัน: GitHub commit status และ deployment 7137380766 ระบุเพียง `Deployment was blocked` ไม่มีรายละเอียดสาเหตุ
+- หน้ารายละเอียด Vercel/URL deployment ต้องเข้าสู่ระบบเจ้าของโครงการ; ส่งคำถามขอข้อความเหตุผลที่บล็อกไปแล้ว ยังไม่ยืนยันว่าเป็นปัญหาสิทธิ์ผู้เขียน commit หรือสาเหตุอื่น และไม่ได้แก้ author, สิทธิ์สมาชิก หรือปิด check เพื่อหลบปัญหา
+- หลังผู้ใช้อนุญาต push ให้ตรวจ Actions ของ SHA ใหม่ และอ่านเหตุผลจาก Vercel ก่อนแก้ปัญหา deployment ต่อ
+
+## งานก่อนหน้า: คืนสีเดิมและใช้ #333 เฉพาะเส้นกรอบ
+
+- ผู้ใช้แก้ความต้องการให้ #333 เป็นเส้นกรอบ ไม่ใช่พื้นหลังกล่อง จึงยกเลิก CSS ธีมเข้มทั้งหมดจากงานก่อนหน้า
+- เปลี่ยน class เป็น `outlined-panel` โดยกำหนดเพียง border 1px solid #333 และคงสีเส้นกรอบขณะ hover; ใช้กับกล่องชุดเดิมใน home, ร้านค้า, ข้อมูลธุรกิจ, FAQ/ความรู้/หน้าต่างแก้ไข และการเชื่อมต่อ LINE
+- พื้นหลัง สีข้อความ ช่องกรอก placeholder สีสถานะ และ focus กลับมาใช้ utility/style เดิมก่อนงานธีมเข้ม; Kanit SemiBold และพฤติกรรมการเปิดฟอร์ม/เมนูบัญชีไม่เปลี่ยน
+- เทียบ source กับ commit ก่อนเพิ่มธีมเข้มแล้ว เหลือเพียงการเพิ่ม class เส้นกรอบและ CSS เส้นกรอบ ไม่มีสีพื้น/ข้อความธีมเข้มหลงเหลือใน src
+- `git diff --check` ผ่าน, `docker compose up -d --build app` ผ่าน และเทสต์ใน Docker บน Node.js 24 ผ่าน 54 รายการ (fail 0)
+- ตรวจ HTML/CSS จากพอร์ต 3000: กล่องชุดเดิมเป็นพื้นขาวและมีกรอบ #333 ทั้งสี่ด้าน, หัวข้อ/ลิงก์กลับเป็นสีน้ำเงินเดิม, ไม่เหลือสีช่องกรอกเข้ม และ Kanit 600 ยังอยู่; `/health` ตอบ 200 และคอนเทนเนอร์ healthy
+- ข้อจำกัดการตรวจ: JSDOM ไม่ประมวลผล Tailwind @layer/custom properties ครบ จึงคลี่ layer และอ่านค่าตัวแปรจาก CSS จริงในการตรวจสี ไม่ใช่ screenshot จากเบราว์เซอร์จริง
+- ไม่รวม HomeHero.jsx และ `.agent/` ที่เป็นงานนอกขอบเขตเข้า commit
+
+## งานก่อนหน้า (ถูกแทนที่แล้ว): กล่องพื้นหลัง #333 ตามภาพและหน้าตั้งค่าร้าน
+
+- อ่านภาพที่ผู้ใช้แนบทั้งสองภาพ และใช้ #333 เป็นพื้นหลังกล่องในรายการหน้าของระบบบน home, ร้านของคุณ/ไม่มีร้าน/สร้างร้านใหม่ และการ์ดร้านที่สร้างจาก controller
+- ใช้ class `charcoal-panel` ร่วมกันในกล่องข้อมูลธุรกิจ แถบเลือกหน้าตั้งค่า กล่อง FAQ/ความรู้/ตัวอย่างข้อมูล AI รวมถึงหน้าต่างเพิ่ม-แก้ไข/ลบความรู้ และกล่องเชื่อมต่อ LINE
+- รวมสีไว้ใน globals.css แบบ scoped: ข้อความสว่าง ช่องกรอก #262626 ขอบและ placeholder ที่มองเห็นชัด พร้อม focus; คงปุ่มหลักสีน้ำเงินและสีป้ายสถานะเดิม ไม่เปลี่ยนพื้นหลังเว็บทั้งหน้า
+- คงพื้นที่บทสนทนาและสีบับเบิลของ LINE เพื่อแยกข้อความลูกค้ากับบอท และปรับ hover ของปุ่มให้ไม่กลายเป็นข้อความสว่างบนพื้นอ่อน
+- `npm test` ผ่าน 54 รายการ; build ในเครื่องผ่าน และ `git diff --check` ผ่าน
+- ตรวจ HTML/CSS ที่ให้บริการจริงด้วย JSDOM: กล่องหลักที่ระบุมี computed background rgb(51,51,51), ข้อความ rgb(245,245,245), ช่องกรอก rgb(38,38,38) และลิงก์บนกล่องเข้มเป็นสีอ่อน
+- คำนวณ contrast ของข้อความหลัก/รอง/ลิงก์และ placeholder กับพื้นหลังที่ใช้ ได้อย่างน้อย 7.35:1 (ตรวจเฉพาะคู่สีเหล่านี้ ไม่ใช่ audit ทั้งเว็บ)
+- `docker compose up -d --build app` รอบสุดท้ายผ่าน และ `docker compose exec -T app npm test` ผ่าน 54 รายการบน Node.js 24
+- ตรวจ computed styles จากพอร์ต 3000 ซ้ำหลังอัปเดตแล้วผ่าน; build ID ของ HTTP ตรงกับคอนเทนเนอร์ล่าสุด, `/health` ตอบ 200 และคอนเทนเนอร์ healthy
+- ข้อจำกัด: ตรวจสีด้วย computed styles ใน DOM ไม่ได้ตรวจภาพ screenshot ของเว็บหลังแก้ด้วยเบราว์เซอร์จริง
+- ไม่รวมการแก้ HomeHero.jsx และ `.agent/` ที่มีอยู่ก่อนงานนี้เข้า commit
+
+## งานก่อนหน้า: ซ่อนฟอร์มสร้างร้านจนกดปุ่ม
+
+- หน้าแดชบอร์ดเริ่มจากรายการร้านเต็มพื้นที่ โดยซ่อนฟอร์มสร้างร้านไว้ก่อน และเพิ่มปุ่ม “+ สร้างร้านค้าใหม่” เพื่อเปิดฟอร์มด้านข้าง (เรียงด้านล่างบนจอเล็ก)
+- คง form เดิมไว้ใน DOM เพื่อไม่ทำให้ controller ที่ผูก submit ตั้งแต่ mount เสีย; เปิดแล้ว focus ช่องชื่อร้าน และมีปุ่มปิดที่คืน focus ให้ปุ่มสร้างร้านโดยเก็บข้อมูลที่กรอกค้างไว้
+- เมื่อสร้างสำเร็จ controller reset form ตามเดิม และ onReset ซ่อนแผงอัตโนมัติก่อนเปิดหน้าตั้งค่าร้านใหม่
+- ปรับข้อความกรณียังไม่มีร้านให้แนะนำปุ่มสร้างร้านแทนแบบฟอร์มด้านข้าง
+- Regression test ก่อนแก้ล้มเหลวเพราะ form แสดงตั้งแต่เข้าหน้า; หลังแก้ทดสอบเปิด/ปิด/เก็บ draft/POST สร้างร้าน/ซ่อนหลังสำเร็จ/กลับหน้ารายการแล้วผ่าน
+- `npm test` ผ่าน 54 รายการ; `npm run build` และ `git diff --check` ผ่าน
+- `docker compose up -d --build app` ผ่าน และ `docker compose exec -T app npm test` ผ่าน 54 รายการบน Node.js 24
+- ตรวจ `/app` พอร์ต 3000 แล้ว build ID ตรงกับคอนเทนเนอร์ใหม่ มีปุ่มเปิดฟอร์มโดย aria-expanded=false และ aside ของฟอร์ม hidden ตั้งแต่ต้น พร้อม link Kanit 600; `/health` ตอบ 200 และคอนเทนเนอร์ healthy
+- ข้อจำกัด: ตรวจพฤติกรรมด้วย DOM integration ไม่ใช่ภาพจากเบราว์เซอร์จริง
+- พบการแก้ `src/components/home/HomeHero.jsx` ระหว่างทำงานซึ่งไม่ใช่ส่วนของงานนี้ จึงเก็บไว้และไม่รวมใน commit; `.agent/` ยังคงเป็นไฟล์ของผู้ใช้ที่ไม่ได้นำเข้า commit
+
+## งานก่อนหน้า: Kanit SemiBold ทั้งเว็บ
+
+- ปรับ Google Fonts ให้โหลด Kanit น้ำหนัก 600 เท่านั้น และกำหนด font-family/font-weight ของทุก element ใน body ให้เป็น Kanit SemiBold รวมส่วนที่เดิมใช้ utility ตัวหนา/ตัวบาง
+- ก่อนเริ่มงานซ่อนฟอร์มสร้างร้าน `npm test` ผ่าน 53 รายการ; `npm run build` และ `git diff --check` ผ่าน
+- ตรวจ stylesheet ของ Google Fonts และดาวน์โหลดไฟล์ TTF จริงมาตรวจด้วย Python: OS/2 weight เท่ากับ 600 และมี cmap ของอักษรไทย
+- `docker compose up -d --build app` ผ่าน; ตรวจ HTTP พอร์ต 3000 พบ link โหลด Kanit 600 และ CSS รวมที่ใช้กับ body ทุก element เป็น font-weight 600; `/health` ตอบ 200
+- ข้อจำกัด: ยังพึ่ง Google Fonts/อินเทอร์เน็ตเหมือนเดิม และยังไม่ได้ตรวจภาพจริงในเบราว์เซอร์
+- งานซ่อนฟอร์มสร้างร้านตามคำขอระหว่างทำงานดำเนินการต่อแยกจาก commit ฟอนต์ ดูหัวข้อด้านบน
+
+## งานก่อนหน้า: เมนูบัญชีบนหน้า homepage
+
+- เพิ่ม `HomeAccountMenu.jsx` ในมุมขวาบนของ `HomeHeader`: ผู้ที่เข้าสู่ระบบเห็นอักษรแรกของชื่อในวงกลม พร้อมชื่อบัญชีบนจอกว้าง
+- อ่านชื่อและอีเมลจาก `/users/me` ด้วย session เดิม ไม่ใส่ข้อมูลส่วนตัวลงใน HTML ที่สร้างแบบ static
+- Dropdown แสดงชื่อ/อีเมล และมี “จัดการร้าน” ไป `/app` กับ “ออกจากระบบ” ซึ่งเรียก POST `/auth/logout` และล้าง session ในเครื่องโดยอยู่หน้า home ต่อ
+- ปิดเมนูด้วยคลิกด้านนอก, Escape (คืน focus ให้ปุ่ม), หรือย้าย focus ออก; พื้นที่กดอย่างน้อย 48px และจำกัดความกว้าง dropdown ตามหน้าจอ
+- ผู้เยี่ยมชมหรือ session หมดอายุเห็นปุ่มเดิม; การโหลดบัญชีผิดพลาดชั่วคราวไม่ลบ token และแสดงข้อความใน dropdown; logout ในเครื่องยังทำได้เมื่อ server ติดต่อไม่ได้ เช่นเดียวกับแดชบอร์ด
+
+### ผลตรวจเมนูบัญชี
+
+- เริ่มจาก test ที่ล้มเหลวเพราะ homepage ไม่มีปุ่มบัญชี ก่อนเพิ่ม component จริง
+- `npm test` ผ่าน 53 รายการ รวมการกลับจากแดชบอร์ดมาดูชื่อบัญชีบน home, ลิงก์จัดการร้าน, POST logout พร้อม token, guest/401, Escape/คลิกด้านนอก และปัญหาเครือข่าย
+- `npm run build` และ `git diff --check` ผ่าน
+- `docker compose up -d --build app` ผ่าน และ `docker compose exec -T app npm test` ผ่าน 53 รายการบน Node.js 24
+- ตรวจ `/home` พอร์ต 3000 แล้ว build ID ตรงกับคอนเทนเนอร์ใหม่ และ JavaScript ที่ให้บริการมีปุ่มบัญชี/ออกจากระบบใหม่; `/health` ตอบ 200 และคอนเทนเนอร์ healthy
+- ข้อจำกัด: ทดสอบพฤติกรรมด้วย DOM integration ของ component จริง ไม่ได้ตรวจภาพด้วยเบราว์เซอร์จริง
+
+## งานก่อนหน้า: กลับหน้าแรกแล้วไม่หลุดบัญชี
+
+- สาเหตุ: dynamic import ของ controller ถูก cache แต่หน้า `/app` ถูกสร้าง DOM ชุดใหม่หลังกลับจาก `/home`; controller เดิมจึงไม่เริ่มใหม่และยังอ้าง DOM ที่ถอดไปแล้ว ไม่ใช่ homepage ลบ token
+- เปลี่ยน controller เป็น `initializeDashboard()` เรียกทุกครั้งที่ mount อ่าน session เดิมจาก `sessionStorage` และค้น element ชุดปัจจุบัน
+- ส่ง element และตัวผูก listener ให้โมดูลย่อยตามอายุหน้า; cleanup ถอน route/DOM listeners ยกเลิกคำขอ และหยุดการแจ้งเตือน โดยไม่ลบ session
+- ป้องกันคำตอบล่าช้าจากหน้าที่ปิดไปแล้วกระทบ session ปัจจุบัน; ล้าง session เมื่อ API ตอบ 401 หรือผู้ใช้กดออกจากระบบ ไม่ล้างเพราะข้อผิดพลาดเครือข่าย/503
+- เพิ่ม DOM integration tests ใน `tests/dashboard-session.test.js` ใช้ component/controller จริงภายใต้ React StrictMode และจำลอง API ด้วยข้อมูลทดสอบ ไม่มีการใช้บัญชีจริง
+- เพิ่ม esbuild/jsdom เป็น dev dependencies และอัปเดต lockfile ของ npm กับ pnpm
+
+### ผลตรวจงานล่าสุด
+
+- ก่อนแก้ regression test ล้มเหลวตรงการกลับจาก homepage แล้วแสดงฟอร์ม login; หลังแก้ผ่าน
+- `npm test` ผ่าน 47 รายการ รวม 5 regression tests: กลับจาก homepage ซ้ำ 3 รอบและเปิดตั้งค่าร้านได้, login หลังกลับหน้า, logout ทำงานครั้งเดียว, session หมดอายุ, server 503 และคำตอบ 401 ล่าช้า (บาง test ครอบคลุมหลายสถานการณ์)
+- `npm run build`, `npm run api:check` และ `git diff --check` ผ่าน
+- ตรวจ pnpm lockfile แบบ frozen ผ่าน โดยใช้ pnpm 10 พร้อมปิด package-manager-strict สำหรับการตรวจครั้งนี้ เพราะ package.json ระบุ npm
+- `docker compose up -d --build app` ผ่าน โดยคง volume ข้อมูลเดิม; `docker compose exec -T app npm test` ผ่าน 47 รายการบน Node.js 24 ของ image
+- ตรวจพอร์ต 3000: build ID ของ HTTP ตรงกับคอนเทนเนอร์ใหม่, `/home` และ `/health` ตอบ 200, คอนเทนเนอร์ healthy
+
+### ข้อจำกัดและขั้นตอนถัดไป
+
+- ตรวจการเปลี่ยนหน้าด้วย DOM integration ไม่ใช่เบราว์เซอร์จริง; ยังไม่ได้ตรวจด้วยภาพหน้าจอ
+- ไม่ได้เปลี่ยนอายุ session หรือเปลี่ยน sessionStorage เป็นการจำบัญชีข้ามการปิดแท็บ
+- `.agent/` เป็นไฟล์ที่ผู้ใช้เพิ่มไว้ก่อนงานนี้ จึงไม่นำเข้า commit ของการแก้บั๊ก
+
+## งานแก้ปุ่มสมัครสมาชิก
+
+- ย้ายการสลับฟอร์มเข้าสู่ระบบ/สมัครสมาชิกไปอยู่ใน React เพื่อรับคลิกได้โดยไม่ต้องรอ controller โหลด และเพิ่มพื้นที่กดสูงอย่างน้อย 48px
+- ตรวจด้วย DOM harness: คลิกทันที สลับกลับ เปิดหน้าใหม่ และลิงก์ `?mode=register` ผ่าน
+- `npm test` ผ่าน 42 รายการ; `npm run build` และ `git diff --check` ผ่าน
+- อัปเดต Docker แล้ว ตรวจ HTTP ที่พอร์ต 3000 พบสถานะฟอร์มและ CSS ใหม่ และ `/health` ตอบ 200
+- ยังไม่ได้ตรวจภาพหน้าจอด้วยเบราว์เซอร์ เพราะเครื่องมือไม่พบเบราว์เซอร์ที่เชื่อมต่อ
 
 ## งานที่ทำ
 

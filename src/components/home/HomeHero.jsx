@@ -11,11 +11,7 @@ export default function HomeHero() {
 
       <div className="relative mx-auto grid max-w-7xl items-center gap-14 px-5 pb-20 pt-16 sm:px-8 lg:grid-cols-[minmax(0,1fr)_minmax(320px,450px)] lg:gap-20 lg:pb-24 lg:pt-20">
         <div>
-          <p className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/10 px-4 py-2 text-xs font-semibold tracking-wide text-blue-50">
-            <span aria-hidden="true" className="size-2 rounded-full bg-[#79e5ca]" />
-            AI CHATBOT · สำหรับธุรกิจ SMBs
-          </p>
-          <h1 className="mt-7 max-w-2xl text-[clamp(2.5rem,5vw,4.65rem)] font-bold leading-[1.15] tracking-tight">
+          <h1 className="max-w-2xl text-[clamp(2.5rem,5vw,4.65rem)] font-bold leading-[1.15] tracking-tight">
             ให้ร้านของคุณ
             <br />
             <span className="text-[#a4f0e4]">ตอบแชตได้ไว</span>

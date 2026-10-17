@@ -8,8 +8,10 @@
   --font-sans: "Kanit", "Noto Sans Thai", "Leelawadee UI", Tahoma, Arial, sans-serif;
 }
 
-html, body, button, input, select, textarea, pre, code {
+/* ใช้ Kanit SemiBold ทุกส่วน รวมถึงข้อความที่เคยกำหนด font-medium หรือ font-bold */
+html, body, body * {
   font-family: "Kanit", "Noto Sans Thai", "Leelawadee UI", Tahoma, Arial, sans-serif;
+  font-weight: 600;
 }
 
 /* สีและลายตารางนี้ใช้เฉพาะหน้าแนะนำ เพื่อให้ใกล้ภาพอ้างอิงโดยไม่กระทบแดชบอร์ด */
@@ -76,7 +78,13 @@ html, body, button, input, select, textarea, pre, code {
   transition: background-color .2s, color .2s, box-shadow .2s;
 }
 
-.app-auth-tab { color: #64748b; }
+.app-auth-tab {
+  min-height: 48px;
+  width: 100%;
+  cursor: pointer;
+  touch-action: manipulation;
+  color: #64748b;
+}
 .app-auth-tab:hover { color: var(--app-blue-dark); }
 .app-auth-tab--active {
   background: white;
@@ -121,3 +129,9 @@ html, body, button, input, select, textarea, pre, code {
   border-color: var(--app-blue);
   box-shadow: 0 18px 32px -18px rgba(33, 64, 134, .35);
 }
+
+/* ใช้ #333 เฉพาะเส้นกรอบกล่อง โดยคงพื้นหลัง ข้อความ และช่องกรอกสีเดิม */
+.outlined-panel {
+  border: 1px solid #333;
+}
+.outlined-panel:hover { border-color: #333; }

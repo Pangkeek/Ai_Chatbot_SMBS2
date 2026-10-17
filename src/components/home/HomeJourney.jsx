@@ -80,7 +80,7 @@ export default function HomeJourney() {
 
           <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {pages.map((page, index) => (
-              <article key={page.title} className="rounded-[24px] border border-[#dfe8f5] border-t-4 border-t-[#4564c9] bg-white p-6 shadow-[0_14px_30px_-25px_rgba(24,52,92,.35)]">
+              <article key={page.title} className="outlined-panel rounded-[24px] border border-[#dfe8f5] border-t-4 border-t-[#4564c9] bg-white p-6 shadow-[0_14px_30px_-25px_rgba(24,52,92,.35)]">
                 <span aria-hidden="true" className={`flex size-11 items-center justify-center rounded-xl text-lg font-bold ${index === 2 ? 'bg-[#fff0e7] text-[#d86828]' : 'bg-[#eaf1ff] text-[#4564c9]'}`}>
                   {page.icon}
                 </span>
@@ -101,7 +101,7 @@ export default function HomeJourney() {
             </div>
             <div className="mt-6 grid gap-4 md:grid-cols-2">
               {plannedPages.map((page) => (
-                <div key={page.title} className="rounded-2xl bg-white p-5 shadow-sm">
+                <div key={page.title} className="outlined-panel rounded-2xl bg-white p-5 shadow-sm">
                   <h4 className="font-bold text-[#18345c]">{page.title}</h4>
                   <p className="mt-2 text-sm leading-7 text-slate-600">{page.description}</p>
                 </div>

@@ -3,7 +3,7 @@ export default function LineIntegrationSection() {
   return (
     <section
               id="line-integration-section"
-              className="hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8"
+              className="outlined-panel hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8"
             >
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-3">
