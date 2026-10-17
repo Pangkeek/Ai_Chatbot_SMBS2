@@ -1,4 +1,6 @@
 import Link from 'next/link';
+import { useRouter } from 'next/router';
+import { useState } from 'react';
 import BrandMark from './BrandMark.jsx';
 import LoginForm from './LoginForm.jsx';
 import RegisterForm from './RegisterForm.jsx';
@@ -6,6 +8,10 @@ import RegisterForm from './RegisterForm.jsx';
 const highlights = ['ข้อมูลร้านแยกเป็นสัดส่วน', 'FAQ และคลังความรู้', 'เชื่อมต่อ LINE'];
 
 export default function AuthView() {
+  const router = useRouter();
+  const [selectedTab, setSelectedTab] = useState(null);
+  const loginSelected = (selectedTab ?? router.query.mode) !== 'register';
+
   return (
     <main id="auth-view" className="app-auth-shell min-h-screen text-white">
       <div className="mx-auto max-w-7xl px-5 sm:px-8">
@@ -46,16 +52,16 @@ export default function AuthView() {
             <p className="mt-3 text-sm leading-6 text-slate-500">เข้าสู่ระบบด้วยบัญชีเดิม หรือสมัครสมาชิกใหม่</p>
 
             <div className="mt-8 grid grid-cols-2 rounded-xl bg-[#eef3ff] p-1">
-              <button id="login-tab" type="button" className="app-auth-tab app-auth-tab--active">
+              <button id="login-tab" type="button" aria-pressed={loginSelected} onClick={() => setSelectedTab('login')} className={`app-auth-tab${loginSelected ? ' app-auth-tab--active' : ''}`}>
                 เข้าสู่ระบบ
               </button>
-              <button id="register-tab" type="button" className="app-auth-tab">
+              <button id="register-tab" type="button" aria-pressed={!loginSelected} onClick={() => setSelectedTab('register')} className={`app-auth-tab${!loginSelected ? ' app-auth-tab--active' : ''}`}>
                 สมัครสมาชิก
               </button>
             </div>
 
-            <LoginForm />
-            <RegisterForm />
+            <LoginForm hidden={!loginSelected} />
+            <RegisterForm hidden={loginSelected} />
           </section>
         </div>
       </div>

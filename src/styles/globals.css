@@ -76,7 +76,13 @@ html, body, button, input, select, textarea, pre, code {
   transition: background-color .2s, color .2s, box-shadow .2s;
 }
 
-.app-auth-tab { color: #64748b; }
+.app-auth-tab {
+  min-height: 48px;
+  width: 100%;
+  cursor: pointer;
+  touch-action: manipulation;
+  color: #64748b;
+}
 .app-auth-tab:hover { color: var(--app-blue-dark); }
 .app-auth-tab--active {
   background: white;

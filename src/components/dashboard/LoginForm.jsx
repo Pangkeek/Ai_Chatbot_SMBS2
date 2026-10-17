@@ -1,6 +1,6 @@
-export default function LoginForm() {
+export default function LoginForm({ hidden = false }) {
   return (
-    <form id="login-form" className="mt-8 space-y-5">
+    <form id="login-form" hidden={hidden} className="mt-8 space-y-5">
               <div>
                 <label
                   htmlFor="login-email"

@@ -199,21 +199,6 @@ elements.settingsPersonaDetails.addEventListener("input", () => {
   elements.businessSettingsForm.dataset.personaChanged = "true";
 });
 
-function switchAuthTab(tab) {
-  const loginSelected = tab === "login";
-
-  elements.loginForm.classList.toggle("hidden", !loginSelected);
-  elements.registerForm.classList.toggle("hidden", loginSelected);
-
-  elements.loginTab.className = loginSelected
-    ? "app-auth-tab app-auth-tab--active"
-    : "app-auth-tab";
-
-  elements.registerTab.className = !loginSelected
-    ? "app-auth-tab app-auth-tab--active"
-    : "app-auth-tab";
-}
-
 async function openShop(shopId, tab = "business") {
   const version = ++openShopVersion;
   try {
@@ -382,14 +367,6 @@ elements.businessSettingsForm.addEventListener("submit", async (event) => {
   }
 });
 
-elements.loginTab.addEventListener("click", () => {
-  switchAuthTab("login");
-});
-
-elements.registerTab.addEventListener("click", () => {
-  switchAuthTab("register");
-});
-
 elements.loginForm.addEventListener("submit", async (event) => {
   event.preventDefault();
 
@@ -519,9 +496,6 @@ elements.logoutButton.addEventListener("click", async () => {
     );
   }
 });
-
-// ลิงก์สมัครสมาชิกจาก /home เปิดแท็บสมัครโดยตรง ส่วน /app ปกติเปิดแท็บเข้าสู่ระบบ
-switchAuthTab(new URLSearchParams(window.location.search).get("mode") === "register" ? "register" : "login");
 
 Router.events.on("routeChangeComplete", (url) => {
   if (url.startsWith("/app")) void syncDashboardRoute(url);
