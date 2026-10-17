@@ -9,15 +9,29 @@
     "node": ">=24.19.0 <25"
   },
   "scripts": {
-    "start": "next start --hostname 0.0.0.0",
+    "start": "node scripts/start.js",
     "dev": "next dev --hostname 127.0.0.1",
-    "build": "next build --webpack",
+    "build": "node scripts/build.js",
     "db:migrate": "node --env-file-if-exists=.env scripts/migrate.js",
+    "db:backup:sqlite": "node --env-file-if-exists=.env scripts/backup-sqlite.js",
+    "db:import:sqlite": "node --env-file-if-exists=.env scripts/import-sqlite.js",
+    "db:verify:import": "node --env-file-if-exists=.env scripts/verify-import.js",
+    "db:cleanup:line": "node --env-file-if-exists=.env scripts/cleanup-line-jobs.js",
     "db:seed": "node --env-file-if-exists=.env scripts/seed.js",
-    "rag:reindex": "node --env-file-if-exists=.env scripts/reindex-knowledge.js",
-    "test": "node --test",
+    "test": "node --env-file-if-exists=.env --test",
+    "test:sqlite": "node --env-file-if-exists=.env --test tests/backup-sqlite.test.js tests/database.test.js",
+    "test:runtime": "node --env-file-if-exists=.env --test tests/api.test.js tests/business-hours.test.js tests/business-profile.test.js tests/chatbot-context.test.js tests/chatbot-persona.test.js tests/dashboard-routes.test.js tests/dashboard-session.test.js tests/knowledge-manager.test.js tests/line-jobs.test.js tests/line.test.js tests/maintenance.test.js tests/postgresql-api-regression.test.js tests/postgresql-config.test.js tests/postgresql-types.test.js tests/rag.test.js",
+    "test:import": "node --env-file-if-exists=.env --test tests/sqlite-import.test.js",
+    "check:toolchain": "node scripts/check-toolchain.js",
+    "test:production": "node --env-file-if-exists=.env --test integration/production-smoke.js",
+    "test:postgres": "node --env-file-if-exists=.env --test integration/postgresql.js",
+    "db:check:postgres": "node --env-file-if-exists=.env scripts/check-postgresql.js",
+    "db:migrate:postgres": "node --env-file-if-exists=.env scripts/migrate-postgresql.js",
+    "test:postgres:schema": "node --env-file-if-exists=.env --test integration/postgresql-schema.js",
+    "test:line:runtime": "node --env-file-if-exists=.env --test integration/line-runtime.js",
     "api:generate": "node scripts/openapi.js",
-    "api:check": "node scripts/openapi.js --check"
+    "api:check": "node scripts/openapi.js --check",
+    "rag:reindex": "node --env-file-if-exists=.env scripts/reindex-knowledge.js"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",
@@ -27,6 +41,7 @@
   },
   "dependencies": {
     "next": "16.3.5",
+    "pg": "8.23.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   }

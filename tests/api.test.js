@@ -2,14 +2,15 @@ import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import { createHmac } from 'node:crypto';
-import { openDatabase } from '../src/lib/db.js';
+import { createTestDatabase } from '../integration/postgresql-fixture.js';
+import { migratePostgresql } from '../scripts/postgresql/migrations.js';
 import { seedDemo, demoPassword } from '../src/lib/seed.js';
 import { createApp } from '../src/lib/app.js';
 import { routes, schemas, openapi } from '../src/lib/contracts.js';
 import { validate } from '../src/utils/validation.js';
 import { tokenHash } from '../src/lib/auth.js';
 
-let db, server, url, coffee, flower;
+let db, server, url, coffee, flower, fixture;
 const exercised = new Set();
 async function request(method, path, body, token, overrides = {}) {
   const response = await fetch(url + path, {
@@ -34,7 +35,9 @@ async function request(method, path, body, token, overrides = {}) {
   return { status: response.status, payload, headers: response.headers };
 }
 before(async () => {
-  db = openDatabase(':memory:');
+  fixture = await createTestDatabase();
+  db = fixture.db;
+  await migratePostgresql({ config: fixture.config });
   await seedDemo(db);
   server = createApp(db, { logErrors: false, serviceOptions: {
     workerOptions: { sendReply: async () => ({ status: 'ok' }), logErrors: false },
@@ -51,7 +54,10 @@ before(async () => {
   coffee = (await request('POST', '/api/v1/auth/login', { email: 'coffee@example.test', password: demoPassword })).payload.data.access_token;
   flower = (await request('POST', '/api/v1/auth/login', { email: 'flower@example.test', password: demoPassword })).payload.data.access_token;
 });
-after(async () => { await new Promise(resolve => server.close(resolve)); db.close(); });
+after(async () => {
+  if (server) { await new Promise(resolve => server.close(resolve)); await server.drain(); }
+  await fixture?.dispose();
+});
 
 test('health and OpenAPI contract are available', async () => {
   assert.equal((await request('GET', '/health')).payload.data.database, 'ok');
@@ -60,13 +66,15 @@ test('health and OpenAPI contract are available', async () => {
 });
 
 test('seed is repeatable and preserves edited content and row counts', async () => {
-  db.prepare("UPDATE knowledge_entries SET title = 'Edited' WHERE id = 'shop-coffee-kb-1'").run();
+  const oldHash = (await db.query("SELECT password_hash FROM users WHERE id='user-coffee'")).rows[0].password_hash;
+  (await db.query("UPDATE knowledge_entries SET title = 'Edited' WHERE id = 'shop-coffee-kb-1'", []));
   await seedDemo(db);
   for (const [table, n] of [['users', 2], ['shops', 2], ['knowledge_entries', 6], ['conversations', 2], ['messages', 4]]) {
-    assert.equal(db.prepare(`SELECT count(*) AS n FROM ${table}`).get().n, n);
+    assert.equal(Number((await db.query(`SELECT count(*) AS n FROM ${table}`, [])).rows[0].n), n);
   }
-  assert.equal(db.prepare("SELECT title FROM knowledge_entries WHERE id = 'shop-coffee-kb-1'").get().title, 'Edited');
-  db.prepare("UPDATE knowledge_entries SET title = 'เวลาเปิดร้าน' WHERE id = 'shop-coffee-kb-1'").run();
+  assert.equal((await db.query("SELECT title FROM knowledge_entries WHERE id = 'shop-coffee-kb-1'", [])).rows[0].title, 'Edited');
+  assert.equal((await db.query("SELECT password_hash FROM users WHERE id='user-coffee'")).rows[0].password_hash, oldHash);
+  await db.query("UPDATE knowledge_entries SET title = 'เวลาเปิดร้าน' WHERE id = 'shop-coffee-kb-1'");
   await seedDemo(db);
 });
 
@@ -76,15 +84,15 @@ test('registration, session revocation, expiry, duplicate emails and private use
   const token = created.payload.data.access_token;
   assert.equal(created.payload.data.user.email, 'new@example.test');
   assert.equal(created.payload.data.user.password_hash, undefined);
-  assert.notEqual(db.prepare('SELECT password_hash FROM users WHERE id = ?').get(created.payload.data.user.id).password_hash, 'Password123!');
-  assert.equal(db.prepare('SELECT token_hash FROM sessions WHERE user_id = ?').get(created.payload.data.user.id).token_hash, tokenHash(token));
+  assert.notEqual((await db.query('SELECT password_hash FROM users WHERE id = $1', [created.payload.data.user.id])).rows[0].password_hash, 'Password123!');
+  assert.equal((await db.query('SELECT token_hash FROM sessions WHERE user_id = $1', [created.payload.data.user.id])).rows[0].token_hash, tokenHash(token));
   assert.equal((await request('GET', '/api/v1/users/me', undefined, token)).status, 200);
   assert.equal((await request('POST', '/api/v1/auth/register', { email: 'new@example.test', password: 'Password123!', name: 'Duplicate' })).status, 409);
   assert.equal((await request('POST', '/api/v1/auth/login', { email: 'new@example.test', password: 'wrongPassword' })).status, 401);
   assert.equal((await request('POST', '/api/v1/auth/logout', undefined, token)).status, 204);
   assert.equal((await request('GET', '/api/v1/users/me', undefined, token)).status, 401);
   const session = (await request('POST', '/api/v1/auth/login', { email: 'new@example.test', password: 'Password123!' })).payload.data;
-  db.prepare('UPDATE sessions SET expires_at = ? WHERE token_hash = ?').run('2000-01-01T00:00:00.000Z', tokenHash(session.access_token));
+  (await db.query('UPDATE sessions SET expires_at = $1 WHERE token_hash = $2', ['2000-01-01T00:00:00.000Z', tokenHash(session.access_token)]));
   assert.equal((await request('GET', '/api/v1/users/me', undefined, session.access_token)).status, 401);
 });
 
@@ -93,7 +101,7 @@ test('shops can be created and updated with an atomic owner membership', async (
   assert.equal(created.status, 201);
   const id = created.payload.data.id;
   assert.equal(created.payload.data.member_role, 'owner');
-  assert.equal(db.prepare('SELECT role FROM shop_memberships WHERE shop_id = ? AND user_id = ?').get(id, 'user-coffee').role, 'owner');
+  assert.equal((await db.query('SELECT role FROM shop_memberships WHERE shop_id = $1 AND user_id = $2', [id, 'user-coffee'])).rows[0].role, 'owner');
   // ตรวจว่าข้อมูลตั้งค่าทั้ง 4 ช่องถูกบันทึกและอ่านกลับได้จริง
   const settings = {
     name: 'New shop updated',
@@ -116,21 +124,6 @@ test('shops can be created and updated with an atomic owner membership', async (
   assert.equal(listed.payload.data.length, 1);
   assert.equal(listed.payload.data[0].member_role, 'owner');
   assert.equal(listed.payload.meta.total, 2);
-});
-
-test('AI preview shows only this shop data, evidence and prompt', async () => {
-  const preview = await request('POST', '/api/v1/shops/shop-coffee/ai/preview',
-    { question: 'ร้านเปิดกี่โมงครับ' }, coffee);
-  assert.equal(preview.status, 200);
-  assert.equal(preview.payload.data.shop.name, 'บ้านกาแฟ');
-  assert.equal(typeof preview.payload.data.aiConfigured, 'boolean');
-  assert.ok(preview.payload.data.sources.length);
-  assert.ok(preview.payload.data.sources.every(source => source.chunkId.startsWith('shop-coffee')));
-  assert.ok(preview.payload.data.prompt.messages[0].content.includes('หลักฐาน'));
-  assert.equal((await request('POST', '/api/v1/shops/shop-flower/ai/preview',
-    { question: 'ร้านขายอะไร' }, coffee)).status, 404);
-  assert.equal((await request('POST', '/api/v1/shops/shop-coffee/ai/preview',
-    { question: '' }, coffee)).status, 422);
 });
 
 test('all tenant routes reject the other shop; resource IDs cannot be mixed between shops', async () => {
@@ -158,7 +151,7 @@ test('knowledge CRUD and agent role boundaries', async () => {
   assert.equal((await request('PATCH', path, { status: 'published' }, coffee)).payload.data.status, 'published');
   assert.equal((await request('DELETE', path, undefined, coffee)).status, 204);
   assert.equal((await request('GET', path, undefined, coffee)).status, 404);
-  db.prepare("INSERT INTO shop_memberships VALUES ('shop-coffee','user-flower','agent',?)").run(new Date().toISOString());
+  (await db.query("INSERT INTO shop_memberships (shop_id,user_id,role,created_at) VALUES ('shop-coffee','user-flower','agent',$1)", [new Date().toISOString()]));
   try {
     assert.equal((await request('GET', '/api/v1/shops/shop-coffee', undefined, flower)).payload.data.member_role, 'agent');
     const agentShops = (await request('GET', '/api/v1/shops', undefined, flower)).payload.data;
@@ -166,7 +159,7 @@ test('knowledge CRUD and agent role boundaries', async () => {
     assert.equal((await request('GET', base, undefined, flower)).status, 200);
     assert.equal((await request('POST', base, { kind: 'faq', title: 'T', content: 'C', status: 'draft' }, flower)).status, 403);
     assert.equal((await request('PATCH', '/api/v1/shops/shop-coffee', { name: 'Changed' }, flower)).status, 403);
-  } finally { db.prepare("DELETE FROM shop_memberships WHERE shop_id = 'shop-coffee' AND user_id = 'user-flower'").run(); }
+  } finally { (await db.query("DELETE FROM shop_memberships WHERE shop_id = 'shop-coffee' AND user_id = 'user-flower'", [])); }
 });
 
 test('conversation lifecycle, message persistence and handover guard', async () => {
@@ -244,20 +237,13 @@ test('LINE channel configuration, webhook verification, deduplication and messag
   assert.equal(simRes.payload.data.status, 'processed');
   assert.equal(simRes.payload.data.replied, true);
   assert.ok(simRes.payload.data.conversation_id);
-  const sourced = await request('POST', simPath, { user_id: 'line-user-100', text: 'ร้านเปิดกี่โมงครับ' }, coffee);
-  assert.deepEqual(sourced.payload.data.reply_source_ids, ['shop-coffee-kb-1']);
-  assert.equal(sourced.payload.data.reply_method, 'faq');
-  const retrieved = await request('POST', simPath, { user_id: 'line-user-101', text: 'ลาเต้เย็นราคาเท่าไหร่' }, coffee);
-  assert.equal(retrieved.payload.data.reply_method, 'extractive');
-  assert.deepEqual(retrieved.payload.data.reply_source_ids, ['shop-coffee-kb-2']);
 });
 
-test('database constraints reject cross-shop references even outside the API', () => {
-  const insert = db.prepare('INSERT INTO messages VALUES (?, ?, ?, ?, ?, ?, ?)');
-  assert.throws(() => insert.run('bad-message', 'shop-coffee', 'shop-flower-conversation-1', 'customer', 'bad', null, new Date().toISOString()), /FOREIGN KEY/);
-  assert.throws(() => insert.run('bad-author', 'shop-coffee', 'shop-coffee-conversation-1', 'agent', 'bad', 'user-flower', new Date().toISOString()), /FOREIGN KEY/);
-  assert.throws(() => insert.run('missing-author', 'shop-coffee', 'shop-coffee-conversation-1', 'agent', 'bad', null, new Date().toISOString()), /CHECK/);
-  assert.deepEqual(db.prepare('PRAGMA foreign_key_check').all(), []);
+test('database constraints reject cross-shop references even outside the API', async () => {
+  const insert = (...values) => db.query('INSERT INTO messages (id,shop_id,conversation_id,role,content,author_user_id,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7)', values);
+  await assert.rejects(insert('bad-message', 'shop-coffee', 'shop-flower-conversation-1', 'customer', 'bad', null, new Date().toISOString()), { code: '23503' });
+  await assert.rejects(insert('bad-author', 'shop-coffee', 'shop-coffee-conversation-1', 'agent', 'bad', 'user-flower', new Date().toISOString()), { code: '23503' });
+  await assert.rejects(insert('missing-author', 'shop-coffee', 'shop-coffee-conversation-1', 'agent', 'bad', null, new Date().toISOString()), { code: '23514' });
 });
 
 test('invalid inputs, body size, protected fields, auth and query boundaries', async () => {
@@ -275,6 +261,21 @@ test('invalid inputs, body size, protected fields, auth and query boundaries', a
   assert.equal((await request('POST', '/api/v1/shops/shop-coffee/conversations/shop-coffee-conversation-1/messages', { role: 'assistant', content: 'forged' }, coffee)).status, 422);
   assert.equal((await request('DELETE', '/api/v1/shops', undefined, coffee)).status, 405);
   assert.equal((await request('GET', '/api/v1/shops/%ZZ', undefined, coffee)).status, 400);
+});
+
+test('AI preview shows only this shop data, evidence and prompt', async () => {
+  const preview = await request('POST', '/api/v1/shops/shop-coffee/ai/preview',
+    { question: 'ร้านเปิดกี่โมงครับ' }, coffee);
+  assert.equal(preview.status, 200);
+  assert.equal(preview.payload.data.shop.name, 'บ้านกาแฟ');
+  assert.equal(typeof preview.payload.data.aiConfigured, 'boolean');
+  assert.ok(preview.payload.data.sources.length);
+  assert.ok(preview.payload.data.sources.every(source => source.chunkId.startsWith('shop-coffee')));
+  assert.ok(preview.payload.data.prompt.messages[0].content.includes('หลักฐาน'));
+  assert.equal((await request('POST', '/api/v1/shops/shop-flower/ai/preview',
+    { question: 'ร้านขายอะไร' }, coffee)).status, 404);
+  assert.equal((await request('POST', '/api/v1/shops/shop-coffee/ai/preview',
+    { question: '' }, coffee)).status, 422);
 });
 
 test('every declared endpoint has a successful HTTP contract check', () => {

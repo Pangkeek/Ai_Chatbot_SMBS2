@@ -1,15 +1,18 @@
 services:
   app:
     build: .
-    ports:
-      - "127.0.0.1:${PORT:-3000}:3000"
+    network_mode: service:postgres
     environment:
-      DATABASE_PATH: /app/data/chatbot.sqlite
+      DATABASE_URL: postgresql://chatbot:local-development-only@127.0.0.1:5432/chatbot_dev
+      DB_SSL_MODE: disable
+      DB_SCHEMA: public
+      LINE_WORKER_ENABLED: ${LINE_WORKER_ENABLED:-false}
+      APP_MAINTENANCE_MODE: ${APP_MAINTENANCE_MODE:-false}
       RAG_GENERATOR_URL: ${RAG_GENERATOR_URL:-}
       RAG_GENERATOR_TOKEN: ${RAG_GENERATOR_TOKEN:-}
-    volumes:
-      # เก็บ SQLite ไว้แม้ container ถูกสร้างใหม่
-      - chatbot_data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
@@ -17,6 +20,22 @@ services:
       timeout: 5s
       start_period: 30s
       retries: 3
-
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: chatbot
+      POSTGRES_PASSWORD: local-development-only
+      POSTGRES_DB: chatbot_dev
+    ports:
+      - "127.0.0.1:55432:5432"
+      - "127.0.0.1:${PORT:-3000}:3000"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+      - ./scripts/postgresql/init-dev.sql:/docker-entrypoint-initdb.d/01-databases.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U chatbot -d chatbot_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 volumes:
-  chatbot_data:
+  postgres_data:

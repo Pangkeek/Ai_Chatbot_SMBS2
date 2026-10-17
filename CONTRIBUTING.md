@@ -3,10 +3,12 @@
 ## เริ่มพัฒนา
 
 1. ใช้ Node ตาม `.nvmrc` และรันตาม README
-2. ใช้ SQLite คนละไฟล์ภายในเครื่อง ไม่ commit `data/` หรือ `.env`
+2. ใช้ PostgreSQL 18 แยก dev/test DB; tests ใช้ TEST_DATABASE_URL และ schema สุ่ม ไม่ commit `data/` หรือ `.env`
 3. แบ่ง branch ตามงาน เช่น `feature/dashboard`, `feature/line-webhook`, `feature/rag`
 4. ใช้ OpenAPI v0.1.0 เป็น baseline; ทบทวน semantics กับทีมก่อนเปลี่ยน contract ที่ frontend ใช้แล้ว
-5. ก่อนส่ง PR รัน `node --test` และ `node scripts/openapi.js --check`
+5. ใช้ Node 24.19.0/npm 11.19.0 ตาม .nvmrc/packageManager; ตรวจด้วย `npm run check:toolchain` และติดตั้งด้วย `npm ci`
+6. ก่อนส่ง PR รัน `npm test`, `npm run test:postgres`, `npm run test:postgres:schema`, `npm run build`, `npm run test:line:runtime`, `npm run test:production` (สองคำสั่งท้ายหลัง build) และ `npm run api:check`
+7. CI แยก `test:sqlite` (SQLite fixtures), `test:runtime` (PostgreSQL/API/UI unit tests), `test:import` (SQLite→PostgreSQL) หากเพิ่มไฟล์ test ให้เพิ่มใน script กลุ่มที่เกี่ยวข้องเพื่อให้ CI ครอบคลุมเหมือน `npm test`
 
 ## กฎสำหรับการแก้ไข
 
@@ -31,19 +33,17 @@
 
 สองรายการท้ายต้องอาศัยการเลือกและการทบทวนของทีม ไม่ใช่ผลที่ automated test ยืนยันได้
 
-## เมื่อต้องการนำขึ้น remote
+## เมื่อต้องการส่ง release ของ migration
 
-สร้าง repository ว่างในบัญชีของทีมก่อน จากนั้นทำ initial commit และเชื่อม remote ของจริง:
+Repository มี origin แล้ว ตรวจ diff และเลือกไฟล์ที่ต้องการก่อน commit งาน ไม่ใส่ .env, snapshots หรือ data ขั้นตอนตัวอย่างบน branch งานปัจจุบัน:
 
 ```text
 git add .
-git commit -m "Initialize chatbot foundation"
-git branch -M main
-git remote add origin <TEAM_REPOSITORY_URL>
-git push -u origin main
+git commit -m "Migrate persistence to PostgreSQL and prepare Render deployment"
+git push -u origin codex/postgresql-render-migration
 ```
 
-แทน `<TEAM_REPOSITORY_URL>` ด้วย URL ที่ทีมเลือก ไม่มีการตั้ง remote หรือ push อัตโนมัติในงานนี้ CI ใน `.github/workflows/ci.yml` จะทำงานเมื่อ repository อยู่บน GitHub
+เลือก branch ให้ตรงกับงานที่ตั้งใจส่ง ไม่เปลี่ยน main อัตโนมัติ งานนี้ยังไม่ได้ commit/push หรือรัน GitHub Actions remote หลัง CI ผ่านผู้ใช้จึงเลือก release commit และดำเนินการ Render ตาม [คู่มือ staging](docs/render-staging.md)
 
 ## Notin แผนงาน
 

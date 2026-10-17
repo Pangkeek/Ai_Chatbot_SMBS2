@@ -67,7 +67,7 @@ export async function checkLineConnection({ channelAccessToken, expectedWebhookU
   }
 }
 
-export async function sendLineReply({ channelAccessToken, replyToken, messages, fetchImpl = fetch }) {
+export async function sendLineReply({ channelAccessToken, replyToken, messages, fetchImpl = fetch, signal }) {
   if (!channelAccessToken || !replyToken || !messages?.length) {
     throw new Error('Missing parameters for LINE reply');
   }
@@ -78,10 +78,13 @@ export async function sendLineReply({ channelAccessToken, replyToken, messages, 
       Authorization: `Bearer ${channelAccessToken}`,
     },
     body: JSON.stringify({ replyToken, messages }),
+    signal: signal || AbortSignal.timeout(10000),
   });
   if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`LINE API error (${response.status}): ${text}`);
+    const error = new Error('LINE reply rejected');
+    error.code = 'LINE_HTTP_REJECTED';
+    error.statusCode = response.status;
+    throw error;
   }
   return { status: 'ok', statusCode: response.status };
 }

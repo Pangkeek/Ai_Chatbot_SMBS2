@@ -58,41 +58,29 @@ export const demoShops = [
 
 // Explicitly invoked only. Existing records are preserved when this is run again.
 export async function seedDemo(db) {
+  if (process.env.NODE_ENV === 'production') throw new Error('Demo seed is disabled in production');
   const hashes = await Promise.all(
     demoShops.map(() => hashPassword(demoPassword))
   );
-  transaction(db, () => {
+  await transaction(db, async tx => {
     for (const [index, shop] of demoShops.entries()) {
-      const collision = db
-        .prepare("SELECT id FROM users WHERE email = ?")
-        .get(shop.email);
+      const collision = (await tx.query("SELECT id FROM users WHERE lower(email) = lower($1)", [shop.email])).rows[0];
       if (collision && collision.id !== shop.userId)
         throw new Error(
           `Demo email already belongs to another user: ${shop.email}`
         );
       const time = "2026-09-01T00:00:00.000Z";
-      db.prepare(
-        "INSERT INTO users VALUES (?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING"
-      ).run(shop.userId, shop.email, shop.owner, hashes[index], time);
-      db.prepare(
-        "INSERT INTO shops VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING"
-      ).run(
-        shop.id,
+      await tx.query("INSERT INTO users (id,email,name,password_hash,created_at) VALUES ($1, $2, $3, $4, $5) ON CONFLICT(id) DO NOTHING", [shop.userId, shop.email, shop.owner, hashes[index], time]);
+      await tx.query("INSERT INTO shops (id,name,description,opening_hours,persona,created_at,updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT(id) DO NOTHING", [shop.id,
         shop.name,
         shop.description,
         shop.hours,
         shop.persona,
         time,
-        time
-      );
-      db.prepare(
-        "INSERT INTO shop_memberships VALUES (?, ?, ?, ?) ON CONFLICT(shop_id, user_id) DO NOTHING"
-      ).run(shop.id, shop.userId, "owner", time);
-      shop.knowledge.forEach(([kind, title, content], entryIndex) => {
-        db.prepare(
-          "INSERT INTO knowledge_entries VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING"
-        ).run(
-          `${shop.id}-kb-${entryIndex + 1}`,
+        time]);
+      await tx.query("INSERT INTO shop_memberships (shop_id,user_id,role,created_at) VALUES ($1, $2, $3, $4) ON CONFLICT(shop_id, user_id) DO NOTHING", [shop.id, shop.userId, "owner", time]);
+      for (const [entryIndex, [kind, title, content]] of shop.knowledge.entries()) {
+        await tx.query("INSERT INTO knowledge_entries (id,shop_id,kind,title,content,status,created_by,created_at,updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) ON CONFLICT(id) DO NOTHING", [`${shop.id}-kb-${entryIndex + 1}`,
           shop.id,
           kind,
           title,
@@ -100,14 +88,10 @@ export async function seedDemo(db) {
           "published",
           shop.userId,
           time,
-          time
-        );
-      });
+          time]);
+      }
       const conversationId = `${shop.id}-conversation-1`;
-      db.prepare(
-        "INSERT INTO conversations VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING"
-      ).run(
-        conversationId,
+      await tx.query("INSERT INTO conversations (id,shop_id,channel,customer_external_id,customer_name,status,bot_mode,created_at,updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) ON CONFLICT(id) DO NOTHING", [conversationId,
         shop.id,
         "web",
         "demo-customer-1",
@@ -115,22 +99,17 @@ export async function seedDemo(db) {
         "open",
         "active",
         time,
-        "2026-09-01T00:00:01.000Z"
-      );
-      [shop.question, shop.answer].forEach((content, messageIndex) => {
-        db.prepare(
-          "INSERT INTO messages VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING"
-        ).run(
-          `${shop.id}-message-${messageIndex + 1}`,
+        "2026-09-01T00:00:01.000Z"]);
+      for (const [messageIndex, content] of [shop.question, shop.answer].entries()) {
+        await tx.query("INSERT INTO messages (id,shop_id,conversation_id,role,content,author_user_id,created_at) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT(id) DO NOTHING", [`${shop.id}-message-${messageIndex + 1}`,
           shop.id,
           conversationId,
           messageIndex ? "assistant" : "customer",
           content,
           null,
-          `2026-09-01T00:00:0${messageIndex}.000Z`
-        );
-      });
+          `2026-09-01T00:00:0${messageIndex}.000Z`]);
+      }
     }
   });
-  rebuildKnowledgeIndex(db);
+  await rebuildKnowledgeIndex(db);
 }

@@ -3,8 +3,8 @@ import { missing, wrap } from "./common.js";
 
 export function createAiPreviewOperations(db) {
   return {
-    previewAiContext({ params, body }) {
-      const prepared = prepareAnswerContext(db, {
+    async previewAiContext({ params, body }) {
+      const prepared = await prepareAnswerContext(db, {
         shopId: params.shopId,
         query: body.question,
       }) || missing();

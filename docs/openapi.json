@@ -747,6 +747,7 @@
       },
       "LineWebhook": {
         "type": "object",
+        "description": "Each event requires webhookEventId or message.id. Text messages also require nonblank source.userId and message.text. Events and new text jobs commit atomically before success; unsupported events are ignored and cross-shop event ID collisions return 409.",
         "properties": {
           "destination": {
             "anyOf": [
@@ -871,7 +872,8 @@
           "processed_count": {
             "type": "integer",
             "minimum": 0,
-            "maximum": 9007199254740991
+            "maximum": 9007199254740991,
+            "description": "New text jobs committed durably; duplicates do not count. This does not confirm LINE reply delivery."
           }
         },
         "required": [
@@ -1395,7 +1397,7 @@
             }
           },
           "409": {
-            "description": "Duplicate email or conversation state conflict",
+            "description": "Duplicate email, conversation state conflict, or LINE event ID collision",
             "content": {
               "application/json": {
                 "schema": {
@@ -1446,6 +1448,16 @@
           },
           "500": {
             "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Database unavailable, schema not initialized, or service in maintenance (MAINTENANCE_MODE; Retry-After: 60)",
             "content": {
               "application/json": {
                 "schema": {
@@ -1534,7 +1546,7 @@
             }
           },
           "409": {
-            "description": "Duplicate email or conversation state conflict",
+            "description": "Duplicate email, conversation state conflict, or LINE event ID collision",
             "content": {
               "application/json": {
                 "schema": {
@@ -1585,6 +1597,16 @@
           },
           "500": {
             "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Database unavailable, schema not initialized, or service in maintenance (MAINTENANCE_MODE; Retry-After: 60)",
             "content": {
               "application/json": {
                 "schema": {
@@ -1683,7 +1705,7 @@
             }
           },
           "409": {
-            "description": "Duplicate email or conversation state conflict",
+            "description": "Duplicate email, conversation state conflict, or LINE event ID collision",
             "content": {
               "application/json": {
                 "schema": {
@@ -1734,6 +1756,16 @@
           },
           "500": {
             "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Database unavailable, schema not initialized, or service in maintenance (MAINTENANCE_MODE; Retry-After: 60)",
             "content": {
               "application/json": {
                 "schema": {
@@ -1820,7 +1852,7 @@
             }
           },
           "409": {
-            "description": "Duplicate email or conversation state conflict",
+            "description": "Duplicate email, conversation state conflict, or LINE event ID collision",
             "content": {
               "application/json": {
                 "schema": {
@@ -1871,6 +1903,16 @@
           },
           "500": {
             "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Database unavailable, schema not initialized, or service in maintenance (MAINTENANCE_MODE; Retry-After: 60)",
             "content": {
               "application/json": {
                 "schema": {
@@ -1963,7 +2005,7 @@
             }
           },
           "409": {
-            "description": "Duplicate email or conversation state conflict",
+            "description": "Duplicate email, conversation state conflict, or LINE event ID collision",
             "content": {
               "application/json": {
                 "schema": {
@@ -2014,6 +2056,16 @@
           },
           "500": {
             "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Database unavailable, schema not initialized, or service in maintenance (MAINTENANCE_MODE; Retry-After: 60)",
             "content": {
               "application/json": {
                 "schema": {
@@ -2159,7 +2211,7 @@
             }
           },
           "409": {
-            "description": "Duplicate email or conversation state conflict",
+            "description": "Duplicate email, conversation state conflict, or LINE event ID collision",
             "content": {
               "application/json": {
                 "schema": {
@@ -2210,6 +2262,16 @@
           },
           "500": {
             "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Database unavailable, schema not initialized, or service in maintenance (MAINTENANCE_MODE; Retry-After: 60)",
             "content": {
               "application/json": {
                 "schema": {
@@ -2300,7 +2362,7 @@
             }
           },
           "409": {
-            "description": "Duplicate email or conversation state conflict",
+            "description": "Duplicate email, conversation state conflict, or LINE event ID collision",
             "content": {
               "application/json": {
                 "schema": {
@@ -2351,6 +2413,16 @@
           },
           "500": {
             "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Database unavailable, schema not initialized, or service in maintenance (MAINTENANCE_MODE; Retry-After: 60)",
             "content": {
               "application/json": {
                 "schema": {
@@ -2464,7 +2536,7 @@
             }
           },
           "409": {
-            "description": "Duplicate email or conversation state conflict",
+            "description": "Duplicate email, conversation state conflict, or LINE event ID collision",
             "content": {
               "application/json": {
                 "schema": {
@@ -2515,6 +2587,16 @@
           },
           "500": {
             "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Database unavailable, schema not initialized, or service in maintenance (MAINTENANCE_MODE; Retry-After: 60)",
             "content": {
               "application/json": {
                 "schema": {
@@ -2616,7 +2698,7 @@
             }
           },
           "409": {
-            "description": "Duplicate email or conversation state conflict",
+            "description": "Duplicate email, conversation state conflict, or LINE event ID collision",
             "content": {
               "application/json": {
                 "schema": {
@@ -2667,6 +2749,16 @@
           },
           "500": {
             "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Database unavailable, schema not initialized, or service in maintenance (MAINTENANCE_MODE; Retry-After: 60)",
             "content": {
               "application/json": {
                 "schema": {
@@ -2780,7 +2872,7 @@
             }
           },
           "409": {
-            "description": "Duplicate email or conversation state conflict",
+            "description": "Duplicate email, conversation state conflict, or LINE event ID collision",
             "content": {
               "application/json": {
                 "schema": {
@@ -2831,6 +2923,16 @@
           },
           "500": {
             "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Database unavailable, schema not initialized, or service in maintenance (MAINTENANCE_MODE; Retry-After: 60)",
             "content": {
               "application/json": {
                 "schema": {
@@ -2996,7 +3098,7 @@
             }
           },
           "409": {
-            "description": "Duplicate email or conversation state conflict",
+            "description": "Duplicate email, conversation state conflict, or LINE event ID collision",
             "content": {
               "application/json": {
                 "schema": {
@@ -3047,6 +3149,16 @@
           },
           "500": {
             "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Database unavailable, schema not initialized, or service in maintenance (MAINTENANCE_MODE; Retry-After: 60)",
             "content": {
               "application/json": {
                 "schema": {
@@ -3148,7 +3260,7 @@
             }
           },
           "409": {
-            "description": "Duplicate email or conversation state conflict",
+            "description": "Duplicate email, conversation state conflict, or LINE event ID collision",
             "content": {
               "application/json": {
                 "schema": {
@@ -3199,6 +3311,16 @@
           },
           "500": {
             "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Database unavailable, schema not initialized, or service in maintenance (MAINTENANCE_MODE; Retry-After: 60)",
             "content": {
               "application/json": {
                 "schema": {
@@ -3322,7 +3444,7 @@
             }
           },
           "409": {
-            "description": "Duplicate email or conversation state conflict",
+            "description": "Duplicate email, conversation state conflict, or LINE event ID collision",
             "content": {
               "application/json": {
                 "schema": {
@@ -3373,6 +3495,16 @@
           },
           "500": {
             "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Database unavailable, schema not initialized, or service in maintenance (MAINTENANCE_MODE; Retry-After: 60)",
             "content": {
               "application/json": {
                 "schema": {
@@ -3484,7 +3616,7 @@
             }
           },
           "409": {
-            "description": "Duplicate email or conversation state conflict",
+            "description": "Duplicate email, conversation state conflict, or LINE event ID collision",
             "content": {
               "application/json": {
                 "schema": {
@@ -3535,6 +3667,16 @@
           },
           "500": {
             "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Database unavailable, schema not initialized, or service in maintenance (MAINTENANCE_MODE; Retry-After: 60)",
             "content": {
               "application/json": {
                 "schema": {
@@ -3640,7 +3782,7 @@
             }
           },
           "409": {
-            "description": "Duplicate email or conversation state conflict",
+            "description": "Duplicate email, conversation state conflict, or LINE event ID collision",
             "content": {
               "application/json": {
                 "schema": {
@@ -3691,6 +3833,16 @@
           },
           "500": {
             "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Database unavailable, schema not initialized, or service in maintenance (MAINTENANCE_MODE; Retry-After: 60)",
             "content": {
               "application/json": {
                 "schema": {
@@ -3846,7 +3998,7 @@
             }
           },
           "409": {
-            "description": "Duplicate email or conversation state conflict",
+            "description": "Duplicate email, conversation state conflict, or LINE event ID collision",
             "content": {
               "application/json": {
                 "schema": {
@@ -3897,6 +4049,16 @@
           },
           "500": {
             "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Database unavailable, schema not initialized, or service in maintenance (MAINTENANCE_MODE; Retry-After: 60)",
             "content": {
               "application/json": {
                 "schema": {
@@ -3998,7 +4160,7 @@
             }
           },
           "409": {
-            "description": "Duplicate email or conversation state conflict",
+            "description": "Duplicate email, conversation state conflict, or LINE event ID collision",
             "content": {
               "application/json": {
                 "schema": {
@@ -4049,6 +4211,16 @@
           },
           "500": {
             "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Database unavailable, schema not initialized, or service in maintenance (MAINTENANCE_MODE; Retry-After: 60)",
             "content": {
               "application/json": {
                 "schema": {
@@ -4172,7 +4344,7 @@
             }
           },
           "409": {
-            "description": "Duplicate email or conversation state conflict",
+            "description": "Duplicate email, conversation state conflict, or LINE event ID collision",
             "content": {
               "application/json": {
                 "schema": {
@@ -4223,6 +4395,16 @@
           },
           "500": {
             "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Database unavailable, schema not initialized, or service in maintenance (MAINTENANCE_MODE; Retry-After: 60)",
             "content": {
               "application/json": {
                 "schema": {
@@ -4334,7 +4516,7 @@
             }
           },
           "409": {
-            "description": "Duplicate email or conversation state conflict",
+            "description": "Duplicate email, conversation state conflict, or LINE event ID collision",
             "content": {
               "application/json": {
                 "schema": {
@@ -4385,6 +4567,16 @@
           },
           "500": {
             "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Database unavailable, schema not initialized, or service in maintenance (MAINTENANCE_MODE; Retry-After: 60)",
             "content": {
               "application/json": {
                 "schema": {
@@ -4560,7 +4752,7 @@
             }
           },
           "409": {
-            "description": "Duplicate email or conversation state conflict",
+            "description": "Duplicate email, conversation state conflict, or LINE event ID collision",
             "content": {
               "application/json": {
                 "schema": {
@@ -4611,6 +4803,16 @@
           },
           "500": {
             "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Database unavailable, schema not initialized, or service in maintenance (MAINTENANCE_MODE; Retry-After: 60)",
             "content": {
               "application/json": {
                 "schema": {
@@ -4722,7 +4924,7 @@
             }
           },
           "409": {
-            "description": "Duplicate email or conversation state conflict",
+            "description": "Duplicate email, conversation state conflict, or LINE event ID collision",
             "content": {
               "application/json": {
                 "schema": {
@@ -4773,6 +4975,16 @@
           },
           "500": {
             "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Database unavailable, schema not initialized, or service in maintenance (MAINTENANCE_MODE; Retry-After: 60)",
             "content": {
               "application/json": {
                 "schema": {
@@ -4886,7 +5098,7 @@
             }
           },
           "409": {
-            "description": "Duplicate email or conversation state conflict",
+            "description": "Duplicate email, conversation state conflict, or LINE event ID collision",
             "content": {
               "application/json": {
                 "schema": {
@@ -4937,6 +5149,16 @@
           },
           "500": {
             "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Database unavailable, schema not initialized, or service in maintenance (MAINTENANCE_MODE; Retry-After: 60)",
             "content": {
               "application/json": {
                 "schema": {
@@ -5038,7 +5260,7 @@
             }
           },
           "409": {
-            "description": "Duplicate email or conversation state conflict",
+            "description": "Duplicate email, conversation state conflict, or LINE event ID collision",
             "content": {
               "application/json": {
                 "schema": {
@@ -5089,6 +5311,16 @@
           },
           "500": {
             "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Database unavailable, schema not initialized, or service in maintenance (MAINTENANCE_MODE; Retry-After: 60)",
             "content": {
               "application/json": {
                 "schema": {
@@ -5202,7 +5434,7 @@
             }
           },
           "409": {
-            "description": "Duplicate email or conversation state conflict",
+            "description": "Duplicate email, conversation state conflict, or LINE event ID collision",
             "content": {
               "application/json": {
                 "schema": {
@@ -5260,6 +5492,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "Database unavailable, schema not initialized, or service in maintenance (MAINTENANCE_MODE; Retry-After: 60)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         },
         "requestBody": {
@@ -5277,7 +5519,7 @@
     "/api/v1/shops/{shopId}/line/webhook": {
       "post": {
         "operationId": "lineWebhook",
-        "summary": "Receive LINE Messaging API webhook events",
+        "summary": "Persist LINE webhook events and new text jobs before acknowledging delivery",
         "security": [],
         "parameters": [
           {
@@ -5362,7 +5604,7 @@
             }
           },
           "409": {
-            "description": "Duplicate email or conversation state conflict",
+            "description": "Duplicate email, conversation state conflict, or LINE event ID collision",
             "content": {
               "application/json": {
                 "schema": {
@@ -5420,6 +5662,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "Database unavailable, schema not initialized, or service in maintenance (MAINTENANCE_MODE; Retry-After: 60)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         },
         "requestBody": {
@@ -5437,7 +5689,7 @@
     "/api/v1/shops/{shopId}/line/simulate": {
       "post": {
         "operationId": "simulateLineMessage",
-        "summary": "Simulate an incoming LINE message event for testing (owner)",
+        "summary": "Simulate an incoming LINE message event for testing (owner; returns 404 in production)",
         "security": [
           {
             "bearerAuth": []
@@ -5526,7 +5778,7 @@
             }
           },
           "409": {
-            "description": "Duplicate email or conversation state conflict",
+            "description": "Duplicate email, conversation state conflict, or LINE event ID collision",
             "content": {
               "application/json": {
                 "schema": {
@@ -5577,6 +5829,16 @@
           },
           "500": {
             "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Database unavailable, schema not initialized, or service in maintenance (MAINTENANCE_MODE; Retry-After: 60)",
             "content": {
               "application/json": {
                 "schema": {

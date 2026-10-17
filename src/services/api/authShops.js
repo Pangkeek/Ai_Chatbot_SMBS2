@@ -2,53 +2,60 @@ import { randomUUID } from 'node:crypto';
 import { transaction } from '../../lib/db.js';
 import { hashPassword, verifyPassword, createSession } from '../../lib/auth.js';
 import { ApiError } from '../../utils/validation.js';
+import { countToNumber } from '../../lib/postgresql-schema.js';
+
 import { publicUser, now, wrap } from './common.js';
 
-// รวมคำสั่ง API ที่เกี่ยวกับ authShops ไว้ในไฟล์เดียว
-export function createAuthShopsOperations(db, { shopForUser, patch }) {
+export function createAuthShopsOperations(db, { patch, shopForUser }) {
   return {
-    health() { db.prepare('SELECT 1').get(); return wrap({ status: 'ok', database: 'ok' }); },
+    async health() {
+      try { await db.query('SELECT 1'); } catch { throw new ApiError(503, 'DATABASE_UNAVAILABLE', 'Database unavailable'); }
+      return wrap({ status: 'ok', database: 'ok' });
+    },
     async register({ body }) {
       const email = body.email.toLowerCase();
       const passwordHash = await hashPassword(body.password);
-      return transaction(db, () => {
-        if (db.prepare('SELECT 1 FROM users WHERE email = ?').get(email)) throw new ApiError(409, 'EMAIL_EXISTS', 'Email is already registered');
+      try { return await transaction(db, async tx => {
+        if ((await tx.query('SELECT 1 FROM users WHERE lower(email) = lower($1)', [email])).rows[0]) throw new ApiError(409, 'EMAIL_EXISTS', 'Email is already registered');
         const user = { id: randomUUID(), email, name: body.name.trim(), created_at: now() };
-        db.prepare('INSERT INTO users VALUES (?, ?, ?, ?, ?)').run(user.id, email, user.name, passwordHash, user.created_at);
-        return wrap({ user, ...createSession(db, user.id) });
-      });
+        await tx.query('INSERT INTO users (id,email,name,password_hash,created_at) VALUES ($1, $2, $3, $4, $5)', [user.id, email, user.name, passwordHash, user.created_at]);
+        return wrap({ user, ...await createSession(tx, user.id) });
+      }); } catch (error) {
+        if (error.code === '23505' && error.constraint === 'users_email_lower_idx') throw new ApiError(409, 'EMAIL_EXISTS', 'Email is already registered');
+        throw error;
+      }
     },
     async login({ body }) {
-      const user = db.prepare('SELECT * FROM users WHERE email = ?').get(body.email.toLowerCase());
-      // ตรวจรหัสผ่านแม้ไม่พบบัญชี เพื่อให้เวลาในการตอบกลับใกล้เคียงกัน
+      const user = (await db.query('SELECT * FROM users WHERE lower(email) = lower($1)', [body.email.toLowerCase()])).rows[0];
+      // Perform scrypt even for unknown accounts to reduce account timing differences.
       const dummy = `scrypt:${'0'.repeat(32)}:${'0'.repeat(128)}`;
       const valid = await verifyPassword(body.password, user?.password_hash || dummy);
       if (!user || !valid) throw new ApiError(401, 'INVALID_CREDENTIALS', 'Invalid email or password');
-      return wrap({ user: publicUser(user), ...createSession(db, user.id) });
+      return wrap({ user: publicUser(user), ...await transaction(db, tx => createSession(tx, user.id)) });
     },
-    logout({ sessionHash }) { db.prepare('DELETE FROM sessions WHERE token_hash = ?').run(sessionHash); },
-    me({ user }) { return wrap(publicUser(user)); },
-    listShops({ user, query }) {
+    async logout({ sessionHash }) { (await db.query('DELETE FROM sessions WHERE token_hash = $1', [sessionHash])); },
+    async me({ user }) { return wrap(publicUser(user)); },
+    async listShops({ user, query }) {
       const { limit, offset } = query;
-      const total = db.prepare('SELECT count(*) AS n FROM shop_memberships WHERE user_id = ?').get(user.id).n;
-      const rows = db.prepare(`SELECT s.*, m.role AS member_role
+      const total = (await db.query('SELECT count(*) AS n FROM shop_memberships WHERE user_id = $1', [user.id])).rows[0].n;
+      const rows = (await db.query(`SELECT s.*, m.role AS member_role
         FROM shops s
         JOIN shop_memberships m ON m.shop_id = s.id
-        WHERE m.user_id = ?
-        ORDER BY s.created_at, s.id LIMIT ? OFFSET ?`).all(user.id, limit, offset);
-      return { data: rows, meta: { limit, offset, total } };
+        WHERE m.user_id = $1
+        ORDER BY s.created_at, s.id LIMIT $2 OFFSET $3`, [user.id, limit, offset])).rows;
+      return { data: rows, meta: { limit, offset, total: countToNumber(total) } };
     },
-    createShop({ user, body }) {
-      return transaction(db, () => {
+    async createShop({ user, body }) {
+      return transaction(db, async tx => {
         const id = randomUUID(), time = now();
-        db.prepare('INSERT INTO shops VALUES (?, ?, ?, ?, ?, ?, ?)').run(id, body.name.trim(), body.description || '', body.opening_hours || '', body.persona || '', time, time);
-        db.prepare('INSERT INTO shop_memberships VALUES (?, ?, ?, ?)').run(id, user.id, 'owner', time);
-        return wrap({ ...db.prepare('SELECT * FROM shops WHERE id = ?').get(id), member_role: 'owner' });
+        await tx.query('INSERT INTO shops (id,name,description,opening_hours,persona,created_at,updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7)', [id, body.name.trim(), body.description || '', body.opening_hours || '', body.persona || '', time, time]);
+        await tx.query('INSERT INTO shop_memberships (shop_id,user_id,role,created_at) VALUES ($1, $2, $3, $4)', [id, user.id, 'owner', time]);
+        return wrap({ ...(await tx.query('SELECT * FROM shops WHERE id = $1', [id])).rows[0], member_role: 'owner' });
       });
     },
-    getShop({ params, user }) { return wrap(shopForUser(params.shopId, user.id)); },
-    updateShop({ params, body, user }) {
-      patch('shops', body, 'id = ?', [params.shopId]);
+    async getShop({ params, user }) { return wrap(await shopForUser(params.shopId, user.id)); },
+    async updateShop({ params, body, user }) {
+      await patch('shops', body, 'id = ?', [params.shopId]);
       return this.getShop({ params, user });
     },
   };

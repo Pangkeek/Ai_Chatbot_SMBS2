@@ -59,28 +59,28 @@ function splitContent(content) {
   return chunks;
 }
 
-export function indexKnowledgeEntry(db, shopId, knowledgeEntryId) {
-  const entry = db.prepare('SELECT * FROM knowledge_entries WHERE shop_id = ? AND id = ?').get(shopId, knowledgeEntryId);
-  db.prepare('DELETE FROM knowledge_chunks WHERE shop_id = ? AND knowledge_entry_id = ?').run(shopId, knowledgeEntryId);
+export async function indexKnowledgeEntry(db, shopId, knowledgeEntryId) {
+  const entry = (await db.query('SELECT * FROM knowledge_entries WHERE shop_id=$1 AND id=$2 FOR UPDATE', [shopId, knowledgeEntryId])).rows[0];
+  await db.query('DELETE FROM knowledge_chunks WHERE shop_id=$1 AND knowledge_entry_id=$2', [shopId, knowledgeEntryId]);
   if (!entry || entry.status !== 'published') return 0;
   const chunks = splitContent(entry.content);
-  const insert = db.prepare(`INSERT INTO knowledge_chunks
-    (id, shop_id, knowledge_entry_id, chunk_index, content, embedding_json, embedding_version, source_updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)`);
-  chunks.forEach((content, index) => {
-    const id = `${knowledgeEntryId}:${index}`;
-    insert.run(id, shopId, knowledgeEntryId, index, content,
-      JSON.stringify(embed(`${entry.title} ${content}`)), EMBEDDING_VERSION, entry.updated_at);
-  });
+  for (const [index, content] of chunks.entries()) {
+    await db.query(`INSERT INTO knowledge_chunks
+      (id,shop_id,knowledge_entry_id,chunk_index,content,embedding_json,embedding_version,source_updated_at)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+    [`${knowledgeEntryId}:${index}`,shopId,knowledgeEntryId,index,content,
+      JSON.stringify(embed(`${entry.title} ${content}`)),EMBEDDING_VERSION,entry.updated_at]);
+  }
   return chunks.length;
 }
 
-export function rebuildKnowledgeIndex(db) {
-  return transaction(db, () => {
-    db.prepare('DELETE FROM knowledge_chunks').run();
-    const entries = db.prepare("SELECT shop_id, id FROM knowledge_entries WHERE status = 'published' ORDER BY shop_id, id").all();
+export async function rebuildKnowledgeIndex(db) {
+  return transaction(db, async tx => {
+    await tx.query('LOCK TABLE knowledge_entries IN SHARE ROW EXCLUSIVE MODE');
+    await tx.query('DELETE FROM knowledge_chunks');
+    const entries = (await tx.query("SELECT shop_id,id FROM knowledge_entries WHERE status='published' ORDER BY shop_id,id")).rows;
     let chunks = 0;
-    for (const entry of entries) chunks += indexKnowledgeEntry(db, entry.shop_id, entry.id);
+    for (const entry of entries) chunks += await indexKnowledgeEntry(tx,entry.shop_id,entry.id);
     return { entries: entries.length, chunks };
   });
 }
@@ -89,16 +89,16 @@ function cosine(left, right) {
   return left.reduce((sum, value, index) => sum + value * right[index], 0);
 }
 
-export function retrieve(db, { shopId, query, limit = 4, shop }) {
+export async function retrieve(db, { shopId, query, limit = 4, shop }) {
   if (!shopId || !normalize(query)) return [];
-  const business = shop || db.prepare('SELECT * FROM shops WHERE id = ?').get(shopId);
+  const business = shop || (await db.query('SELECT * FROM shops WHERE id=$1', [shopId])).rows[0];
   const searchQuery = /ส่ง|เดลิเวอรี่|delivery/i.test(query) ? `${query} การจัดส่ง` : query;
-  const knowledgeRows = db.prepare(`SELECT c.id AS chunk_id, c.knowledge_entry_id, c.content, c.embedding_json,
+  const knowledgeRows = (await db.query(`SELECT c.id AS chunk_id, c.knowledge_entry_id, c.content, c.embedding_json,
       e.kind, e.title, e.content AS full_content
     FROM knowledge_chunks c JOIN knowledge_entries e
       ON e.shop_id = c.shop_id AND e.id = c.knowledge_entry_id
-    WHERE c.shop_id = ? AND e.status = 'published'
-      AND c.embedding_version = ? AND c.source_updated_at = e.updated_at`).all(shopId, EMBEDDING_VERSION);
+    WHERE c.shop_id = $1 AND e.status = 'published'
+      AND c.embedding_version = $2 AND c.source_updated_at = e.updated_at`, [shopId, EMBEDDING_VERSION])).rows;
   const rows = [...knowledgeRows, ...buildBusinessEvidence(business)];
   const queryVector = embed(searchQuery);
   const queryTerms = terms(searchQuery);
@@ -125,10 +125,10 @@ export function retrieve(db, { shopId, query, limit = 4, shop }) {
 }
 
 // ใช้ฟังก์ชันเดียวกันทั้งตอนตอบจริงและตอนดูตัวอย่าง เพื่อให้หลักฐานตรงกัน
-export function prepareAnswerContext(db, { shopId, query }) {
-  const shop = db.prepare('SELECT * FROM shops WHERE id = ?').get(shopId);
+export async function prepareAnswerContext(db, { shopId, query }) {
+  const shop = (await db.query('SELECT * FROM shops WHERE id=$1', [shopId])).rows[0];
   if (!shop) return null;
-  const matches = retrieve(db, { shopId, query, shop });
+  const matches = await retrieve(db, { shopId, query, shop });
   const context = matches.map(({ chunk_id, knowledge_entry_id, source_type, title, content, score }) =>
     ({ chunkId: chunk_id, knowledgeEntryId: knowledge_entry_id, sourceType: source_type || 'knowledge', title, content, score }));
   return { shop, matches, context, prompt: buildAnswerPrompt({ shop, query, context }) };
@@ -136,7 +136,7 @@ export function prepareAnswerContext(db, { shopId, query }) {
 
 // หากยังไม่ได้ต่อบริการ AI ภายนอก ระบบจะคัดข้อความจากหลักฐานที่ค้นพบแทน
 export async function answerQuestion(db, { shopId, query, generator }) {
-  const prepared = prepareAnswerContext(db, { shopId, query });
+  const prepared = await prepareAnswerContext(db, { shopId, query });
   const matches = prepared?.matches || [];
   if (!matches.length) return { text: UNKNOWN_ANSWER, sources: [], method: 'no_evidence' };
   const exact = matches.find(match => match.exactFaq);

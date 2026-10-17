@@ -10,8 +10,8 @@ flowchart LR
     Dashboard[Dashboard ระยะถัดไป] -.-> API
     API --> Auth[Session และ shop membership]
     Auth --> Service[Service และกฎบทสนทนา]
-    Service --> DB[(SQLite พร้อม migrations)]
-    LINE[LINE webhook] --> Queue[คิวในหน่วยความจำและ event deduplication]
+    Service --> DB[(PostgreSQL 18 พร้อม migrations)]
+    LINE[LINE webhook] --> Queue[PostgreSQL durable jobs และ event deduplication]
     Queue --> Worker[Chat worker]
     Worker --> KB[Tenant-scoped retrieval]
     KB --> DB
@@ -25,12 +25,12 @@ flowchart LR
 
 | เรื่อง | การเลือกและเหตุผล | ข้อจำกัด/แผนต่อยอด |
 |---|---|---|
-| Runtime | Node.js 24.19.x แบบ ESM, Next.js Pages Router และ API Routes พร้อม SQLite/test จาก Node.js | schema validator รองรับเฉพาะ subset ที่ใช้ใน contract นี้ |
-| Database | SQLite แบบ WAL, STRICT tables, foreign_keys เปิดทุก connection | เหมาะกับทีมเริ่มต้นและหนึ่ง server process; ยังไม่ใช่ shared database หลาย instance |
+| Runtime | Node.js 24.19.x แบบ ESM, Next.js Pages Router และ API Routes พร้อม pg; SQLite ใช้เฉพาะ backup/import tooling | schema validator รองรับเฉพาะ subset ที่ใช้ใน contract นี้ |
+| Database | PostgreSQL 18, async queries, transactions และ composite foreign keys | แยก test schemas; migrations และ knowledge indexing เป็นขั้นตอน explicit ก่อน start |
 | API | REST JSON, `/api/v1`, OpenAPI 3.1 จาก route registry | เพิ่ม contract ก่อนให้ frontend ใช้ endpoint ใหม่ |
-| Tenant boundary | membership check + shop-scoped query + composite foreign key | SQLite ไม่มี RLS; ต้องตรวจ scope ในทุก service ใหม่ |
+| Tenant boundary | membership check + shop-scoped query + composite foreign key | ยังไม่ได้เปิด PostgreSQL RLS; ต้องตรวจ scope ในทุก service ใหม่ |
 | Authentication | salted scrypt; opaque bearer token; เก็บเฉพาะ token hash | ยังไม่มี email verification, reset password, MFA และ refresh session |
-| Test | integration ผ่าน HTTP จริงและฐานข้อมูลแยกจากข้อมูลพัฒนา | มี CI config พร้อมใช้ แต่ต้องนำขึ้น remote จึงจะรัน CI บนบริการได้ |
+| Test | integration ผ่าน HTTP จริงและฐานข้อมูลแยกจากข้อมูลพัฒนา | CI ตรวจ runtime, import, migrations, build, LINE lifecycle, production smoke และ Docker Compose |
 
 เปิด localhost เป็นค่าเริ่มต้นและไม่มี CORS สำหรับ origin อื่น Next.js, API Console และ API ทำงานจากเซิร์ฟเวอร์และ origin เดียวกัน
 
