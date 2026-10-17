@@ -1,6 +1,6 @@
-export default function CreateShopForm() {
+export default function CreateShopForm({ inputRef, onReset }) {
   return (
-    <form id="shop-form" className="mt-6 space-y-5">
+    <form id="shop-form" onReset={onReset} className="mt-6 space-y-5">
                   <div>
                     <label
                       htmlFor="shop-name"
@@ -10,6 +10,7 @@ export default function CreateShopForm() {
                     </label>
 
                     <input
+                      ref={inputRef}
                       id="shop-name"
                       name="name"
                       placeholder="เช่น บ้านกาแฟ"

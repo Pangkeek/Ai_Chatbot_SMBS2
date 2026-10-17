@@ -69,7 +69,7 @@ function createApp({ rejectSession = false, failureStatus, loggedIn = true } = {
     const shop = { id: 'test-shop', name: 'Test shop', member_role: 'owner', description: '', persona: '', opening_hours: '' };
     const data = url.endsWith('/users/me') ? { name: 'Test owner', email: 'owner@example.test' }
       : url.endsWith('/auth/login') ? { access_token: 'existing-session' }
-      : url.endsWith('/shops') ? [shop]
+      : url.endsWith('/shops') ? (options.method === 'POST' ? shop : [shop])
       : url.endsWith('/shops/test-shop') ? shop : [];
     return { ok: true, json: async () => ({ data }) };
   };
@@ -307,6 +307,43 @@ test('homepage logout clears the local session even when the server cannot be re
     assert.equal(app.window.sessionStorage.getItem('smb_access_token'), null);
     assert.equal(app.window.document.getElementById('home-account-button'), null);
     assert.match(app.window.document.querySelector('header').textContent, /เข้าสู่ระบบ/);
+    assert.deepEqual(app.errors, []);
+    await app.ui.unmount();
+  } finally {
+    app.dom.window.close();
+  }
+});
+
+test('create-shop form is hidden until requested and closes after a successful creation', async () => {
+  const app = createApp();
+  try {
+    await app.ui.mount();
+    await app.ui.settle();
+    const form = app.window.document.getElementById('shop-form');
+    const panel = form.closest('aside');
+    assert.ok(panel.hidden, 'Creation form must be hidden on entry');
+    const trigger = app.window.document.getElementById('create-shop-button');
+    assert.equal(trigger.getAttribute('aria-expanded'), 'false');
+    await app.ui.click('create-shop-button');
+    assert.ok(!panel.hidden);
+    assert.equal(trigger.getAttribute('aria-expanded'), 'true');
+    const name = app.window.document.getElementById('shop-name');
+    assert.equal(app.window.document.activeElement, name);
+    name.value = 'Test shop';
+    await app.ui.click('close-create-shop-button');
+    assert.ok(panel.hidden);
+    assert.equal(app.window.document.activeElement, trigger);
+    await app.ui.click('create-shop-button');
+    assert.equal(name.value, 'Test shop', 'Closing the panel must not lose an unfinished draft');
+    await app.ui.submit('shop-form');
+    await app.ui.settle();
+    const created = app.requests.filter(request => request.url.endsWith('/shops') && request.options.method === 'POST');
+    assert.equal(created.length, 1);
+    assert.equal(JSON.parse(created[0].options.body).name, 'Test shop');
+    assert.ok(panel.hidden, 'The form must close after a successful creation');
+    assert.equal(app.window.location.pathname, '/app/shops/test-shop/settings');
+    await app.ui.click('settings-back-button');
+    assert.ok(panel.hidden, 'Returning to the shop list must not reopen the form');
     assert.deepEqual(app.errors, []);
     await app.ui.unmount();
   } finally {

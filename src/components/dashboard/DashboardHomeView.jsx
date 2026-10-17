@@ -1,5 +1,14 @@
+import { useEffect, useRef, useState } from 'react';
 import CreateShopForm from './CreateShopForm.jsx';
 export default function DashboardHomeView() {
+  const [createShopOpen, setCreateShopOpen] = useState(false);
+  const createButtonRef = useRef(null);
+  const shopNameRef = useRef(null);
+
+  useEffect(() => {
+    if (createShopOpen) shopNameRef.current?.focus();
+  }, [createShopOpen]);
+
   return (
     <main
           id="dashboard-home-view"
@@ -50,9 +59,9 @@ export default function DashboardHomeView() {
             </div>
           </section>
 
-          <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_360px]">
+          <div className={`mt-8 grid gap-8 ${createShopOpen ? 'lg:grid-cols-[minmax(0,1fr)_360px]' : ''}`}>
             <section>
-              <div className="mb-5 flex items-center justify-between">
+              <div className="mb-5 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
                 <div>
                   <h2 className="text-xl font-bold text-slate-900">
                     ร้านค้าของคุณ
@@ -62,6 +71,17 @@ export default function DashboardHomeView() {
                     ระบบจะแสดงเฉพาะร้านที่บัญชีนี้มีสิทธิ์เข้าถึง
                   </p>
                 </div>
+                <button
+                  ref={createButtonRef}
+                  id="create-shop-button"
+                  type="button"
+                  aria-expanded={createShopOpen}
+                  aria-controls="create-shop-panel"
+                  onClick={() => setCreateShopOpen(true)}
+                  className="app-primary-button inline-flex min-h-12 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold"
+                >
+                  <span aria-hidden="true" className="text-xl">+</span> สร้างร้านค้าใหม่
+                </button>
               </div>
 
               <div id="shop-loading" className="grid gap-4 sm:grid-cols-2">
@@ -98,7 +118,7 @@ export default function DashboardHomeView() {
                 <h3 className="mt-5 text-lg font-bold">ยังไม่มีร้านค้า</h3>
 
                 <p className="mt-2 text-sm text-slate-500">
-                  สร้างร้านแรกของคุณจากแบบฟอร์มด้านข้าง
+                  กดปุ่ม “+ สร้างร้านค้าใหม่” เพื่อสร้างร้านแรกของคุณ
                 </p>
               </div>
 
@@ -151,7 +171,8 @@ export default function DashboardHomeView() {
               </section>
             </section>
 
-            <aside>
+            {/* คง form ไว้ใน DOM เพื่อให้ controller ผูก submit ได้ตั้งแต่เปิดหน้า */}
+            <aside id="create-shop-panel" hidden={!createShopOpen} aria-labelledby="create-shop-title">
               <div className="sticky top-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
                 <div className="flex size-12 items-center justify-center rounded-2xl bg-blue-50 text-2xl">
                   <svg
@@ -169,13 +190,24 @@ export default function DashboardHomeView() {
                   </svg>
                 </div>
 
-                <h2 className="mt-5 text-xl font-bold">สร้างร้านใหม่</h2>
+                <h2 id="create-shop-title" className="mt-5 text-xl font-bold">สร้างร้านใหม่</h2>
 
                 <p className="mt-2 text-sm leading-6 text-slate-500">
                   บัญชีของคุณจะเป็นเจ้าของร้านโดยอัตโนมัติ
                 </p>
 
-                <CreateShopForm />
+                <CreateShopForm inputRef={shopNameRef} onReset={() => setCreateShopOpen(false)} />
+                <button
+                  id="close-create-shop-button"
+                  type="button"
+                  onClick={() => {
+                    setCreateShopOpen(false);
+                    createButtonRef.current?.focus();
+                  }}
+                  className="mt-3 min-h-12 w-full cursor-pointer rounded-xl border border-slate-200 px-5 py-3 text-sm text-slate-600 transition hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-[#4564c9]"
+                >
+                  ปิดแบบฟอร์ม
+                </button>
               </div>
             </aside>
           </div>
