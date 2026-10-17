@@ -45,7 +45,7 @@ function renderPreview(result) {
   document.querySelector("#ai-preview-result").classList.remove("hidden");
 }
 
-export function createAiPreview({ apiRequest, getSelectedShopId, setButtonLoading }) {
+export function createAiPreview({ listen, apiRequest, getSelectedShopId, setButtonLoading }) {
   const form = document.querySelector("#ai-preview-form");
   const question = document.querySelector("#ai-preview-question");
   const button = document.querySelector("#ai-preview-button");
@@ -62,7 +62,7 @@ export function createAiPreview({ apiRequest, getSelectedShopId, setButtonLoadin
     result.classList.add("hidden");
   }
 
-  form.addEventListener("submit", async (event) => {
+  listen(form, "submit", async (event) => {
     event.preventDefault();
     const shopId = getSelectedShopId();
     if (!shopId) return;

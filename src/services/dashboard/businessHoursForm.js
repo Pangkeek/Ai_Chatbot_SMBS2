@@ -43,14 +43,14 @@ export function readBusinessHours(form) {
   return formatBusinessHours(hours);
 }
 
-export function setupBusinessHoursForm(form) {
-  form.addEventListener("change", (event) => {
+export function setupBusinessHoursForm(form, listen) {
+  listen(form, "change", (event) => {
     if (!event.target.closest("[data-hours-day]")) return;
     form.dataset.hoursChanged = "true";
     showLegacyText(form, "");
   });
 
-  form.addEventListener("click", (event) => {
+  listen(form, "click", (event) => {
     const preset = event.target.closest("[data-hours-preset]");
     if (!preset) return;
     const keys = BUSINESS_DAYS.map(([key]) => key);

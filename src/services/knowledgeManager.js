@@ -5,6 +5,7 @@ import { createKnowledgeCard } from './knowledge/card.js';
 export { filterKnowledgeEntries, paginateKnowledgeEntries, fetchAllKnowledgeEntries } from './knowledge/data.js';
 
 export function createKnowledgeManager({
+  listen,
   apiRequest,
   showNotification,
   onUnauthorized,
@@ -447,39 +448,39 @@ export function createKnowledgeManager({
     render();
   }
 
-  elements.addButton.addEventListener("click", () => openForm());
-  elements.retryButton.addEventListener("click", () => load({ force: true }));
+  listen(elements.addButton, "click", () => openForm());
+  listen(elements.retryButton, "click", () => load({ force: true }));
   for (const control of [elements.search, elements.kindFilter, elements.statusFilter]) {
-    control.addEventListener("input", () => {
+    listen(control, "input", () => {
       state.page = 1;
       render();
     });
   }
-  elements.prevButton.addEventListener("click", () => {
+  listen(elements.prevButton, "click", () => {
     state.page--;
     render();
     elements.section.scrollIntoView({ behavior: "smooth", block: "start" });
   });
-  elements.nextButton.addEventListener("click", () => {
+  listen(elements.nextButton, "click", () => {
     state.page++;
     render();
     elements.section.scrollIntoView({ behavior: "smooth", block: "start" });
   });
-  elements.kind.addEventListener("change", updateFormLabels);
-  elements.title.addEventListener("input", updateCounts);
-  elements.content.addEventListener("input", updateCounts);
-  elements.form.addEventListener("submit", submitForm);
-  elements.modalClose.addEventListener("click", () => closeForm());
-  elements.formCancel.addEventListener("click", () => closeForm());
-  elements.modal.addEventListener("click", (event) => {
+  listen(elements.kind, "change", updateFormLabels);
+  listen(elements.title, "input", updateCounts);
+  listen(elements.content, "input", updateCounts);
+  listen(elements.form, "submit", submitForm);
+  listen(elements.modalClose, "click", () => closeForm());
+  listen(elements.formCancel, "click", () => closeForm());
+  listen(elements.modal, "click", (event) => {
     if (event.target === elements.modal) closeForm();
   });
-  elements.deleteCancel.addEventListener("click", closeDelete);
-  elements.deleteConfirm.addEventListener("click", confirmDelete);
-  elements.deleteModal.addEventListener("click", (event) => {
+  listen(elements.deleteCancel, "click", closeDelete);
+  listen(elements.deleteConfirm, "click", confirmDelete);
+  listen(elements.deleteModal, "click", (event) => {
     if (event.target === elements.deleteModal) closeDelete();
   });
-  document.addEventListener("keydown", (event) => {
+  listen(document, "keydown", (event) => {
     if (!elements.deleteModal.classList.contains("hidden")) {
       if (event.key === "Escape") closeDelete();
       trapFocus(event, elements.deleteModal);

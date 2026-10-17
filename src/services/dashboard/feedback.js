@@ -1,29 +1,33 @@
-import { elements, icons } from './elements.js';
+import { icons } from './elements.js';
 
-let notificationTimer;
+export function createDashboardFeedback(elements) {
+  let notificationTimer;
 
-// แสดงข้อความแจ้งเตือน แล้วซ่อนอัตโนมัติ
-function showNotification(type, title, message) {
-  clearTimeout(notificationTimer);
+  // แสดงข้อความแจ้งเตือน แล้วซ่อนอัตโนมัติ
+  function showNotification(type, title, message) {
+    clearTimeout(notificationTimer);
 
-  const isSuccess = type === "success";
+    const isSuccess = type === "success";
 
-  elements.notification.classList.remove("hidden");
-  elements.notification.classList.toggle("border-emerald-200", isSuccess);
-  elements.notification.classList.toggle("border-red-200", !isSuccess);
+    elements.notification.classList.remove("hidden");
+    elements.notification.classList.toggle("border-emerald-200", isSuccess);
+    elements.notification.classList.toggle("border-red-200", !isSuccess);
 
-  elements.notificationIcon.className = [
-    "flex size-9 shrink-0 items-center justify-center rounded-full",
-    isSuccess ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700",
-  ].join(" ");
+    elements.notificationIcon.className = [
+      "flex size-9 shrink-0 items-center justify-center rounded-full",
+      isSuccess ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700",
+    ].join(" ");
 
-  elements.notificationIcon.innerHTML = isSuccess ? icons.check : icons.alert;
-  elements.notificationTitle.textContent = title;
-  elements.notificationMessage.textContent = message;
+    elements.notificationIcon.innerHTML = isSuccess ? icons.check : icons.alert;
+    elements.notificationTitle.textContent = title;
+    elements.notificationMessage.textContent = message;
 
-  notificationTimer = setTimeout(() => {
-    elements.notification.classList.add("hidden");
-  }, 4500);
+    notificationTimer = setTimeout(() => {
+      elements.notification.classList.add("hidden");
+    }, 4500);
+  }
+
+  return { showNotification, dispose: () => clearTimeout(notificationTimer) };
 }
 
 function setButtonLoading(button, loading, loadingText) {
@@ -38,4 +42,4 @@ function setButtonLoading(button, loading, loadingText) {
   button.disabled = false;
 }
 
-export { showNotification, setButtonLoading };
+export { setButtonLoading };

@@ -1,5 +1,29 @@
 # จุดพักงานล่าสุด
 
+## งานล่าสุด: กลับหน้าแรกแล้วไม่หลุดบัญชี
+
+- สาเหตุ: dynamic import ของ controller ถูก cache แต่หน้า `/app` ถูกสร้าง DOM ชุดใหม่หลังกลับจาก `/home`; controller เดิมจึงไม่เริ่มใหม่และยังอ้าง DOM ที่ถอดไปแล้ว ไม่ใช่ homepage ลบ token
+- เปลี่ยน controller เป็น `initializeDashboard()` เรียกทุกครั้งที่ mount อ่าน session เดิมจาก `sessionStorage` และค้น element ชุดปัจจุบัน
+- ส่ง element และตัวผูก listener ให้โมดูลย่อยตามอายุหน้า; cleanup ถอน route/DOM listeners ยกเลิกคำขอ และหยุดการแจ้งเตือน โดยไม่ลบ session
+- ป้องกันคำตอบล่าช้าจากหน้าที่ปิดไปแล้วกระทบ session ปัจจุบัน; ล้าง session เมื่อ API ตอบ 401 หรือผู้ใช้กดออกจากระบบ ไม่ล้างเพราะข้อผิดพลาดเครือข่าย/503
+- เพิ่ม DOM integration tests ใน `tests/dashboard-session.test.js` ใช้ component/controller จริงภายใต้ React StrictMode และจำลอง API ด้วยข้อมูลทดสอบ ไม่มีการใช้บัญชีจริง
+- เพิ่ม esbuild/jsdom เป็น dev dependencies และอัปเดต lockfile ของ npm กับ pnpm
+
+### ผลตรวจงานล่าสุด
+
+- ก่อนแก้ regression test ล้มเหลวตรงการกลับจาก homepage แล้วแสดงฟอร์ม login; หลังแก้ผ่าน
+- `npm test` ผ่าน 47 รายการ รวม 5 regression tests: กลับจาก homepage ซ้ำ 3 รอบและเปิดตั้งค่าร้านได้, login หลังกลับหน้า, logout ทำงานครั้งเดียว, session หมดอายุ, server 503 และคำตอบ 401 ล่าช้า (บาง test ครอบคลุมหลายสถานการณ์)
+- `npm run build`, `npm run api:check` และ `git diff --check` ผ่าน
+- ตรวจ pnpm lockfile แบบ frozen ผ่าน โดยใช้ pnpm 10 พร้อมปิด package-manager-strict สำหรับการตรวจครั้งนี้ เพราะ package.json ระบุ npm
+- `docker compose up -d --build app` ผ่าน โดยคง volume ข้อมูลเดิม; `docker compose exec -T app npm test` ผ่าน 47 รายการบน Node.js 24 ของ image
+- ตรวจพอร์ต 3000: build ID ของ HTTP ตรงกับคอนเทนเนอร์ใหม่, `/home` และ `/health` ตอบ 200, คอนเทนเนอร์ healthy
+
+### ข้อจำกัดและขั้นตอนถัดไป
+
+- ตรวจการเปลี่ยนหน้าด้วย DOM integration ไม่ใช่เบราว์เซอร์จริง; ยังไม่ได้ตรวจด้วยภาพหน้าจอ
+- ไม่ได้เปลี่ยนอายุ session หรือเปลี่ยน sessionStorage เป็นการจำบัญชีข้ามการปิดแท็บ
+- `.agent/` เป็นไฟล์ที่ผู้ใช้เพิ่มไว้ก่อนงานนี้ จึงไม่นำเข้า commit ของการแก้บั๊ก
+
 ## งานแก้ปุ่มสมัครสมาชิก
 
 - ย้ายการสลับฟอร์มเข้าสู่ระบบ/สมัครสมาชิกไปอยู่ใน React เพื่อรับคลิกได้โดยไม่ต้องรอ controller โหลด และเพิ่มพื้นที่กดสูงอย่างน้อย 48px

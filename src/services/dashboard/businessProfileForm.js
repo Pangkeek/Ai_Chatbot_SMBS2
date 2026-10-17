@@ -44,15 +44,15 @@ export function readBusinessProfile(form) {
   });
 }
 
-export function setupBusinessProfileForm(form) {
+export function setupBusinessProfileForm(form, listen) {
   const controls = fields(form);
   const editable = [controls.type, controls.otherType, controls.offering, controls.mode, controls.details];
   for (const field of editable) {
-    field.addEventListener("input", () => {
+    listen(field, "input", () => {
       form.dataset.descriptionChanged = "true";
       if (field === controls.type) showOtherType(form);
     });
-    field.addEventListener("change", () => {
+    listen(field, "change", () => {
       form.dataset.descriptionChanged = "true";
       if (field === controls.type) showOtherType(form);
     });

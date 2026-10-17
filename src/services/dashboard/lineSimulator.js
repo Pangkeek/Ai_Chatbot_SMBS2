@@ -1,7 +1,5 @@
-import { elements } from './elements.js';
-
 // จัดการผลทดสอบแชต โดยแยกออกจากการนำทางของแดชบอร์ด
-export function createLineSimulator({ apiRequest, getSelectedShopId, setButtonLoading }) {
+export function createLineSimulator({ elements, listen, apiRequest, getSelectedShopId, setButtonLoading }) {
   const simulatorEmptyState = elements.lineSimResult.innerHTML;
   let simulatorVersion = 0;
   let simulatorBusy = false;
@@ -48,16 +46,16 @@ export function createLineSimulator({ apiRequest, getSelectedShopId, setButtonLo
   }
 
   for (const button of document.querySelectorAll("[data-sim-prompt]")) {
-    button.addEventListener("click", () => {
+    listen(button, "click", () => {
       elements.lineSimText.value = getSelectedShopId() === "shop-flower"
         ? button.dataset.simPromptFlower || button.dataset.simPrompt
         : button.dataset.simPrompt;
       elements.lineSimText.focus();
     });
   }
-  elements.lineSimClear.addEventListener("click", resetSimulator);
-  elements.lineSimUser.addEventListener("change", resetSimulator);
-  elements.lineSimForm.addEventListener("submit", async (event) => {
+  listen(elements.lineSimClear, "click", resetSimulator);
+  listen(elements.lineSimUser, "change", resetSimulator);
+  listen(elements.lineSimForm, "submit", async (event) => {
     event.preventDefault();
     if (!getSelectedShopId() || simulatorBusy) return;
     const userId = elements.lineSimUser.value.trim() || "line-user-demo-1";

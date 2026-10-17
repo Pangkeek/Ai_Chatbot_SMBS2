@@ -1,6 +1,6 @@
 import Router from 'next/router';
 import { shopRoute } from '../../utils/dashboardRoutes.js';
-import { elements, icons } from './elements.js';
+import { icons } from './elements.js';
 import { summarizeBusinessProfile } from '../../utils/businessProfile.js';
 
 // สร้างการ์ดร้านทีละใบ โดยใช้ textContent กับข้อมูลที่มาจาก API
@@ -64,7 +64,7 @@ function createShopCard(shop) {
   return card;
 }
 
-function renderShops(shops) {
+function renderShops(shops, elements) {
   elements.shopList.replaceChildren();
   elements.shopCount.textContent = String(shops.length);
   elements.shopLoading.classList.add("hidden");
