@@ -21,7 +21,10 @@ function canonicalQuestion(value) {
 }
 
 function terms(value) {
-  const words = [...segmenter.segment(normalize(value))]
+  // NFKC แยกสระอำจนตัด "สำหรับ" เป็น "รับ" ทำให้จับคำถามรับโอนผิดเรื่อง
+  // คืนรูปเฉพาะตอนตัดคำ ไม่เปลี่ยน embedding เดิมที่เก็บในฐานข้อมูล
+  const wordText = normalize(value).replace(/\u0e4d\u0e32/g, '\u0e33');
+  const words = [...segmenter.segment(wordText)]
     .filter(part => part.isWordLike).map(part => part.segment.trim())
     .filter(word => word.length > 1 && !['ร้าน', 'อะไร', 'บ้าง', 'หรือ', 'ครับ', 'ค่ะ', 'ไหม', 'หน่อย'].includes(word));
   return new Set(words);
