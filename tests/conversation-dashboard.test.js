@@ -35,7 +35,7 @@ const bundle = await build({
   } }],
 });
 
-async function fixture() {
+async function fixture(serviceOptions = {}) {
   const fixture = await createTestDatabase();
   const db = fixture.db;
   await migratePostgresql({ config: fixture.config });
@@ -48,7 +48,7 @@ async function fixture() {
     await insertMessage(db, `ui-msg-${index}`, 'shop-coffee', 'ui-024', 'customer', `ข้อความ ${index}`, null, new Date(Date.parse(time) + index * 1000).toISOString());
   }
   await insertMessage(db, 'ui-xss', 'shop-coffee', 'ui-024', 'customer', '<img src=x onerror=alert(1)>', null, '2026-10-17T00:02:00.000Z');
-  const server = createApp(db, { logErrors: false });
+  const server = createApp(db, { logErrors: false, serviceOptions });
   server.listen(0, '127.0.0.1'); await once(server, 'listening');
   const base = `http://127.0.0.1:${server.address().port}`;
   const response = await fetch(base + '/api/v1/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'coffee@example.test', password: demoPassword }) });
@@ -74,6 +74,7 @@ async function fixture() {
   window.fetch = async (path, options) => {
     requests.push(path);
     if (controls.hold && path.includes('/shops/shop-coffee/statistics')) await controls.hold;
+    if (controls.holdLineConfig && path.endsWith('/line/config') && (!options.method || options.method === 'GET')) await controls.holdLineConfig;
     if (controls.fail && path.includes('/statistics')) return new Response(JSON.stringify({ error: { message: 'ทดสอบเครือข่ายขัดข้อง' } }), { status: controls.failStatus || 503 });
     // Node fetch ใช้ signal คนละ realm; ยังตรวจการยกเลิกทั้งก่อนและหลังอ่าน HTTP
     options.signal?.throwIfAborted();
@@ -127,6 +128,91 @@ test('conversation screen reads real statistics, pages rooms and safely shows pa
     await app.until(() => app.document.getElementById('conversation-messages')?.textContent.includes('<img src=x'));
     assert.deepEqual(app.errors, []);
   } finally { await app.close(); }
+});
+
+test('admin takes over, sends a real API reply through the LINE boundary, pauses and resumes', async () => {
+  const sent = [];
+  const app = await fixture({ sendPush: async payload => { sent.push(payload); } });
+  try {
+    await app.db.query(`INSERT INTO line_channels(shop_id,channel_secret,channel_access_token,created_at,updated_at)
+      VALUES('shop-coffee','test-secret','test-token',clock_timestamp(),clock_timestamp())`);
+    await app.ui.mount();
+    await app.until(() => app.document.getElementById('conversation-room-ui-024'));
+    await app.ui.click('conversation-room-ui-024');
+    await app.until(() => app.document.getElementById('conversation-detail-meta').textContent.includes('บอทเปิดทำงาน'));
+    assert.equal(app.document.getElementById('conversation-send').disabled, true);
+    await app.ui.click('conversation-takeover');
+    await app.until(() => app.document.getElementById('conversation-detail-meta').textContent.includes('แอดมินดูแล'));
+    app.document.getElementById('conversation-reply').value = 'แอดมินตอบจากหน้าจอ <img src=x>';
+    await app.ui.submit('conversation-composer');
+    await app.until(() => app.document.getElementById('conversation-messages').textContent.includes('แอดมินตอบจากหน้าจอ'));
+    assert.equal(sent.length, 1);
+    assert.equal(sent[0].to, 'U-24');
+    assert.equal(app.document.querySelector('#conversation-messages img'), null);
+    assert.equal(app.document.getElementById('conversation-reply').value, '');
+    await app.ui.click('conversation-pause');
+    await app.until(() => app.document.getElementById('conversation-detail-meta').textContent.includes('พักบอท'));
+    await app.ui.click('conversation-resume');
+    await app.until(() => app.document.getElementById('conversation-detail-meta').textContent.includes('บอทเปิดทำงาน'));
+    assert.equal(app.document.getElementById('conversation-send').disabled, true);
+    assert.deepEqual(app.errors, []);
+  } finally { await app.close(); }
+});
+
+test('uncertain send keeps its draft and request ID, survives remount as an outcome, and cannot leak into another room', async () => {
+  let calls = 0, release, started;
+  const ready = new Promise(resolve => { started = resolve; });
+  const barrier = new Promise(resolve => { release = resolve; });
+  const app = await fixture({ sendPush: async () => { calls++; started(); await barrier; throw new Error('Connection lost'); } });
+  try {
+    await app.db.query(`INSERT INTO line_channels(shop_id,channel_secret,channel_access_token,created_at,updated_at)
+      VALUES('shop-coffee','test-secret','test-token',clock_timestamp(),clock_timestamp())`);
+    await app.ui.mount(); await app.until(() => app.document.getElementById('conversation-room-ui-024'));
+    await app.ui.click('conversation-room-ui-024');
+    await app.until(() => !app.document.getElementById('conversation-takeover').disabled);
+    await app.ui.click('conversation-takeover');
+    await app.until(() => !app.document.getElementById('conversation-send').disabled);
+    app.document.getElementById('conversation-reply').value = 'ข้อความไม่ทราบผล';
+    await app.ui.submit('conversation-composer'); await ready;
+    assert.equal(app.document.getElementById('conversation-send').disabled, true);
+    release();
+    await app.until(() => app.document.getElementById('conversation-send').textContent === 'ตรวจสถานะการส่ง' && !app.document.getElementById('conversation-send').disabled);
+    assert.equal(app.document.getElementById('conversation-reply').value, 'ข้อความไม่ทราบผล');
+    await app.ui.submit('conversation-composer');
+    await app.until(() => !app.document.getElementById('conversation-send').disabled);
+    assert.equal(calls, 1);
+    assert.ok(!app.document.getElementById('conversation-messages').textContent.includes('ข้อความไม่ทราบผล'));
+    await app.ui.unmount(); await app.ui.mount();
+    await app.until(() => app.document.getElementById('conversation-room-ui-024'));
+    await app.ui.click('conversation-room-ui-024');
+    await app.until(() => app.document.getElementById('conversation-deliveries').textContent.includes('ยังยืนยันการส่งไม่ได้'));
+    await app.ui.click('conversation-room-ui-023');
+    await app.until(() => app.document.getElementById('conversation-detail-title').textContent === 'ลูกค้า 23');
+    assert.equal(app.document.getElementById('conversation-reply').value, '');
+    assert.equal(app.document.getElementById('conversation-deliveries').textContent, '');
+    assert.deepEqual(app.errors, []);
+  } finally { release?.(); await app.close(); }
+});
+
+test('LINE settings cannot accept credentials until the current configuration load has finished', async () => {
+  const app = await fixture(); let release;
+  try {
+    await app.ui.mount(); await app.until(() => app.document.getElementById('conversation-room-ui-024'));
+    app.controls.holdLineConfig = new Promise(resolve => { release = resolve; });
+    await app.ui.click('settings-line-tab');
+    assert.equal(app.document.getElementById('line-channel-secret').disabled, true);
+    assert.equal(app.document.getElementById('line-channel-token').disabled, true);
+    assert.equal(app.document.getElementById('save-line-btn').disabled, true);
+    release(); app.controls.holdLineConfig = null;
+    await app.until(() => !app.document.getElementById('line-channel-secret').disabled);
+    app.document.getElementById('line-channel-secret').value = 'fixture-secret';
+    app.document.getElementById('line-channel-token').value = 'fixture-token';
+    await app.ui.submit('line-settings-form');
+    await app.until(() => !app.document.getElementById('verify-line-btn').disabled);
+    const row = (await app.db.query("SELECT channel_secret,channel_access_token FROM line_channels WHERE shop_id='shop-coffee'")).rows[0];
+    assert.equal(row.channel_secret, 'fixture-secret'); assert.equal(row.channel_access_token, 'fixture-token');
+    assert.deepEqual(app.errors, []);
+  } finally { release?.(); await app.close(); }
 });
 
 test('refresh recovers from failures and late responses cannot leak the previous shop', async () => {

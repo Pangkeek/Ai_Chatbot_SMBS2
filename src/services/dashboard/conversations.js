@@ -1,4 +1,5 @@
 import { renderStatistics, renderRooms, renderMessages, pageLabel, modeLabels, statusLabels, channelLabel } from './conversationView.js';
+import { createHandoverManager } from './handover.js';
 
 const ROOM_LIMIT = 20;
 const MESSAGE_LIMIT = 50;
@@ -9,6 +10,7 @@ export function createConversationsManager({ listen, apiRequest, onUnauthorized 
   let shopId = '', active = false, offset = 0, messageOffset = 0, selectedId = '';
   let rooms = [], roomTotal = 0, messageTotal = 0, filters = {}, followLatest = true;
   let listVersion = 0, detailVersion = 0, listController, detailController, timer;
+  const handover = createHandoverManager({ node, listen, apiRequest, onUnauthorized, onChanged: refresh });
 
   const hide = (target, value) => target.classList.toggle('hidden', value);
   const base = () => `/shops/${encodeURIComponent(shopId)}`;
@@ -23,6 +25,7 @@ export function createConversationsManager({ listen, apiRequest, onUnauthorized 
     listController?.abort(); detailController?.abort();
   }
   function clearDetail() {
+    handover.reset();
     detailVersion++; detailController?.abort();
     selectedId = ''; messageOffset = 0; messageTotal = 0;
     node('detail-title').textContent = 'เลือกห้องเพื่ออ่านประวัติ';
@@ -58,9 +61,10 @@ export function createConversationsManager({ listen, apiRequest, onUnauthorized 
     hide(node('detail-error'), true);
     node('messages-prev').disabled = true; node('messages-next').disabled = true;
     try {
-      let [room, result] = await Promise.all([
+      let [room, result, deliveries] = await Promise.all([
         apiRequest(path, { signal }),
         apiRequest(`${path}/messages?limit=${MESSAGE_LIMIT}&offset=${messageOffset}`, { signal, withMeta: true }),
+        apiRequest(`${path}/replies`, { signal }),
       ]);
       if (version !== detailVersion) return;
       const lastOffset = Math.max(0, Math.floor((result.meta.total - 1) / MESSAGE_LIMIT) * MESSAGE_LIMIT);
@@ -71,6 +75,7 @@ export function createConversationsManager({ listen, apiRequest, onUnauthorized 
       }
       if (version !== detailVersion) return;
       messageTotal = result.meta.total;
+      handover.setRoom(shopId, room, deliveries);
       node('detail-title').textContent = room.customer_name;
       node('detail-meta').textContent = `${channelLabel(room.channel)} · ${room.customer_external_id} · ${statusLabels[room.status]} · ${modeLabels[room.bot_mode]}`;
       renderMessages(node('messages'), result.data);
@@ -79,6 +84,7 @@ export function createConversationsManager({ listen, apiRequest, onUnauthorized 
       node('messages-next').disabled = messageOffset + MESSAGE_LIMIT >= messageTotal;
     } catch (error) {
       if (version !== detailVersion || signal.aborted) return;
+      handover.reset();
       node('messages').replaceChildren(); node('message-page').textContent = '';
       showError(node('detail-error'), error);
     } finally {

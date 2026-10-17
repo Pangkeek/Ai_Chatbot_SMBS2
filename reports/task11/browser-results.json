@@ -1,0 +1,314 @@
+{
+  "generated_at": "2026-10-17T19:24:31.945Z",
+  "browser": "Chrome headless",
+  "steps": [
+    {
+      "name": "register_and_authenticated_dashboard",
+      "passed": true
+    },
+    {
+      "name": "create_shop_and_open_settings",
+      "passed": true
+    },
+    {
+      "name": "publish_faq",
+      "passed": true
+    },
+    {
+      "name": "simulator_uses_published_faq_without_line_delivery",
+      "passed": true
+    },
+    {
+      "name": "signed_line_webhook_to_bot_reply",
+      "passed": true
+    },
+    {
+      "name": "keyboard_takeover_and_agent_send_safe_text",
+      "passed": true
+    },
+    {
+      "name": "pause_suppresses_bot_and_resume_replies_to_new_message",
+      "passed": true
+    },
+    {
+      "name": "mobile_390_no_horizontal_overflow",
+      "passed": true
+    },
+    {
+      "name": "logo_returns_home_with_signed_in_manage_button",
+      "passed": true
+    },
+    {
+      "name": "home_round_trip_preserves_session_and_tenant_shop_list",
+      "passed": true
+    },
+    {
+      "name": "logout_revokes_session_and_relogin_works",
+      "passed": true
+    }
+  ],
+  "page_errors": [],
+  "network": [
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/register",
+      "status": 201
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/users/me",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/shops",
+      "status": 201
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/users/me",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/knowledge",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/knowledge",
+      "status": 201
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/knowledge",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/line/config",
+      "status": 200
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/line/config",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/line/config",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/line/simulate",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/statistics",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/conversations",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/conversations/ad5ad4bd-e688-4513-8e13-1c35b5a89672",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/conversations/ad5ad4bd-e688-4513-8e13-1c35b5a89672/messages",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/conversations/ad5ad4bd-e688-4513-8e13-1c35b5a89672/replies",
+      "status": 200
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/conversations/ad5ad4bd-e688-4513-8e13-1c35b5a89672",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/statistics",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/conversations",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/conversations/ad5ad4bd-e688-4513-8e13-1c35b5a89672",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/conversations/ad5ad4bd-e688-4513-8e13-1c35b5a89672/replies",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/conversations/ad5ad4bd-e688-4513-8e13-1c35b5a89672/messages",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/conversations/ad5ad4bd-e688-4513-8e13-1c35b5a89672/replies",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/statistics",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/conversations",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/conversations/ad5ad4bd-e688-4513-8e13-1c35b5a89672",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/conversations/ad5ad4bd-e688-4513-8e13-1c35b5a89672/messages",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/conversations/ad5ad4bd-e688-4513-8e13-1c35b5a89672/replies",
+      "status": 200
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/conversations/ad5ad4bd-e688-4513-8e13-1c35b5a89672",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/statistics",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/conversations",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/conversations/ad5ad4bd-e688-4513-8e13-1c35b5a89672",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/conversations/ad5ad4bd-e688-4513-8e13-1c35b5a89672/messages",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/conversations/ad5ad4bd-e688-4513-8e13-1c35b5a89672/replies",
+      "status": 200
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/conversations/ad5ad4bd-e688-4513-8e13-1c35b5a89672",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/statistics",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/conversations",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/conversations/ad5ad4bd-e688-4513-8e13-1c35b5a89672",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/conversations/ad5ad4bd-e688-4513-8e13-1c35b5a89672/replies",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/conversations/ad5ad4bd-e688-4513-8e13-1c35b5a89672/messages",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/users/me",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/users/me",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/logout",
+      "status": 204
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/users/me",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shops",
+      "status": 200
+    }
+  ],
+  "screenshots": [
+    "screenshots/conversations-desktop.png",
+    "screenshots/conversations-mobile.png",
+    "screenshots/home-mobile-signed-in.png"
+  ],
+  "boundary": "Production Next frontend; browser API requests forwarded to real HTTP/PostgreSQL test service with injected LINE transport; not live LINE/AI",
+  "limitations": [
+    "Single Chrome engine and desktop/mobile viewports, not physical devices",
+    "Basic keyboard activation only, not a full accessibility audit"
+  ],
+  "passed": true
+}

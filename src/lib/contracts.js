@@ -61,6 +61,8 @@ export const schemas = {
     ...conversationFields,
     status: choice("open", "closed"),
     bot_mode: choice("active", "paused", "human"),
+    bot_revision: integer(),
+    bot_changed_at: { anyOf: [date, { type: 'null' }] },
     created_at: date,
     updated_at: date,
   }),
@@ -93,6 +95,15 @@ export const schemas = {
   MessageCreate: object({
     role: choice("customer", "agent"),
     content: str(10000),
+  }),
+  AgentReplyCreate: object({
+    request_id: { ...str(36), pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$' },
+    content: str(5000),
+  }),
+  AgentDelivery: object({
+    id, shop_id: id, conversation_id: id, request_id: str(36), content: str(5000), author_user_id: id,
+    status: choice('sending', 'sent', 'failed', 'unknown'), message_id: nullableId,
+    created_at: date, updated_at: date,
   }),
   LineConfig: object({
     configured: { type: "boolean" },
@@ -420,6 +431,12 @@ export const routes = [
     data(schemas.Message),
     { body: schemas.MessageCreate, status: 201 }
   ),
+  route('POST', `${base}/conversations/{conversationId}/replies`, 'sendAgentReply',
+    'Send an idempotent agent reply to the stored LINE customer; sent means LINE accepted, not read',
+    data(schemas.AgentDelivery), { body: schemas.AgentReplyCreate }),
+  route('GET', `${base}/conversations/{conversationId}/replies`, 'listAgentReplies',
+    'Read the latest 20 agent delivery outcomes; never automatically retry uncertain sends',
+    data({ type: 'array', items: schemas.AgentDelivery })),
   route(
     "GET",
     `${base}/line/config`,

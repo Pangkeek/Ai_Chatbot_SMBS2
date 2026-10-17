@@ -89,7 +89,7 @@ export async function sendLineReply({ channelAccessToken, replyToken, messages, 
   return { status: 'ok', statusCode: response.status };
 }
 
-export async function sendLinePush({ channelAccessToken, to, messages, fetchImpl = fetch }) {
+export async function sendLinePush({ channelAccessToken, to, messages, fetchImpl = fetch, signal, retryKey }) {
   if (!channelAccessToken || !to || !messages?.length) {
     throw new Error('Missing parameters for LINE push');
   }
@@ -98,12 +98,17 @@ export async function sendLinePush({ channelAccessToken, to, messages, fetchImpl
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${channelAccessToken}`,
+      ...(retryKey ? { 'X-Line-Retry-Key': retryKey } : {}),
     },
     body: JSON.stringify({ to, messages }),
+    signal: signal || AbortSignal.timeout(10000),
   });
+  if (retryKey && response.status === 409 && response.headers.get('x-line-accepted-request-id')) return { status: 'ok', statusCode: 409 };
   if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`LINE API error (${response.status}): ${text}`);
+    const error = new Error('LINE push rejected');
+    error.code = 'LINE_HTTP_REJECTED';
+    error.statusCode = response.status;
+    throw error;
   }
   return { status: 'ok', statusCode: response.status };
 }

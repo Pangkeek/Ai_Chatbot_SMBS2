@@ -26,13 +26,8 @@ const pages = [
   { title: 'ข้อมูลธุรกิจ', path: '/app/shops/:shopId/settings', description: 'แก้ไขชื่อ คำอธิบาย เวลาเปิด และบุคลิกการตอบของร้าน', icon: '⌘' },
   { title: 'FAQ และคลังความรู้', path: '/app/shops/:shopId/knowledge', description: 'ดูแลเนื้อหาอ้างอิงที่ใช้ตอบคำถามของลูกค้า', icon: '≡' },
   { title: 'การเชื่อมต่อ LINE', path: '/app/shops/:shopId/line', description: 'ตั้งค่า LINE Official Account และทดลองแชตด้วย Simulator', icon: '↗' },
+  { title: 'บทสนทนาและสถิติ', path: '/app/shops/:shopId/conversations', description: 'อ่านประวัติ ดูสถิติ แอดมินรับช่วงตอบ LINE และควบคุมบอทด้วย Pause/Resume', icon: '◌' },
   { title: 'API Console', path: '/docs', description: 'สำรวจและทดลองคำขอ API ของระบบ', icon: '{ }' },
-];
-
-// รายการนี้มาจากแผนโครงการและยังไม่มีหน้าใช้งาน จึงไม่สร้างลิงก์ที่พาไป 404
-const plannedPages = [
-  { title: 'บทสนทนาและสถิติ', description: 'ดูห้องสนทนา ประวัติข้อความ และตัวเลขการใช้งานแยกตามร้าน' },
-  { title: 'แอดมินรับช่วงตอบ', description: 'ให้เจ้าหน้าที่รับช่วงสนทนา รวมถึงหยุดและเปิดการตอบของบอท' },
 ];
 
 export default function HomeJourney() {
@@ -94,20 +89,6 @@ export default function HomeJourney() {
             ))}
           </div>
 
-          <div className="mt-12 rounded-[26px] border-2 border-dashed border-[#ffc797] bg-[#fff5e8] p-6 sm:p-8">
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="rounded-full bg-[#ff8842] px-3 py-1 text-xs font-bold text-white">อยู่ในแผนพัฒนา</span>
-              <h3 className="text-lg font-bold text-[#18345c]">หน้าที่จะเพิ่มในระยะถัดไป</h3>
-            </div>
-            <div className="mt-6 grid gap-4 md:grid-cols-2">
-              {plannedPages.map((page) => (
-                <div key={page.title} className="outlined-panel rounded-2xl bg-white p-5 shadow-sm">
-                  <h4 className="font-bold text-[#18345c]">{page.title}</h4>
-                  <p className="mt-2 text-sm leading-7 text-slate-600">{page.description}</p>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
       </section>
     </>

@@ -1,4 +1,4 @@
-# บทสนทนาและสถิติ — งานข้อ 9
+# บทสนทนา สถิติ และแอดมินรับช่วง — งานข้อ 9–10
 
 ## วิธีใช้งาน
 
@@ -35,11 +35,37 @@
 - `GET /api/v1/shops/{shopId}/conversations/{conversationId}/messages?limit=50&offset=0` อ่านข้อความเรียง created_at แล้ว id แบบคงที่ตาม PostgreSQL ของ master; เมื่อเวลาเท่ากันจะเรียงตาม id ไม่ใช่ลำดับ INSERT และไม่ใช้ rowid/ctid
 - query ที่ไม่รู้จัก ค่าซ้ำ หรือ filter ไม่ถูกต้อง ตอบ 400; ไม่มี session ตอบ 401; ข้ามร้านหรือผสมรหัสห้องอีกร้านตอบ 404
 
+## แอดมินรับช่วง ส่งข้อความ และ Pause/Resume
+
+1. เลือกห้อง LINE ที่ยังเปิดอยู่ แล้วกด **รับช่วงสนทนา** เพื่อใช้โหมด `human` หรือ **Pause · พักบอท** เพื่อใช้โหมด `paused` ทั้งสองโหมดรับข้อความลูกค้าเข้าประวัติต่อ แต่บอทไม่ตอบ
+2. พิมพ์ข้อความไม่เกิน 5,000 ตัวอักษร แล้วกด **ส่งไป LINE** ใช้ลูกค้าและ token ของร้านจากเซิร์ฟเวอร์ ไม่รับปลายทางจากฟอร์ม เจ้าของร้านและสมาชิกบทบาท agent ใช้ได้
+3. ประวัติเพิ่มข้อความแอดมินเมื่อ LINE ยอมรับคำขอแล้วเท่านั้น แยกจากสถานะการส่ง 20 รายการล่าสุดใต้ช่องพิมพ์: `sending`, `sent`, `failed`, `unknown` โดย `sent` ไม่ได้หมายความว่าลูกค้าอ่านหรือได้รับบนอุปกรณ์แล้ว
+4. หาก `failed` ให้ตรวจการเชื่อมต่อ/สิทธิ์/โควตา LINE แล้วส่งใหม่ได้ ส่วน `unknown` ให้ตรวจสอบใน LINE ก่อน เพราะคำขออาจสำเร็จแล้ว ระบบไม่ส่งซ้ำอัตโนมัติ ปุ่ม **ตรวจสถานะการส่ง** ใช้ request ID เดิมโดยไม่ยิง LINE ซ้ำ ข้อความร่างคงอยู่เมื่อเครือข่ายล้มเหลว แต่ไม่เก็บข้ามการปิดหน้า; ผลการส่งเก็บใน PostgreSQL และเปิดกลับมาดูได้
+5. กด **Resume · เปิดบอท** เพื่อกลับโหมด `active` บอทตอบเฉพาะเหตุการณ์ใหม่หลังเปลี่ยนโหมด ไม่ย้อนส่งงานในคิวช่วงพักหรือคำตอบ AI เก่า แม้กด Pause แล้ว Resume ระหว่าง AI กำลังคิด
+
+เมื่อมีข้อความเริ่มส่งแล้ว ปุ่มเปลี่ยนโหมด/ส่งซ้ำจะรอให้จบ และ API ตอบ `409 DELIVERY_IN_PROGRESS` หากอีกแท็บพยายามเปลี่ยนโหมดระหว่างส่ง การ Pause ไม่สามารถเรียกคืนคำขอที่ LINE รับไปก่อนแล้วได้ ห้องปิดและห้องเว็บที่เป็นประวัติทดสอบส่งออกไม่ได้
+
+### API ข้อ 10
+
+- `PATCH /api/v1/shops/{shopId}/conversations/{conversationId}` ส่ง `{ "bot_mode": "human" }`, `paused` หรือ `active`; ตรวจและล็อกห้องใน transaction เดียวกับการเปลี่ยนสถานะ
+- `POST /api/v1/shops/{shopId}/conversations/{conversationId}/replies` ส่ง `{ "request_id": "<UUID>", "content": "ข้อความ" }` คืน delivery พร้อมสถานะ การเรียก UUID เดิม/เนื้อหาเดิมคืนรายการเดิม แม้รีสตาร์ตหรือส่งคำขอพร้อมกัน; UUID เดิมแต่เนื้อหาต่างกันตอบ 409
+- `GET /api/v1/shops/{shopId}/conversations/{conversationId}/replies` อ่านผล 20 รายการล่าสุด ไม่แบ่งหน้า และเปลี่ยน sending ที่ค้างเกิน 30 วินาทีเป็น unknown โดยไม่ส่งซ้ำ
+- API เดิม `POST .../messages` ยังคงเป็นการบันทึกประวัติ/ข้อความทดสอบ **ไม่มีการส่งออก** จึงไม่ใช้กับปุ่มส่งจริง
+- LINE push มี timeout 10 วินาทีและ `X-Line-Retry-Key` ประจำ delivery; timeout/5xx/การเชื่อมต่อขาดเป็น unknown ไม่แสดงข้อความในประวัติว่าจัดส่งสำเร็จ และไม่เผย response body/token ของ LINE
+- อ้างอิงพฤติกรรมการส่งซ้ำและข้อจำกัดจาก [LINE Developers](https://developers.line.biz/en/docs/messaging-api/retrying-api-request/)
+
+### Migration และการเปิดใช้
+
+หยุดแอป/worker รุ่นเก่าทุก instance ก่อน deploy แล้วรัน `npm run db:migrate:postgres` ก่อนเปิดรุ่นใหม่ เพิ่ม migration `005_handover.sql` สำหรับ `agent_deliveries`, `conversations.bot_revision`, `bot_changed_at` และ revision ของงาน LINE ไม่แก้ migration ที่เคย apply แล้ว Runtime จะปฏิเสธ schema ที่ยังไม่ครบ
+
+trigger เพิ่ม revision ทุกครั้งที่ status/mode เปลี่ยน เพื่อยกเลิกคำตอบเก่าแม้สถานะเปลี่ยนกลับ รวมทั้งตรวจเวลาเหตุการณ์กับการเปลี่ยนโหมดล่าสุดก่อนส่ง งานเก่าที่มี customer checkpoint แต่ไม่มี revision จากก่อน upgrade จะไม่ถูกส่งต่อโดยเดาสถานะใหม่
+
 ## ขอบเขตและการตรวจ
 
-- หน้านี้อ่านประวัติ/สถานะและสถิติเท่านั้น ปุ่มรับช่วง พิมพ์ตอบ และ Pause/Resume อยู่ในงานข้อ 10 ไม่แสดงปุ่มที่บันทึกข้อความแต่ยังไม่ส่งจริง
+- เพิ่มข้อ 10 ในหน้าบทสนทนาเดิม ไม่ต้องเปิดหน้าแอดมินแยก
+- `tests/handover.test.js`: PostgreSQL/HTTP จริงกับ LINE boundary ทดสอบรับช่วง ส่ง/กันซ้ำ สิทธิ์ โหมดปิด ข้อมูลผิดพลาด HTTP rejection timeout จริง 10 วินาที process ค้าง การบันทึกหลัง LINE ยอมรับล้มเหลว งาน AI ค้าง และคิวช่วง Pause/Resume
 - `tests/conversation-api.test.js`: ตรวจยอดที่ทราบแน่นอน ห้องว่าง แยกร้าน กรองก่อนแบ่งหน้ามากกว่า 100 ห้อง ลำดับข้อความ และ signed webhook ที่ใช้ตัวส่ง LINE จำลอง
-- `tests/conversation-dashboard.test.js`: ใช้ component/controller จริงกับ HTTP API และ PostgreSQL schema ชั่วคราว ตรวจค้นหา/แบ่งหน้า XSS เปิดใหม่ซ้ำ สลับร้านระหว่างรอ API ล้มเหลว/401 และ polling/visibility
+- `tests/conversation-dashboard.test.js`: ใช้ component/controller จริงกับ HTTP API และ PostgreSQL schema ชั่วคราว ตรวจค้นหา/แบ่งหน้า XSS เปิดใหม่ซ้ำ สลับร้านระหว่างรอ API ล้มเหลว/401 polling/visibility และรับช่วง→ส่ง→Pause→Resume; unknown คงร่าง ตรวจสถานะไม่ส่งซ้ำ และอ่านผลกลับหลัง remount
 - ชุดทดสอบทั้งสองไฟล์ใช้ `integration/postgresql-fixture.js` และ migrations เดียวกับ master ต้องตั้ง `TEST_DATABASE_URL` เป็นฐาน `chatbot_test` บน loopback โดยแยกจาก runtime; ลงทะเบียนใน `npm run test:runtime` ซึ่ง CI เรียกจริง ไม่มีการ skip หรือใช้ SQLite adapter
 - การทดสอบข้างต้นไม่ใช่การส่งข้อความกับบัญชี LINE จริง และ DOM integration ไม่ใช่การตรวจภาพหน้าจอด้วยเบราว์เซอร์จริง
-- ตรวจภาพแยกด้วย Chrome บน production build และฐานข้อมูลทดสอบที่พอร์ต 3109 แล้ว ทั้งจอปกติและมือถือ 390px: เลือกห้องอ่านประวัติได้ ตัวเลขตรงกับ fixture และเนื้อหาไม่ล้นแนวนอน ดูผลตรวจ/ข้อจำกัดใน `AI_CHECKPOINT.md`
+- ข้อ 11 เพิ่มการตรวจด้วย Chrome headless จริงบน production frontend ทั้ง 1440px และ 390px รวมการรับช่วง ส่ง Pause/Resume คีย์บอร์ด และกลับหน้าแรก/เข้าสู่ระบบ ดูภาพและผลใน `reports/task11/browser-results.json` การเรียก API ใน browser ชุดนี้ส่งต่อไป HTTP/PostgreSQL test service ที่แทนเฉพาะ LINE transport ไม่ใช่การส่งผ่าน LINE จริง

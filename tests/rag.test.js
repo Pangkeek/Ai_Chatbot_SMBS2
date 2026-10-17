@@ -34,6 +34,20 @@ test('published chunks and embeddings are scoped to the shop; FAQ and unknown an
   assert.deepEqual(unknown.sources, []);
 }));
 
+test('Thai Sara Am normalization must not turn สำหรับ into an unrelated รับ payment match', () => withDemo(async db => {
+  const query = 'รับโอนธนาคารอะไร';
+  const missing = await answerQuestion(db, { shopId: 'shop-coffee', query });
+  assert.equal(missing.text, UNKNOWN_ANSWER);
+  assert.deepEqual(missing.sources, []);
+  const service = createService(db);
+  const policy = (await service.createKnowledge({ params: { shopId: 'shop-coffee' }, user: { id: 'user-coffee' }, body: {
+    kind: 'policy', title: 'การชำระเงิน', content: 'รับโอนผ่านธนาคารกสิกรไทย', status: 'published',
+  } })).data;
+  const known = await answerQuestion(db, { shopId: 'shop-coffee', query });
+  assert.match(known.text, /ธนาคารกสิกรไทย/);
+  assert.equal(known.sources[0].knowledge_entry_id, policy.id);
+}));
+
 test('create, edit, publish, draft and delete update the index; rebuild covers existing data', () => withDemo(async db => {
   const service = createService(db);
   const params = { shopId: 'shop-coffee' };

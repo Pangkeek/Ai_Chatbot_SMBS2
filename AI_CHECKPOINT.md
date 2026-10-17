@@ -1,5 +1,58 @@
 # จุดพักงานล่าสุด
 
+## ข้อ 11 — ชุดทดสอบอัตโนมัติ/รายงานเสร็จ และข้อจำกัดที่ต้องตรวจจริง
+
+- ทำต่อบน branch task11-integration-testing จาก task10-human-handover; ข้อ 10 มี commits 89e1ab8 (API) และ 34bbe04 (UI) ส่วนข้อ 11 แยกแก้ RAG 55a3983 และ UI 69822c7 แล้ว หน่วยเครื่องมือ/รายงาน/patch dependencies บันทึกต่อใน commit นี้ ไม่มี push/merge
+- อัปเดต Next 16.3.5→16.3.8, sharp 0.35.4→0.35.5, source-map-js 1.2.1→1.2.2 ตาม advisory และ lockfile เพิ่ม Playwright สำหรับ QA เท่านั้น; audit จาก Critical 1/High 2 packages เหลือ 0 ไม่ใช้ audit fix --force และไม่ได้อ้างว่าเคย exploit แอปได้
+- npm run test:evaluation ผ่าน 3 tests: gold 28/28 (correctness/relevance/grounded/tenant ทุกมิติ 28), AI boundary/failover 7/7, handover 7/7 เวลา local webhook→worker→DB p50 114.35ms / p95 157.9ms / max 174.04ms ตาม results.json รอบที่เก็บ ไม่ใช่ production SLA
+- npm run test:browser ผ่าน 1 test / 11 ขั้นตอนบน Chrome headless production frontend ทั้ง 1440px/390px ไม่มี page error และไม่มี document overflow ตรวจภาพแล้ว; API browser ถูกส่งต่อไป real HTTP/PG service ที่ฉีด LINE test transport ผล production API/CLI แยกตรวจใน smoke
+- runtime ล่าสุด 99/99 ผ่าน; schema/PostgreSQL/import/backup/production/LINE lifecycle รวม 19/19 ผ่าน; build Next 16.3.8, api:check, check:toolchain, diff --check ผ่าน
+- Docker smoke rebuild รุ่นล่าสุดใน project task10-smoke แยกพอร์ต 3110/55510 สำเร็จ app/PG healthy, HTTP health database ok และ container ยืนยัน next@16.3.8 ใช้เฉพาะ test volume ไม่แตะ runtime เดิม
+- หลักฐานอยู่ docs/task11-review.md และ reports/task11/: expected/actual JSON+Markdown, baseline 27/28 ก่อนแก้, before/after audit, browser/network/screenshot และ CSV คะแนนมนุษย์ว่าง 28 แถว ตรวจไฟล์/JSON/จำนวน/ลิงก์ภาพมีจริงแล้ว
+- เพิ่ม CI evaluation/browser/audit gates และ artifact ใน reports/ci-task11 แยกจากรายงาน Git เพื่อไม่เอาผลเก่าไปแทนรอบ CI ที่ยังไม่ได้รัน ยังไม่ได้ยืนยัน remote CI เพราะไม่ได้ push
+- ค่า LINE/AI ภายนอกรอบ fixtures เป็น 0 เพราะไม่มีการเรียกจริง; billable tokens/ค่า hosting/ค่า production ยังไม่วัด ไม่สร้างตัวเลขแทนสิ่งที่ไม่ทราบ
+- งานที่ยังต้องยืนยันด้วยคน/บัญชีที่ได้รับอนุญาตก่อนข้อ 12: คะแนนมนุษย์ใน human-review.csv, LINE bot→human push→Pause/Resume ถึงอุปกรณ์จริง, provider/model/token/ราคาและเวลาเครือข่ายจริง รวมถึงสิทธิ์ Vercel/Render และ remote checks ของ commit ที่จะรวม
+- รันซ้ำใช้ TEST_DATABASE_URL แบบ loopback chatbot_test แยกจาก runtime; browser ต้อง build ก่อนและมี Chrome หรือ PLAYWRIGHT_CHANNEL=chromium หลังติดตั้ง browser ที่เข้ากัน ไม่อ่าน credentials หรือ deploy เพื่อทดสอบ
+
+## ข้อ 11 — แก้หน้าจอและตรวจ Chrome
+
+- พบ Chrome flow กรอก Secret เร็วแล้ว GET โหลด LINE config ที่ช้าล้างค่าทิ้ง จนฟอร์มไม่ส่ง PUT และ signed webhook ตอบ 404; สร้าง deferred GET regression ให้ล้มก่อนแก้
+- lineSettings ล็อก input/save ระหว่างโหลด ใช้ request version และ shopId ที่จับตอนบันทึก ป้องกันคำตอบเก่า/ร้านเก่าแก้หน้าปัจจุบัน; โหลดล้มเหลวยังคงปิดการกรอกและแนะนำเปิดแท็บใหม่เพื่อลองอีกครั้ง
+- แก้ HomeJourney ที่ยังบอกข้อ 9–10 เป็นงานอนาคต ให้มีการ์ดบทสนทนา/รับช่วง/Pause/Resume ผ่าน /app ตามหน้าที่ใช้งานจริง
+- DOM integration ผ่าน regression ใหม่และทั้ง runtime 99/99; dashboard-session 13 tests ผ่าน การตรวจ Chrome headless บน production frontend ผ่านครบ 11 ขั้นตอน มีภาพ 1440px/390px ไม่มี document overflow และไม่มี page error (ไม่ใช่ accessibility audit เต็มรูปแบบ)
+- Chrome ใช้ HTTP/PostgreSQL test service จริงผ่าน browser API forwarding และแทนเฉพาะ LINE transport ไม่มีการส่งหาลูกค้าจริง เครื่องมือ/ภาพ/รายงานจะบันทึกแยกอีก commit; ยังไม่ push/merge
+
+## ข้อ 11 — แก้การเลือกหลักฐานผิดเรื่องจาก Unicode ภาษาไทย
+
+- เพิ่ม gold fixtures 28 ข้อแล้วพบ 1 เคส: ถามรับโอนธนาคาร แต่ตอบรายละเอียดร้านซึ่งไม่มีธนาคาร เก็บ expected เดิมไว้ ไม่เปลี่ยนเฉลยให้ผ่าน
+- probe พบ NFKC แยกสระอำใน “สำหรับ” ทำให้ Intl.Segmenter เกิด token “รับ” ร่วมกับคำถาม แล้วคะแนน cosine ผ่าน threshold
+- คืนรูปสระอำเฉพาะ terms() ไม่เปลี่ยน embedding/version หรือบังคับ reindex; เพิ่ม regression ทั้งกรณีไม่มีข้อมูล (ต้องปฏิเสธ) และเพิ่ม policy ธนาคารแล้ว (ต้องตอบถูก)
+- RED ก่อนแก้และ GREEN หลังแก้ผ่าน; evaluation ชุดเดิม 28/28 โดย correctness/relevance/grounded/tenant ทุกมิติผ่าน 28/28 รายงานและเครื่องมือจะบันทึกอีกหน่วยงาน
+- runtime ล่าสุดทั้งชุด 99/99 ผ่านบน Node 24.19.0 โดยมี dependency patch และ UI fixes ใน working tree ซึ่งจะบันทึกแยกต่อไป ยังไม่ push/merge
+
+## ข้อ 10 — หน้าจอและคู่มือเสร็จ
+
+- เพิ่มรับช่วง/Pause/Resume ในห้องเดิม พร้อมช่องพิมพ์ ส่งไป LINE และผลการส่ง 20 รายการล่าสุด; disable ตามโหมด/สถานะห้อง/ระหว่างส่ง แสดง sent ว่า LINE รับแล้ว ไม่ใช่อ่านแล้ว
+- unknown คงร่างและ request ID ปุ่มตรวจสถานะไม่ส่ง LINE ซ้ำ ผลเก็บในฐานและอ่านหลัง remount ได้ สลับห้อง/ร้านไม่พาข้อมูลหรือผลคำขอเก่าไปทับห้องใหม่
+- tests/conversation-dashboard.test.js ผ่านทั้ง 5 tests กับ HTTP/PostgreSQL จริง รวม flow รับช่วง→ส่ง→Pause→Resume, XSS, remount, unknown, paging/filter, stale shop response และ visibility
+- README/docs/conversations.md อธิบาย API ใหม่ migration ลำดับ deploy ข้อจำกัดการส่ง และกรณี unknown; OpenAPI ตรงกับ runtime
+- บันทึกแยก API และ UI ตาม skill; ยังไม่ push/merge ทั้งสองหน่วย การทดสอบ LINE เป็น boundary จำลองและไม่มี browser สำหรับ visual QA ข้อ 10
+- ขั้นต่อไปข้อ 11 ตามคำสั่งผู้ใช้: สร้างชุดวัดผลซ้ำได้ เก็บ expected/actual/เวลา/ขอบเขตต้นทุน และรายงานช่องว่างจริง
+
+## ข้อ 10 — API รับช่วงและส่งข้อความ (branch task10-human-handover)
+
+- เพิ่ม API `POST/GET .../conversations/{conversationId}/replies` ส่ง LINE Push ไปยังลูกค้าที่เก็บในห้อง ด้วย token ร้านเดียวกัน ไม่ใช้ API messages เดิมซึ่งบันทึกอย่างเดียว
+- เก็บ delivery ใน PostgreSQL พร้อม request UUID กันซ้ำ สถานะ sending/sent/failed/unknown และ author; สร้างข้อความ agent เฉพาะเมื่อ LINE รับคำขอแล้ว ไม่กล่าวอ้างว่าอ่านแล้ว
+- จำกัดส่ง 5,000 ตัวอักษร ตรวจสมาชิก owner/agent ห้องเปิด โหมดพัก/มนุษย์ และ LINE config; ไม่ส่งซ้ำเมื่อ timeout/5xx/ผลไม่แน่นอน มี timeout จริง 10s และ recovery sending ค้าง 30s
+- Migration 005 เพิ่ม outbox, revision และเวลาเปลี่ยนโหมด; trigger ยกเลิก AI รุ่นเก่าแม้ Pause→Resume และ worker ไม่ย้อนส่งคิวก่อน Resume เปรียบเทียบ timestamp ใน PostgreSQL เพื่อไม่เสีย microseconds
+- เปลี่ยนโหมดใช้ row lock เดียวกับจุดเริ่มส่ง หากเริ่มส่งอยู่ตอบ 409 รอจนจบ ไม่ยืนยัน Pause ทั้งที่ยังส่งไม่เสร็จ
+- ตรวจ Node 24.19.0/npm 11.19.0: runtime รอบรวม 95 ผ่าน; หลังเพิ่ม regression microsecond ทดสอบ handover ล่าสุด 8/8 ผ่าน รวม timeout จริงและ DB ล้มเหลวหลัง LINE รับแล้ว; API contract tests ผ่านครบ endpoints
+- schema/PostgreSQL/SQLite import+backup รวม 16 tests ผ่าน; production smoke+LINE runtime รวม 3 ผ่าน; build ล่าสุด, api:check, check:toolchain และ diff --check ผ่าน
+- Docker smoke แบบแยก project task10-smoke ใช้พอร์ต 3110/55510 healthy และ health ตอบ database ok; migration 001–005 ครบ ไม่ใช้ volume/ฐาน runtime เดิม ตัว Docker build เริ่มก่อนปรับการเปรียบเทียบ microsecond ขั้นสุดท้าย ส่วน source build/targeted test ตรวจหลังแก้แล้ว
+- LINE ใช้ test transport เท่านั้น ไม่มีข้อความไปหาลูกค้าจริงและไม่มีการ deploy/push/merge; ก่อนใช้จริงหยุด worker รุ่นเก่าทุก instance รัน db:migrate:postgres แล้วเปิดรุ่นใหม่
+- หน้าจอข้อ 10 ทำและทดสอบ DOM/HTTP/PostgreSQL แล้ว จะบันทึกแยกอีก commit พร้อมคู่มือ ไม่มี browser เชื่อมต่อสำหรับตรวจภาพ
+- ผู้ใช้สั่งให้ต่อข้อ 11 หลังจบข้อ 10: ทดสอบรวม ความถูกต้อง/เกี่ยวข้อง/ไร้หลักฐาน ความเร็ว Handover Failover และต้นทุน พร้อมหลักฐานจริง ไม่แทนข้อมูลทดสอบเป็นผล production
+
 ## งานล่าสุด: ปุ่มหลักหน้าแรกหลังเข้าสู่ระบบ
 
 - เปลี่ยนปุ่มกลาง HomeHero เป็น **จัดการร้าน** เมื่อยืนยัน session แล้ว ใช้สีมิ้นต์ #a4f0e4 ไอคอนร้าน ขนาดข้อความ 16px และความสูงอย่างน้อย 56px; ลิงก์ยังไป /app และคงรูปแบบ guest เดิม

@@ -12,6 +12,7 @@ const bundle = await build({
       import Dashboard from './src/components/Dashboard.jsx';
       import HomeHeader from './src/components/home/HomeHeader.jsx';
       import HomeHero from './src/components/home/HomeHero.jsx';
+      import HomeJourney from './src/components/home/HomeJourney.jsx';
       import HomeAccountProvider from './src/components/home/HomeAccountProvider.jsx';
       let root;
       globalThis.testUI = {
@@ -22,7 +23,7 @@ const bundle = await build({
         async unmount() { await act(async () => root.unmount()); },
         async mountHome() {
           root = createRoot(document.getElementById('root'));
-          await act(async () => root.render(<React.StrictMode><HomeAccountProvider><HomeHeader /><HomeHero /></HomeAccountProvider></React.StrictMode>));
+          await act(async () => root.render(<React.StrictMode><HomeAccountProvider><HomeHeader /><HomeHero /><HomeJourney /></HomeAccountProvider></React.StrictMode>));
         },
         async key(key) { await act(async () => document.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }))); },
         async clickOutside() { await act(async () => document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }))); },
@@ -303,6 +304,20 @@ test('a failed account lookup preserves the session and offers account actions',
   } finally {
     app.dom.window.close();
   }
+});
+
+test('homepage offers the implemented conversation and handover workflow instead of calling it a future feature', async () => {
+  const app = createApp({ loggedIn: false });
+  try {
+    await app.ui.mountHome();
+    const explore = app.window.document.getElementById('explore');
+    assert.ok(!explore.textContent.includes('อยู่ในแผนพัฒนา'));
+    const card = [...explore.querySelectorAll('article')].find(node => node.textContent.includes('บทสนทนาและสถิติ'));
+    assert.ok(card);
+    assert.equal(card.querySelector('a').getAttribute('href'), '/app');
+    assert.ok(card.textContent.includes('Pause/Resume'));
+    await app.ui.unmount();
+  } finally { app.dom.window.close(); }
 });
 
 test('homepage logout clears the local session even when the server cannot be reached', async () => {

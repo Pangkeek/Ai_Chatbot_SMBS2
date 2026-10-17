@@ -6,6 +6,7 @@ import { createConversationsOperations } from './api/conversations.js';
 import { createLineChannelOperations } from './api/lineChannel.js';
 import { createAiPreviewOperations } from './api/aiPreview.js';
 import { createStatisticsOperations } from './api/statistics.js';
+import { createAgentRepliesOperations } from './api/agentReplies.js';
 
 export { publicUser } from './api/common.js';
 export function createService(db, options = {}) {
@@ -15,6 +16,7 @@ export function createService(db, options = {}) {
     ...createAuthShopsOperations(db, helpers),
     ...createKnowledgeOperations(db, helpers),
     ...createConversationsOperations(db, helpers),
+    ...createAgentRepliesOperations(db, helpers, options),
     ...createLineChannelOperations(db, worker, options),
     ...createAiPreviewOperations(db),
     ...createStatisticsOperations(db),

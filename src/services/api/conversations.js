@@ -4,8 +4,9 @@ import { ApiError } from '../../utils/validation.js';
 
 import { now, wrap } from './common.js';
 import { countToNumber } from '../../lib/postgresql-schema.js';
+import { recoverAgentDeliveries } from './agentReplies.js';
 
-export function createConversationsOperations(db, { get, page, patch }) {
+export function createConversationsOperations(db, { get, page }) {
   return {
     async listConversations({ params, query }) {
       const values = [params.shopId];
@@ -40,9 +41,21 @@ export function createConversationsOperations(db, { get, page, patch }) {
     },
     async getConversation({ params }) { return wrap(await get('conversations', params.shopId, params.conversationId)); },
     async updateConversation({ params, body }) {
-      await get('conversations', params.shopId, params.conversationId);
-      await patch('conversations', body, 'shop_id = ? AND id = ?', [params.shopId, params.conversationId]);
-      return this.getConversation({ params });
+      return transaction(db, async tx => {
+        const { shopId, conversationId } = params;
+        await get('conversations', shopId, conversationId, tx, true);
+        await recoverAgentDeliveries(tx, shopId, conversationId);
+        // การส่งที่เริ่มไปแล้วเรียกคืนไม่ได้ จึงยังไม่ยืนยันเปลี่ยนโหมดจนส่งเสร็จ
+        const sending = await tx.query(`SELECT 1 FROM agent_deliveries WHERE shop_id=$1 AND conversation_id=$2 AND status='sending'
+          UNION ALL SELECT 1 FROM line_jobs WHERE shop_id=$1 AND conversation_id=$2 AND status='processing' AND delivery_state='sending'`, [shopId, conversationId]);
+        if (sending.rowCount) throw new ApiError(409, 'DELIVERY_IN_PROGRESS', 'A message is being sent; wait and refresh before changing mode');
+        const fields = Object.keys(body);
+        if (fields.some(field => !['bot_mode', 'status'].includes(field))) throw new ApiError(422, 'VALIDATION_ERROR', 'Unsupported conversation field');
+        const values = Object.values(body);
+        await tx.query(`UPDATE conversations SET ${fields.map((field, i) => `${field}=$${i + 1}`).join(',')},updated_at=clock_timestamp()
+          WHERE shop_id=$${values.length + 1} AND id=$${values.length + 2}`, [...values, shopId, conversationId]);
+        return wrap(await get('conversations', shopId, conversationId, tx));
+      });
     },
     async listMessages({ params, query }) {
       await get('conversations', params.shopId, params.conversationId);

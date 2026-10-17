@@ -41,8 +41,8 @@ export function createLineSimulator(db, options = {}) {
     // No checked-out transaction client is held during generation or HTTP delivery.
     const answer = await prepareReply(db, { shop, conversation, messageText }, options);
     const replyText = answer.text;
-    const latest = (await db.query('SELECT status,bot_mode FROM conversations WHERE shop_id=$1 AND id=$2', [shopId, conversation.id])).rows[0];
-    if (!latest || latest.status !== 'open' || latest.bot_mode !== 'active') {
+    const latest = (await db.query('SELECT status,bot_mode,bot_revision FROM conversations WHERE shop_id=$1 AND id=$2', [shopId, conversation.id])).rows[0];
+    if (!latest || latest.status !== 'open' || latest.bot_mode !== 'active' || latest.bot_revision !== conversation.bot_revision) {
       await updateEvent(db, shopId, event.webhookEventId, 'completed');
       return { ...base, reason: latest?.bot_mode || 'closed' };
     }
