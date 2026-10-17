@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import HomeAccountMenu from './HomeAccountMenu.jsx';
 
 const navigation = [
   { href: '#features', label: 'ฟีเจอร์' },
@@ -35,14 +36,7 @@ export default function HomeHeader() {
           ))}
         </nav>
 
-        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-          <Link href="/app" className="hidden rounded-xl px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-white sm:inline-flex">
-            เข้าสู่ระบบ
-          </Link>
-          <Link href="/app" className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-bold text-[#3855b8] shadow-sm transition hover:bg-[#eaf2ff] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white sm:px-5">
-            จัดการร้านค้า <span aria-hidden="true">↗</span>
-          </Link>
-        </div>
+        <HomeAccountMenu />
       </div>
     </header>
   );

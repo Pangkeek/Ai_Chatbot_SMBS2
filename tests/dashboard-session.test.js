@@ -10,6 +10,7 @@ const bundle = await build({
       import React, { act } from 'react';
       import { createRoot } from 'react-dom/client';
       import Dashboard from './src/components/Dashboard.jsx';
+      import HomeHeader from './src/components/home/HomeHeader.jsx';
       let root;
       globalThis.testUI = {
         async mount() {
@@ -17,6 +18,12 @@ const bundle = await build({
           await act(async () => root.render(<React.StrictMode><Dashboard /></React.StrictMode>));
         },
         async unmount() { await act(async () => root.unmount()); },
+        async mountHome() {
+          root = createRoot(document.getElementById('root'));
+          await act(async () => root.render(<React.StrictMode><HomeHeader /></React.StrictMode>));
+        },
+        async key(key) { await act(async () => document.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }))); },
+        async clickOutside() { await act(async () => document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }))); },
         async settle() { await act(async () => { await new Promise(resolve => setTimeout(resolve, 10)); }); },
         async click(id) { await act(async () => document.getElementById(id).click()); },
         async submit(id) {
@@ -187,6 +194,119 @@ test('a late unauthorized response from an unmounted page cannot clear the curre
     assert.equal(app.window.sessionStorage.getItem('smb_access_token'), 'existing-session');
     assert.ok(app.window.document.getElementById('auth-view').classList.contains('hidden'));
     assert.equal(app.window.document.getElementById('header-user-name').textContent, 'Test owner');
+    assert.deepEqual(app.errors, []);
+    await app.ui.unmount();
+  } finally {
+    app.dom.window.close();
+  }
+});
+
+test('homepage shows the signed-in account with shop navigation and working logout', async () => {
+  const app = createApp();
+  try {
+    await app.ui.mount();
+    await app.ui.settle();
+    await app.ui.unmount();
+    await app.window.testRouter.push('/home');
+    await app.ui.mountHome();
+    await app.ui.settle();
+    const trigger = app.window.document.getElementById('home-account-button');
+    assert.ok(trigger, 'Homepage must show the signed-in account');
+    assert.match(trigger.getAttribute('aria-label'), /Test owner/);
+    assert.equal(trigger.getAttribute('aria-expanded'), 'false');
+    await app.ui.click('home-account-button');
+    const dropdown = app.window.document.getElementById('home-account-dropdown');
+    assert.ok(dropdown);
+    assert.match(dropdown.textContent, /owner@example.test/);
+    assert.equal(dropdown.querySelector('a').getAttribute('href'), '/app');
+    assert.match(dropdown.querySelector('a').textContent, /จัดการร้าน/);
+    await app.ui.click('home-logout-button');
+    await app.ui.settle();
+    const logout = app.requests.filter(request => request.url.endsWith('/auth/logout'));
+    assert.equal(logout.length, 1);
+    assert.equal(logout[0].options.method, 'POST');
+    assert.equal(logout[0].options.headers.Authorization, 'Bearer existing-session');
+    assert.equal(app.window.sessionStorage.getItem('smb_access_token'), null);
+    assert.equal(app.window.document.getElementById('home-account-button'), null);
+    assert.match(app.window.document.querySelector('header').textContent, /เข้าสู่ระบบ/);
+    assert.deepEqual(app.errors, []);
+    await app.ui.unmount();
+  } finally {
+    app.dom.window.close();
+  }
+});
+
+test('account dropdown closes with Escape and an outside click', async () => {
+  const app = createApp();
+  try {
+    await app.ui.mountHome();
+    await app.ui.settle();
+    const trigger = app.window.document.getElementById('home-account-button');
+    trigger.focus();
+    await app.ui.click('home-account-button');
+    assert.equal(trigger.getAttribute('aria-expanded'), 'true');
+    await app.ui.key('Escape');
+    assert.equal(trigger.getAttribute('aria-expanded'), 'false');
+    assert.equal(app.window.document.activeElement, trigger);
+    assert.equal(app.window.document.getElementById('home-account-dropdown'), null);
+    await app.ui.click('home-account-button');
+    await app.ui.clickOutside();
+    assert.equal(trigger.getAttribute('aria-expanded'), 'false');
+    assert.equal(app.window.document.getElementById('home-account-dropdown'), null);
+    assert.deepEqual(app.errors, []);
+    await app.ui.unmount();
+  } finally {
+    app.dom.window.close();
+  }
+});
+
+for (const options of [{ loggedIn: false }, { rejectSession: true }]) {
+  test(`homepage shows guest actions for ${options.loggedIn === false ? 'visitors' : 'expired sessions'}`, async () => {
+    const app = createApp(options);
+    try {
+      await app.ui.mountHome();
+      await app.ui.settle();
+      assert.equal(app.window.document.getElementById('home-account-button'), null);
+      assert.match(app.window.document.querySelector('header').textContent, /เข้าสู่ระบบ/);
+      assert.equal(app.window.sessionStorage.getItem('smb_access_token'), null);
+      if (options.loggedIn === false) assert.equal(app.requests.length, 0);
+      assert.deepEqual(app.errors, []);
+      await app.ui.unmount();
+    } finally {
+      app.dom.window.close();
+    }
+  });
+}
+
+test('a failed account lookup preserves the session and offers account actions', async () => {
+  const app = createApp({ failureStatus: 503 });
+  try {
+    await app.ui.mountHome();
+    await app.ui.settle();
+    assert.equal(app.window.sessionStorage.getItem('smb_access_token'), 'existing-session');
+    await app.ui.click('home-account-button');
+    const dropdown = app.window.document.getElementById('home-account-dropdown');
+    assert.match(dropdown.textContent, /โหลดชื่อบัญชีไม่สำเร็จ/);
+    assert.equal(dropdown.querySelector('a').getAttribute('href'), '/app');
+    assert.ok(dropdown.querySelector('#home-logout-button'));
+    await app.ui.unmount();
+  } finally {
+    app.dom.window.close();
+  }
+});
+
+test('homepage logout clears the local session even when the server cannot be reached', async () => {
+  const app = createApp();
+  try {
+    await app.ui.mountHome();
+    await app.ui.settle();
+    await app.ui.click('home-account-button');
+    app.window.fetch = async () => { throw new Error('Network unavailable'); };
+    await app.ui.click('home-logout-button');
+    await app.ui.settle();
+    assert.equal(app.window.sessionStorage.getItem('smb_access_token'), null);
+    assert.equal(app.window.document.getElementById('home-account-button'), null);
+    assert.match(app.window.document.querySelector('header').textContent, /เข้าสู่ระบบ/);
     assert.deepEqual(app.errors, []);
     await app.ui.unmount();
   } finally {
