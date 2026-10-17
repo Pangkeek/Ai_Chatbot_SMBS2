@@ -74,6 +74,7 @@ async function fixture(serviceOptions = {}) {
   window.fetch = async (path, options) => {
     requests.push(path);
     if (controls.hold && path.includes('/shops/shop-coffee/statistics')) await controls.hold;
+    if (controls.holdLineConfig && path.endsWith('/line/config') && (!options.method || options.method === 'GET')) await controls.holdLineConfig;
     if (controls.fail && path.includes('/statistics')) return new Response(JSON.stringify({ error: { message: 'ทดสอบเครือข่ายขัดข้อง' } }), { status: controls.failStatus || 503 });
     // Node fetch ใช้ signal คนละ realm; ยังตรวจการยกเลิกทั้งก่อนและหลังอ่าน HTTP
     options.signal?.throwIfAborted();
@@ -189,6 +190,27 @@ test('uncertain send keeps its draft and request ID, survives remount as an outc
     await app.until(() => app.document.getElementById('conversation-detail-title').textContent === 'ลูกค้า 23');
     assert.equal(app.document.getElementById('conversation-reply').value, '');
     assert.equal(app.document.getElementById('conversation-deliveries').textContent, '');
+    assert.deepEqual(app.errors, []);
+  } finally { release?.(); await app.close(); }
+});
+
+test('LINE settings cannot accept credentials until the current configuration load has finished', async () => {
+  const app = await fixture(); let release;
+  try {
+    await app.ui.mount(); await app.until(() => app.document.getElementById('conversation-room-ui-024'));
+    app.controls.holdLineConfig = new Promise(resolve => { release = resolve; });
+    await app.ui.click('settings-line-tab');
+    assert.equal(app.document.getElementById('line-channel-secret').disabled, true);
+    assert.equal(app.document.getElementById('line-channel-token').disabled, true);
+    assert.equal(app.document.getElementById('save-line-btn').disabled, true);
+    release(); app.controls.holdLineConfig = null;
+    await app.until(() => !app.document.getElementById('line-channel-secret').disabled);
+    app.document.getElementById('line-channel-secret').value = 'fixture-secret';
+    app.document.getElementById('line-channel-token').value = 'fixture-token';
+    await app.ui.submit('line-settings-form');
+    await app.until(() => !app.document.getElementById('verify-line-btn').disabled);
+    const row = (await app.db.query("SELECT channel_secret,channel_access_token FROM line_channels WHERE shop_id='shop-coffee'")).rows[0];
+    assert.equal(row.channel_secret, 'fixture-secret'); assert.equal(row.channel_access_token, 'fixture-token');
     assert.deepEqual(app.errors, []);
   } finally { release?.(); await app.close(); }
 });

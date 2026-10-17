@@ -1,6 +1,18 @@
 // ดูแลการตั้งค่า LINE ของร้านที่กำลังเปิดอยู่
 export function createLineSettings({ elements, listen, apiRequest, getSelectedShopId, showNotification, setButtonLoading }) {
+  let configVersion = 0, readyShopId = '';
+  const setFieldsDisabled = disabled => {
+    for (const input of [elements.lineChannelId, elements.lineChannelSecret, elements.lineChannelToken]) input.disabled = disabled;
+    elements.saveLineBtn.disabled = disabled;
+  };
   async function loadLineConfig(shopId) {
+    const version = ++configVersion;
+    readyShopId = '';
+    // ห้ามพิมพ์ก่อนโหลดเสร็จ ไม่ให้คำตอบ GET ล้าง credentials ที่เพิ่งกรอก
+    setButtonLoading(elements.saveLineBtn, false);
+    setFieldsDisabled(true); elements.verifyLineBtn.disabled = true;
+    elements.lineSettingsForm.setAttribute('aria-busy', 'true');
+    elements.lineStatusBadge.textContent = 'กำลังโหลดการตั้งค่า…';
     try {
       const origin = window.location.origin;
       elements.lineWebhookUrl.value = `${origin}/api/v1/shops/${encodeURIComponent(
@@ -10,7 +22,7 @@ export function createLineSettings({ elements, listen, apiRequest, getSelectedSh
       const config = await apiRequest(
         `/shops/${encodeURIComponent(shopId)}/line/config`
       );
-      if (shopId !== getSelectedShopId()) return;
+      if (shopId !== getSelectedShopId() || version !== configVersion) return;
       elements.verifyLineBtn.disabled = !config.configured;
       if (config.configured) {
         elements.lineStatusBadge.textContent = "บันทึกแล้ว · ยังไม่ตรวจสอบ";
@@ -43,12 +55,17 @@ export function createLineSettings({ elements, listen, apiRequest, getSelectedSh
           "Channel Access Token (long-lived) จาก LINE Developers Console";
         elements.lineChannelToken.required = true;
       }
+      readyShopId = shopId;
     } catch (error) {
-      console.error("Failed to load LINE config:", error);
-      if (shopId === getSelectedShopId()) {
+      if (shopId === getSelectedShopId() && version === configVersion) {
         elements.verifyLineBtn.disabled = true;
         elements.lineStatusBadge.textContent = "โหลดสถานะไม่สำเร็จ";
-        elements.lineVerificationDetail.textContent = error.message;
+        elements.lineVerificationDetail.textContent = `${error.message} เปิดแท็บการเชื่อมต่อ LINE อีกครั้งเพื่อลองใหม่`;
+      }
+    } finally {
+      if (shopId === getSelectedShopId() && version === configVersion) {
+        setFieldsDisabled(readyShopId !== shopId);
+        elements.lineSettingsForm.setAttribute('aria-busy', 'false');
       }
     }
   }
@@ -118,7 +135,8 @@ export function createLineSettings({ elements, listen, apiRequest, getSelectedSh
   if (elements.lineSettingsForm) {
     listen(elements.lineSettingsForm, "submit", async (event) => {
       event.preventDefault();
-      if (!getSelectedShopId()) return;
+      const shopId = getSelectedShopId();
+      if (!shopId || readyShopId !== shopId) return;
 
       const formElement = event.currentTarget;
       const form = new FormData(formElement);
@@ -151,18 +169,22 @@ export function createLineSettings({ elements, listen, apiRequest, getSelectedSh
       setButtonLoading(button, true, "กำลังบันทึก...");
       try {
         await apiRequest(
-          `/shops/${encodeURIComponent(getSelectedShopId())}/line/config`,
+          `/shops/${encodeURIComponent(shopId)}/line/config`,
           {
             method: "PUT",
             body,
           }
         );
-        await loadLineConfig(getSelectedShopId());
+        if (shopId !== getSelectedShopId()) return;
+        await loadLineConfig(shopId);
         showNotification("success", "บันทึกสำเร็จ", "บันทึกข้อมูล LINE แล้ว กรุณากดตรวจสอบกับ LINE");
       } catch (error) {
-        showNotification("error", "บันทึกไม่สำเร็จ", error.message);
+        if (shopId === getSelectedShopId()) showNotification("error", "บันทึกไม่สำเร็จ", error.message);
       } finally {
-        setButtonLoading(button, false);
+        if (shopId === getSelectedShopId()) {
+          setButtonLoading(button, false);
+          button.disabled = readyShopId !== shopId;
+        }
       }
     });
   }

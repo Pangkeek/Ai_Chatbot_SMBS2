@@ -1,5 +1,13 @@
 # จุดพักงานล่าสุด
 
+## ข้อ 11 — แก้หน้าจอและตรวจ Chrome
+
+- พบ Chrome flow กรอก Secret เร็วแล้ว GET โหลด LINE config ที่ช้าล้างค่าทิ้ง จนฟอร์มไม่ส่ง PUT และ signed webhook ตอบ 404; สร้าง deferred GET regression ให้ล้มก่อนแก้
+- lineSettings ล็อก input/save ระหว่างโหลด ใช้ request version และ shopId ที่จับตอนบันทึก ป้องกันคำตอบเก่า/ร้านเก่าแก้หน้าปัจจุบัน; โหลดล้มเหลวยังคงปิดการกรอกและแนะนำเปิดแท็บใหม่เพื่อลองอีกครั้ง
+- แก้ HomeJourney ที่ยังบอกข้อ 9–10 เป็นงานอนาคต ให้มีการ์ดบทสนทนา/รับช่วง/Pause/Resume ผ่าน /app ตามหน้าที่ใช้งานจริง
+- DOM integration ผ่าน regression ใหม่และทั้ง runtime 99/99; dashboard-session 13 tests ผ่าน การตรวจ Chrome headless บน production frontend ผ่านครบ 11 ขั้นตอน มีภาพ 1440px/390px ไม่มี document overflow และไม่มี page error (ไม่ใช่ accessibility audit เต็มรูปแบบ)
+- Chrome ใช้ HTTP/PostgreSQL test service จริงผ่าน browser API forwarding และแทนเฉพาะ LINE transport ไม่มีการส่งหาลูกค้าจริง เครื่องมือ/ภาพ/รายงานจะบันทึกแยกอีก commit; ยังไม่ push/merge
+
 ## ข้อ 11 — แก้การเลือกหลักฐานผิดเรื่องจาก Unicode ภาษาไทย
 
 - เพิ่ม gold fixtures 28 ข้อแล้วพบ 1 เคส: ถามรับโอนธนาคาร แต่ตอบรายละเอียดร้านซึ่งไม่มีธนาคาร เก็บ expected เดิมไว้ ไม่เปลี่ยนเฉลยให้ผ่าน
