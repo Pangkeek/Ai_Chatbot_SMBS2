@@ -1,5 +1,5 @@
-export const requiredMigrations = ['001_initial.sql', '002_line_jobs.sql', '003_defer_job_checkpoint_references.sql', '004_rag.sql'];
-export const requiredTables = ['schema_migrations', 'users', 'shops', 'shop_memberships', 'sessions', 'knowledge_entries', 'conversations', 'messages', 'line_channels', 'line_events', 'line_jobs', 'knowledge_chunks', 'message_sources'];
+export const requiredMigrations = ['001_initial.sql', '002_line_jobs.sql', '003_defer_job_checkpoint_references.sql', '004_rag.sql', '005_handover.sql'];
+export const requiredTables = ['schema_migrations', 'users', 'shops', 'shop_memberships', 'sessions', 'knowledge_entries', 'conversations', 'messages', 'line_channels', 'line_events', 'line_jobs', 'knowledge_chunks', 'message_sources', 'agent_deliveries'];
 
 export function schemaName(value = 'public') {
   if (!/^[a-z][a-z0-9_]{0,62}$/.test(value) || value.startsWith('pg_') || value === 'information_schema') throw new Error('Invalid PostgreSQL application schema');

@@ -1,5 +1,19 @@
 # จุดพักงานล่าสุด
 
+## ข้อ 10 — API รับช่วงและส่งข้อความ (branch task10-human-handover)
+
+- เพิ่ม API `POST/GET .../conversations/{conversationId}/replies` ส่ง LINE Push ไปยังลูกค้าที่เก็บในห้อง ด้วย token ร้านเดียวกัน ไม่ใช้ API messages เดิมซึ่งบันทึกอย่างเดียว
+- เก็บ delivery ใน PostgreSQL พร้อม request UUID กันซ้ำ สถานะ sending/sent/failed/unknown และ author; สร้างข้อความ agent เฉพาะเมื่อ LINE รับคำขอแล้ว ไม่กล่าวอ้างว่าอ่านแล้ว
+- จำกัดส่ง 5,000 ตัวอักษร ตรวจสมาชิก owner/agent ห้องเปิด โหมดพัก/มนุษย์ และ LINE config; ไม่ส่งซ้ำเมื่อ timeout/5xx/ผลไม่แน่นอน มี timeout จริง 10s และ recovery sending ค้าง 30s
+- Migration 005 เพิ่ม outbox, revision และเวลาเปลี่ยนโหมด; trigger ยกเลิก AI รุ่นเก่าแม้ Pause→Resume และ worker ไม่ย้อนส่งคิวก่อน Resume เปรียบเทียบ timestamp ใน PostgreSQL เพื่อไม่เสีย microseconds
+- เปลี่ยนโหมดใช้ row lock เดียวกับจุดเริ่มส่ง หากเริ่มส่งอยู่ตอบ 409 รอจนจบ ไม่ยืนยัน Pause ทั้งที่ยังส่งไม่เสร็จ
+- ตรวจ Node 24.19.0/npm 11.19.0: runtime รอบรวม 95 ผ่าน; หลังเพิ่ม regression microsecond ทดสอบ handover ล่าสุด 8/8 ผ่าน รวม timeout จริงและ DB ล้มเหลวหลัง LINE รับแล้ว; API contract tests ผ่านครบ endpoints
+- schema/PostgreSQL/SQLite import+backup รวม 16 tests ผ่าน; production smoke+LINE runtime รวม 3 ผ่าน; build ล่าสุด, api:check, check:toolchain และ diff --check ผ่าน
+- Docker smoke แบบแยก project task10-smoke ใช้พอร์ต 3110/55510 healthy และ health ตอบ database ok; migration 001–005 ครบ ไม่ใช้ volume/ฐาน runtime เดิม ตัว Docker build เริ่มก่อนปรับการเปรียบเทียบ microsecond ขั้นสุดท้าย ส่วน source build/targeted test ตรวจหลังแก้แล้ว
+- LINE ใช้ test transport เท่านั้น ไม่มีข้อความไปหาลูกค้าจริงและไม่มีการ deploy/push/merge; ก่อนใช้จริงหยุด worker รุ่นเก่าทุก instance รัน db:migrate:postgres แล้วเปิดรุ่นใหม่
+- หน้าจอข้อ 10 ทำและทดสอบ DOM/HTTP/PostgreSQL แล้ว จะบันทึกแยกอีก commit พร้อมคู่มือ ไม่มี browser เชื่อมต่อสำหรับตรวจภาพ
+- ผู้ใช้สั่งให้ต่อข้อ 11 หลังจบข้อ 10: ทดสอบรวม ความถูกต้อง/เกี่ยวข้อง/ไร้หลักฐาน ความเร็ว Handover Failover และต้นทุน พร้อมหลักฐานจริง ไม่แทนข้อมูลทดสอบเป็นผล production
+
 ## งานล่าสุด: ปุ่มหลักหน้าแรกหลังเข้าสู่ระบบ
 
 - เปลี่ยนปุ่มกลาง HomeHero เป็น **จัดการร้าน** เมื่อยืนยัน session แล้ว ใช้สีมิ้นต์ #a4f0e4 ไอคอนร้าน ขนาดข้อความ 16px และความสูงอย่างน้อย 56px; ลิงก์ยังไป /app และคงรูปแบบ guest เดิม

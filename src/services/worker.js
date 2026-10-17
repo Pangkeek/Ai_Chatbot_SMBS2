@@ -86,13 +86,16 @@ export function createLineWorker(db, options = {}) {
       [id, job.shop_id, conversation.id, current.payload.message.text]);
       await tx.query('UPDATE conversations SET updated_at=clock_timestamp() WHERE shop_id=$1 AND id=$2', [job.shop_id, conversation.id]);
       await owned(tx, job);
-      return (await tx.query(`UPDATE line_jobs SET conversation_id=$2,customer_message_id=$3,
-        updated_at=clock_timestamp() WHERE job_id=$1 RETURNING *`, [job.job_id, conversation.id, id])).rows[0];
+      return (await tx.query(`UPDATE line_jobs SET conversation_id=$2,customer_message_id=$3,bot_revision=$4,
+        updated_at=clock_timestamp() WHERE job_id=$1 RETURNING *`, [job.job_id, conversation.id, id, conversation.bot_revision])).rows[0];
     });
   }
   async function canReply(tx, job) {
-    const conversation = (await tx.query('SELECT * FROM conversations WHERE shop_id=$1 AND id=$2 FOR UPDATE', [job.shop_id, job.conversation_id])).rows[0];
-    if (!conversation || conversation.status !== 'open' || conversation.bot_mode !== 'active') {
+    // เปรียบเทียบใน PostgreSQL เพื่อไม่เสีย microseconds จาก JavaScript Date
+    const conversation = (await tx.query(`SELECT *,bot_changed_at IS NOT NULL AND bot_changed_at>
+      (SELECT received_at FROM line_jobs WHERE job_id=$3) AS stale_event
+      FROM conversations WHERE shop_id=$1 AND id=$2 FOR UPDATE`, [job.shop_id, job.conversation_id, job.job_id])).rows[0];
+    if (!conversation || conversation.status !== 'open' || conversation.bot_mode !== 'active' || conversation.bot_revision !== job.bot_revision || conversation.stale_event) {
       await terminal(tx, job, 'completed', 'BOT_INACTIVE'); return false;
     }
     const expired = (await tx.query("SELECT clock_timestamp()>$1::timestamptz+$2*interval '1 millisecond' AS expired", [job.received_at, cutoffMs])).rows[0].expired;

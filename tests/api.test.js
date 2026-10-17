@@ -1,7 +1,7 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
-import { createHmac } from 'node:crypto';
+import { createHmac, randomUUID } from 'node:crypto';
 import { createTestDatabase } from '../integration/postgresql-fixture.js';
 import { migratePostgresql } from '../scripts/postgresql/migrations.js';
 import { seedDemo, demoPassword } from '../src/lib/seed.js';
@@ -282,6 +282,16 @@ test('AI preview shows only this shop data, evidence and prompt', async () => {
     { question: 'ร้านขายอะไร' }, coffee)).status, 404);
   assert.equal((await request('POST', '/api/v1/shops/shop-coffee/ai/preview',
     { question: '' }, coffee)).status, 422);
+});
+
+test('agent push endpoints match their HTTP contract and stored destination', async () => {
+  const base = '/api/v1/shops/shop-coffee/conversations';
+  const created = await request('POST', base, { channel: 'line', customer_external_id: 'contract-test-user', customer_name: 'ทดสอบส่ง' }, coffee);
+  const path = `${base}/${created.payload.data.id}`;
+  await request('PATCH', path, { bot_mode: 'human' }, coffee);
+  const reply = await request('POST', path + '/replies', { request_id: randomUUID(), content: 'ทดสอบส่งผ่าน transport ทดสอบ' }, coffee);
+  assert.equal(reply.payload.data.status, 'sent');
+  assert.equal((await request('GET', path + '/replies', undefined, coffee)).payload.data.length, 1);
 });
 
 test('every declared endpoint has a successful HTTP contract check', () => {

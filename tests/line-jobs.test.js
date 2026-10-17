@@ -264,7 +264,7 @@ test('recovered pre-send jobs retain their original RAG evidence across a worker
   const source={knowledge_entry_id:'shop-coffee-kb-1',chunk_id:'shop-coffee-kb-1:0',content:'Original verified excerpt'};
   await db.query(`UPDATE line_jobs SET reply_text='Original reply',reply_sources=$1,reply_method='faq',
     status='processing',attempts=1,locked_by='previous-worker',locked_at=now()-interval '2 seconds',lease_until=now()-interval '1 second',
-    conversation_id='shop-coffee-conversation-1',customer_message_id='shop-coffee-message-1' WHERE event_id=$2`,[JSON.stringify([source]),e.webhookEventId]);
+    conversation_id='shop-coffee-conversation-1',customer_message_id='shop-coffee-message-1',bot_revision=0 WHERE event_id=$2`,[JSON.stringify([source]),e.webhookEventId]);
   await db.query("DELETE FROM knowledge_entries WHERE id='shop-coffee-kb-1'");
   let sends=0;
   await createLineWorker(db,{sendReply:async({messages})=>{sends++;assert.equal(messages[0].text,'Original reply');},
