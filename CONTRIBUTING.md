@@ -44,3 +44,7 @@ git push -u origin main
 ```
 
 แทน `<TEAM_REPOSITORY_URL>` ด้วย URL ที่ทีมเลือก ไม่มีการตั้ง remote หรือ push อัตโนมัติในงานนี้ CI ใน `.github/workflows/ci.yml` จะทำงานเมื่อ repository อยู่บน GitHub
+
+## Notin แผนงาน
+
+https://app.notion.com/p/AI-Chatbot-SMBs-3d8d1e39ec9c81158d17e529e229f350
