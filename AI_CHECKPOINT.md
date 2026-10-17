@@ -1,6 +1,21 @@
 # จุดพักงานล่าสุด
 
-## งานล่าสุด: คืนสีเดิมและใช้ #333 เฉพาะเส้นกรอบ
+## งานล่าสุด: แก้ GitHub Actions ที่ล้มเหลวตอนติดตั้งแพ็กเกจ
+
+- อ่าน GitHub Actions run `39019685168` ของ commit `36b3867f8eff475ca1d232cc637491d5045ffcec` พบล้มที่ `pnpm install --frozen-lockfile` ด้วยข้อความ `This project is configured to use npm`
+- ทำซ้ำด้วย `npx --yes pnpm@11.19.0 install --frozen-lockfile` แล้วล้มด้วยสาเหตุเดียวกัน ยืนยันว่าไม่ใช่เทสต์แอปหรือ build ล้ม
+- แก้ `.github/workflows/ci.yml` ให้ใช้ npm 11.19.0 ตาม packageManager, cache จาก package-lock.json และรัน npm ci / npm run build / npm test / npm run api:check โดยยังคง Node.js 24.19.0
+- ตรวจขั้นตอนทั้งหมดใน Docker สภาพแวดล้อมสะอาดบน Linux ด้วย Node.js 24.19.0 + npm 11.19.0: npm ci ผ่าน, build ผ่าน, เทสต์ 54 รายการผ่าน และ OpenAPI contract ผ่าน; ตรวจในเครื่องผ่านเช่นกัน และ git diff --check ผ่าน
+- การทดสอบ CI ใช้ image ชั่วคราว `smb-chatbot-ci-check:local` ไม่ได้เปลี่ยนคอนเทนเนอร์แอปพอร์ต 3000
+
+### งานค้างและข้อจำกัดของ CI/Deployment
+
+- ยังไม่ได้ push commit แก้ไข จึงยังไม่อ้างว่า GitHub Actions รอบใหม่ผ่าน; run ของ commit 36b3867 ที่ตรวจยังเป็น failure
+- Vercel เป็นอีก check แยกกัน: GitHub commit status และ deployment 7137380766 ระบุเพียง `Deployment was blocked` ไม่มีรายละเอียดสาเหตุ
+- หน้ารายละเอียด Vercel/URL deployment ต้องเข้าสู่ระบบเจ้าของโครงการ; ส่งคำถามขอข้อความเหตุผลที่บล็อกไปแล้ว ยังไม่ยืนยันว่าเป็นปัญหาสิทธิ์ผู้เขียน commit หรือสาเหตุอื่น และไม่ได้แก้ author, สิทธิ์สมาชิก หรือปิด check เพื่อหลบปัญหา
+- หลังผู้ใช้อนุญาต push ให้ตรวจ Actions ของ SHA ใหม่ และอ่านเหตุผลจาก Vercel ก่อนแก้ปัญหา deployment ต่อ
+
+## งานก่อนหน้า: คืนสีเดิมและใช้ #333 เฉพาะเส้นกรอบ
 
 - ผู้ใช้แก้ความต้องการให้ #333 เป็นเส้นกรอบ ไม่ใช่พื้นหลังกล่อง จึงยกเลิก CSS ธีมเข้มทั้งหมดจากงานก่อนหน้า
 - เปลี่ยน class เป็น `outlined-panel` โดยกำหนดเพียง border 1px solid #333 และคงสีเส้นกรอบขณะ hover; ใช้กับกล่องชุดเดิมใน home, ร้านค้า, ข้อมูลธุรกิจ, FAQ/ความรู้/หน้าต่างแก้ไข และการเชื่อมต่อ LINE
