@@ -4,7 +4,7 @@ Server ใช้ `LINE_WORKER_ENABLED=true` เพื่อเปิด consumer
 
 Production ใช้ `npm start` ซึ่งเรียก Next CLI ที่ `0.0.0.0` และอ่าน PORT จาก environment พร้อม manual signal handling เมื่อ SIGTERM/SIGINT จะหยุด claim, รอ active job สูงสุด 15 วินาทีและปิด pool หากหยุดไม่ทันหรือ DB ไม่พร้อมจะให้ process exit ภายใน 15 วินาที งานที่เหลือฟื้นจาก lease เมื่อเริ่ม server ใหม่ Manual shutdown นี้ใช้ production start; next dev ใช้ lifecycle ของ Next dev และต้องพึ่ง lease recovery เมื่อถูกหยุด
 
-Consumer poll ทุก 1 วินาทีและปลุกเมื่อ webhook commit แล้ว ใช้ lease 60 วินาที/heartbeat 15 วินาที ทุก checkpoint ตรวจ owner และ lease อีกครั้ง การ claim ใช้ SKIP LOCKED และการสร้าง conversation ใช้ shop/customer advisory lock ข้อความใช้ ID ที่คำนวณจาก shop/event/role
+Consumer poll ทุก 1 วินาทีและปลุกเมื่อ webhook commit แล้ว ใช้ lease 15 วินาที/heartbeat 3 วินาที เพื่อเผื่อเวลาหลัง crash ให้กู้ สร้างคำตอบ (provider timeout 10 วินาที) และส่ง (HTTP timeout 10 วินาที) ก่อน cutoff 45 วินาที ทุก checkpoint ตรวจ owner และ lease อีกครั้ง การ claim ใช้ SKIP LOCKED และการสร้าง conversation ใช้ shop/customer advisory lock ข้อความใช้ ID ที่คำนวณจาก shop/event/role การกู้ทันยังขึ้นกับอายุงานตอน crash, เวลาที่ระบบหยุด และเวลาประมวลผล ไม่รับรองงานที่ crash ใกล้ cutoff
 
 Webhook ที่เป็น text ต้องมี webhookEventId หรือ message ID, userId และ text ที่ประมวลผลได้ Event ที่ไม่รองรับจะเก็บ ignored โดยไม่มี job; event ที่ไม่มี ID จะตอบ 422 ทั้ง batch แทนสร้าง ID สุ่ม Event ID ที่ชนกับร้านอื่นตอบ 409 โดยไม่เปิดเผยร้านเดิม `processed_count` หมายถึงจำนวน text jobs ใหม่ที่ commit สำเร็จ ไม่ใช่จำนวนคำตอบที่ส่งแล้ว
 
@@ -53,6 +53,8 @@ Logs มีเพียง error code/job ID ไม่มี payload, reply text
 ## ตรวจสอบ
 
 `npm test` ทดสอบ producer, concurrency, leases, delivery failures, crash/recovery และ retention กับ PostgreSQL จริง หลัง `npm run build` รัน `npm run test:line:runtime` เพื่อทดสอบ Next startup โดยไม่มี request แรก, worker flag, health และ shutdown Tests ใช้ schema สุ่มใน chatbot_test และ fixture/mock LINE ไม่ส่งข้อความจริง
+
+Crash regression ใช้ child process และ lease/heartbeat/poll/cutoff ค่า default จริง รอ heartbeat ก่อน SIGKILL แล้วให้ worker ใหม่ poll กู้โดยไม่แก้ timestamp หรือบังคับ lease หมดอายุ ตรวจว่าส่งก่อน 45 วินาทีและเก็บ customer checkpoint เดิม; กรณี kill ระหว่าง sending ต้องเป็น unknown และไม่ส่งซ้ำ
 
 บน Windows lifecycle test ส่ง Node signal event ผ่าน IPC เพราะ OS ไม่ส่ง POSIX signals แบบ Linux; CI Linux ส่ง SIGTERM/SIGINT จริง ต้องตรวจ deploy/restart และ LINE channel ทดสอบบน Render อีกครั้งในระยะ G
 

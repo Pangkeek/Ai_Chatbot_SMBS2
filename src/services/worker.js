@@ -10,8 +10,9 @@ const transient = error => ['08000','08003','08006','57P01','57P02','57P03','400
 
 export function createLineWorker(db, options = {}) {
   const workerId = options.workerId || randomUUID();
-  const leaseMs = options.leaseMs ?? 60000;
-  const heartbeatMs = options.heartbeatMs ?? 15000;
+  // เผื่อเวลากู้ lease สร้างคำตอบ (10s) และส่ง (10s) ภายใน cutoff 45s
+  const leaseMs = options.leaseMs ?? 15000;
+  const heartbeatMs = options.heartbeatMs ?? 3000;
   const pollMs = options.pollMs ?? 1000;
   const cutoffMs = options.cutoffMs ?? 45000;
   const httpTimeoutMs = options.httpTimeoutMs ?? 10000;

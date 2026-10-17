@@ -1,5 +1,13 @@
 # จุดพักงานล่าสุด
 
+## แก้ P1: LINE crash recovery ก่อน reply cutoff — 17 ตุลาคม 2026
+
+- ลด default lease จาก 60 เป็น 15 วินาที และ heartbeat จาก 15 เป็น 3 วินาที คง poll 1 วินาที/cutoff 45 วินาที/HTTP timeout 10 วินาที เพื่อมีเวลากู้ สร้างคำตอบ และส่งหลัง worker ล่มก่อน sending
+- เปลี่ยน crash regression ให้ใช้ค่า default จริง รอ heartbeat ก่อน SIGKILL แล้วกู้ผ่าน polling โดยไม่แก้ timestamp หรือบังคับ lease หมดอายุใน DB ตรวจ customer checkpoint เดิม/assistant ไม่ซ้ำและส่งก่อน cutoff; kill ระหว่าง sending ต้อง unknown และไม่ส่งซ้ำ
+- ตรวจด้วย Node 24.19.0/npm 11.19.0 และ PostgreSQL 18 บน loopback chatbot_test/schema สุ่ม: test LINE jobs ผ่าน 13/13, natural recovery ส่งหนึ่งครั้งที่อายุงาน 18.5 วินาที; sending recovery เป็น unknown ส่ง 0 ครั้ง; git diff --check ผ่าน
+- ถัดไป: รวม origin/master ล่าสุดและแก้ conflict, รัน checks บนผลรวม แล้ว push PR #6 และตรวจ CI ของ commit ล่าสุด ห้าม merge/deploy ในรอบนี้
+- Render auto-deploy, backup/restore และ production cutover ยังต้องยืนยันโดยผู้ใช้ตาม docs/production-cutover.md
+
 ## งานที่ทำ
 
 - เชื่อมข้อมูลธุรกิจที่บันทึกใน `shops` เข้ากับการค้นหลักฐานตอบ Chatbot โดยแยกเป็นชื่อร้าน ประเภท สินค้า/บริการ รูปแบบบริการ เวลาเปิด และรายละเอียดเพิ่มเติม

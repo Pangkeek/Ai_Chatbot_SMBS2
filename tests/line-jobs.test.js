@@ -186,23 +186,44 @@ test('retention clears terminal payloads/tokens after 30 days and retains dedupl
   assert.equal((await cleanupLineHistory(db)).jobs, 0);
 }));
 
-test('real child process crash recovers customer checkpoint; crash during HTTP is unknown and never sent again', async () => seeded(async ({ db, config, submit, job }) => {
+test('default timers recover a killed worker before reply cutoff without changing database clocks; sending stays unknown', { timeout: 80000 }, async t => seeded(async ({ db, config, submit, job }) => {
   for (const stage of ['generation','sending']) {
     const e = event({ source: { userId: stage } }); await submit([e]); const current = await job(e.webhookEventId);
     const child = fork(new URL('./fixtures/line-worker-child.js', import.meta.url), [], {
       env: { ...process.env, DB_SCHEMA: config.schema, LINE_CRASH_STAGE: stage, LINE_JOB_ID: current.job_id }, stdio: ['ignore','ignore','ignore','ipc'],
     });
     try {
-      await Promise.race([once(child, 'message'), sleep(5000).then(() => { throw new Error('Child checkpoint timeout'); })]);
+      const [checkpoint] = await Promise.race([once(child, 'message'), sleep(5000).then(() => { throw new Error('Child checkpoint timeout'); })]);
+      assert.equal(checkpoint.stage, stage);
+      const initial = await job(e.webhookEventId);
+      // รอ heartbeat ค่า default จริงก่อน kill โดยไม่แก้ lease/เวลาใน DB
+      // worker ใหม่ต้องกู้และส่งทัน reply window เดิม
+      await until(async () => (await job(e.webhookEventId)).lease_until > initial.lease_until, 20000);
       const exit = once(child, 'exit'); child.kill('SIGKILL'); await exit;
       const before = await job(e.webhookEventId); assert.ok(before.customer_message_id);
-      await expire(db, current.job_id);
-      let sent = 0; await worker(db, { sendReply: async () => { sent++; } }).runOnce();
+      let sent = 0, sendAge;
+      const replacement = worker(db, { sendReply: async () => {
+        const age = (await db.query('SELECT extract(epoch FROM clock_timestamp()-received_at) AS age FROM line_jobs WHERE job_id=$1', [current.job_id])).rows[0].age;
+        assert.ok(Number(age) < 45, `Reply started at ${age}s, after cutoff`);
+        sendAge = Number(age);
+        sent++;
+      } });
+      assert.equal(await replacement.runOnce(current.job_id), false);
+      assert.equal((await job(e.webhookEventId)).lease_until.getTime(), before.lease_until.getTime());
+      replacement.start();
+      try {
+        await until(async () => ['completed','failed','unknown'].includes((await job(e.webhookEventId)).status), 35000);
+      } finally { await replacement.stop(); }
       const after = await job(e.webhookEventId);
       assert.equal(after.status, stage === 'generation' ? 'completed' : 'unknown');
+      assert.equal(after.delivery_state, stage === 'generation' ? 'sent' : 'unknown');
       assert.equal(sent, stage === 'generation' ? 1 : 0);
       assert.equal(after.customer_message_id, before.customer_message_id);
       assert.equal((await db.query('SELECT 1 FROM messages WHERE id=$1', [before.customer_message_id])).rowCount, 1);
+      assert.equal((await db.query("SELECT count(*)::int AS count FROM messages WHERE conversation_id=$1 AND role='assistant'", [after.conversation_id])).rows[0].count, stage === 'generation' ? 1 : 0);
+      assert.equal(await worker(db, { sendReply: async () => { sent++; } }).runOnce(current.job_id), false);
+      assert.equal(sent, stage === 'generation' ? 1 : 0);
+      t.diagnostic(`${stage}: ${after.status}/${after.delivery_state}; sends=${sent}${sendAge === undefined ? '' : `; send age=${sendAge.toFixed(1)}s`}`);
     } finally { if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL'); }
   }
 }));
