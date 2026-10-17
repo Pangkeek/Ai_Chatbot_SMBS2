@@ -1,40 +1,13 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
-import { createApiClient } from '../../services/dashboard/apiClient.js';
-
-const TOKEN_KEY = 'smb_access_token';
+import { useHomeAccount } from './HomeAccountProvider.jsx';
 
 export default function HomeAccountMenu() {
-  const [account, setAccount] = useState({ status: 'checking', user: null, error: '' });
+  const { account, signOut } = useHomeAccount();
   const [open, setOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const containerRef = useRef(null);
   const buttonRef = useRef(null);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    const token = sessionStorage.getItem(TOKEN_KEY);
-
-    if (!token) {
-      setAccount({ status: 'guest', user: null, error: '' });
-    } else {
-      const apiRequest = createApiClient(() => token);
-      apiRequest('/users/me', { signal: controller.signal }).then(user => {
-        if (!controller.signal.aborted) setAccount({ status: 'signed-in', user, error: '' });
-      }).catch(error => {
-        if (controller.signal.aborted) return;
-        if (error.status === 401) {
-          if (sessionStorage.getItem(TOKEN_KEY) === token) sessionStorage.removeItem(TOKEN_KEY);
-          setAccount({ status: 'guest', user: null, error: '' });
-        } else {
-          // เครือข่ายสะดุดไม่ใช่การออกจากระบบ จึงคงเมนูบัญชีและ token ไว้
-          setAccount({ status: 'signed-in', user: null, error: 'โหลดชื่อบัญชีไม่สำเร็จ กรุณาลองเปิดหน้านี้ใหม่' });
-        }
-      });
-    }
-
-    return () => controller.abort();
-  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -58,14 +31,9 @@ export default function HomeAccountMenu() {
   async function logout() {
     if (loggingOut) return;
     setLoggingOut(true);
-    const token = sessionStorage.getItem(TOKEN_KEY);
     try {
-      await createApiClient(() => token)('/auth/logout', { method: 'POST' });
-    } catch {
-      // เช่นเดียวกับหน้าแดชบอร์ด ต้องออกจากระบบในเครื่องได้แม้ server ติดต่อไม่ได้
+      await signOut();
     } finally {
-      if (sessionStorage.getItem(TOKEN_KEY) === token) sessionStorage.removeItem(TOKEN_KEY);
-      setAccount({ status: 'guest', user: null, error: '' });
       setOpen(false);
       setLoggingOut(false);
     }

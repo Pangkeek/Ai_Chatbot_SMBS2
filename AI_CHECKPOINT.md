@@ -1,5 +1,14 @@
 # จุดพักงานล่าสุด
 
+## งานล่าสุด: ปุ่มหลักหน้าแรกหลังเข้าสู่ระบบ
+
+- เปลี่ยนปุ่มกลาง HomeHero เป็น **จัดการร้าน** เมื่อยืนยัน session แล้ว ใช้สีมิ้นต์ #a4f0e4 ไอคอนร้าน ขนาดข้อความ 16px และความสูงอย่างน้อย 56px; ลิงก์ยังไป /app และคงรูปแบบ guest เดิม
+- ย้ายการตรวจ session ของหน้า home ไป HomeAccountProvider เพื่อให้เมนูบัญชีและปุ่มหลักอ่านสถานะเดียวกัน ไม่ยิง /users/me แยกคนละชุด; ออกจากระบบแล้วปุ่มกลับเป็นเข้าสู่ระบบทันที กรณี 401 เป็น guest ส่วน 503 คง token/ปุ่มจัดการร้าน
+- ทำ regression ให้ล้มก่อนแก้ โดยพบผู้ล็อกอินยังเห็น 'เข้าสู่ระบบ / เริ่มใช้งาน'; หลังแก้ dashboard-session tests ผ่าน 12 รายการ ครอบคลุม guest/หมดอายุ/เครือข่าย/ล็อกเอาต์และกลับหน้าแรก
+- ตรวจรวมล่าสุดบน Node 24.19.0/npm 11.19.0: test:runtime ผ่าน 85 รายการ (รวมชุดข้อ 9 บน PostgreSQL), build/api:check/git diff --check ผ่าน และ production smoke หลัง build ใหม่ผ่าน 2 รายการ
+- ตรวจ Chrome บน production CLI + PostgreSQL schema ทดสอบแยกที่พอร์ต 3109: login demo กลับหน้า home พบปุ่มจัดการร้านจริง ตรวจ computed background rgb(164,240,228), font 16px, สูง 56px, href /app และกดกลับแดชบอร์ดได้ ปิดแท็บ/เซิร์ฟเวอร์ทดสอบหลังตรวจ ไม่แก้ข้อมูลร้านจริง
+- บันทึกแยกจาก commit P1 d9af8bb; งานทั้งหมดอยู่บน task9-chat-page ยังไม่ push/merge PR #7 หรือ deploy Render และไม่ได้ทำ production cutover
+
 ## งานล่าสุด: แก้ P1 ของ PR #7 ให้รวมกับ PostgreSQL master ได้
 
 - รวม master e695be7 เข้า branch task9-chat-page แบบ local และแก้ conflict โดยคงระบบ PostgreSQL/durable LINE worker ของ master พร้อมฟีเจอร์ข้อ 9 ไม่ได้ merge PR, push หรือ deploy
