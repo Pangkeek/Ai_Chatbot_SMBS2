@@ -1,5 +1,52 @@
 # จุดพักงานล่าสุด
 
+## งานล่าสุด: ปุ่มหลักหน้าแรกหลังเข้าสู่ระบบ
+
+- เปลี่ยนปุ่มกลาง HomeHero เป็น **จัดการร้าน** เมื่อยืนยัน session แล้ว ใช้สีมิ้นต์ #a4f0e4 ไอคอนร้าน ขนาดข้อความ 16px และความสูงอย่างน้อย 56px; ลิงก์ยังไป /app และคงรูปแบบ guest เดิม
+- ย้ายการตรวจ session ของหน้า home ไป HomeAccountProvider เพื่อให้เมนูบัญชีและปุ่มหลักอ่านสถานะเดียวกัน ไม่ยิง /users/me แยกคนละชุด; ออกจากระบบแล้วปุ่มกลับเป็นเข้าสู่ระบบทันที กรณี 401 เป็น guest ส่วน 503 คง token/ปุ่มจัดการร้าน
+- ทำ regression ให้ล้มก่อนแก้ โดยพบผู้ล็อกอินยังเห็น 'เข้าสู่ระบบ / เริ่มใช้งาน'; หลังแก้ dashboard-session tests ผ่าน 12 รายการ ครอบคลุม guest/หมดอายุ/เครือข่าย/ล็อกเอาต์และกลับหน้าแรก
+- ตรวจรวมล่าสุดบน Node 24.19.0/npm 11.19.0: test:runtime ผ่าน 85 รายการ (รวมชุดข้อ 9 บน PostgreSQL), build/api:check/git diff --check ผ่าน และ production smoke หลัง build ใหม่ผ่าน 2 รายการ
+- ตรวจ Chrome บน production CLI + PostgreSQL schema ทดสอบแยกที่พอร์ต 3109: login demo กลับหน้า home พบปุ่มจัดการร้านจริง ตรวจ computed background rgb(164,240,228), font 16px, สูง 56px, href /app และกดกลับแดชบอร์ดได้ ปิดแท็บ/เซิร์ฟเวอร์ทดสอบหลังตรวจ ไม่แก้ข้อมูลร้านจริง
+- บันทึกแยกจาก commit P1 d9af8bb; งานทั้งหมดอยู่บน task9-chat-page ยังไม่ push/merge PR #7 หรือ deploy Render และไม่ได้ทำ production cutover
+
+## งานล่าสุด: แก้ P1 ของ PR #7 ให้รวมกับ PostgreSQL master ได้
+
+- รวม master e695be7 เข้า branch task9-chat-page แบบ local และแก้ conflict โดยคงระบบ PostgreSQL/durable LINE worker ของ master พร้อมฟีเจอร์ข้อ 9 ไม่ได้ merge PR, push หรือ deploy
+- ทำซ้ำอาการบน PostgreSQL 18 จริง: statistics endpoint เดิมตอบ 500 แทน 200 เพราะใช้ SQLite API; แก้เป็น async db.query พร้อม $1 และ countToNumber ให้ count(*)/message_count เป็นจำนวนเต็มตาม HTTP contract ไม่ใช่ int8/string
+- รายการห้องยังค้น/กรองก่อนนับและแบ่งหน้า ใช้ strpos กับ bound parameters แทน instr และใช้ created_at,id เป็นลำดับคงที่ตาม master แทน rowid (เวลาเท่ากันเรียง id ไม่ใช่ลำดับ INSERT)
+- ย้าย tests/conversation-api.test.js และ tests/conversation-dashboard.test.js ไปใช้ PostgreSQL fixture/migrations จริง แยก random schema ในฐาน chatbot_test บน loopback; เพิ่มเข้า test:runtime ที่ CI ใช้จริง ไม่ทำ SQLite compatibility adapter
+- production smoke ตรวจ statistics/list filters/message_count/last_message ด้วย session จริงบน production CLI, การกันข้ามร้าน/401, agent access และยอดคงเดิมหลัง restart
+- ตรวจบน Node 24.19.0 + npm 11.19.0: runtime 85 tests ผ่าน, SQLite backup 3, import 8, PostgreSQL 2, schema 3, LINE runtime 1 และ production smoke 2 ผ่าน; build ผ่านขณะ DATABASE_URL ว่างและ parent worker=true, check:toolchain ผ่าน
+- ใช้ container ทดสอบเฉพาะ task9-review-postgres ที่พอร์ต 55439 ไม่แตะฐาน runtime หรือทำ production cutover; คำขอปรับปุ่มหน้าแรกหลัง login จะทำต่อเป็นอีกหน่วยงานแยก
+
+## งานล่าสุด: ข้อ 9 หน้าบทสนทนาและสถิติ — implementation เสร็จบน task9-chat-page
+
+- ย้ายงานทั้งหน่วย API และหน้าจอไป branch `task9-chat-page` ตามคำสั่งระหว่างทำงาน ไม่ได้ push/merge หรือเปลี่ยน remote; ตอนตรวจสุดท้าย master/origin/master อยู่ที่ 8c5d987 (แก้ CONTRIBUTING.md) โดยงานข้อ 9 ยังคงแยกใน feature branch
+- เพิ่มแท็บ **บทสนทนาและสถิติ** และ URL `/app/shops/{shopId}/conversations` รองรับเข้าโดยตรง/เปิดใหม่/กลับจากหน้าแรก โดยไม่ล้าง session
+- อ่านข้อมูลจริงผ่าน API: รายการห้องเรียงอัปเดตล่าสุด ข้อความล่าสุด จำนวนข้อความ สถานะห้อง/บอท ค้นชื่อลูกค้า/รหัสลูกค้า กรอง LINE/เว็บ เปิด/ปิด และโหมดบอท แบ่งห้อง 20 รายการและประวัติ 50 ข้อความต่อหน้า
+- เริ่มอ่านที่หน้าข้อความล่าสุด ภายในหน้าเรียงเก่าไปใหม่ แสดงผู้ส่งและเวลาไทย ใช้ textContent เพื่อไม่ตีความข้อความลูกค้าเป็น HTML
+- แสดงสถิติทั้งร้าน ไม่ใช่ยอดเฉพาะหน้าที่โหลด รวม role และ channel ชัดเจน; ห้อง human คือโหมดปัจจุบัน ไม่ใช่จำนวนครั้งส่งต่อสะสม และสถิตินับข้อมูลตัวอย่าง/Simulator ที่บันทึกด้วย
+- รีเฟรชด้วยปุ่มหรือทุก 15 วินาทีเฉพาะหน้านี้ ยกเลิกคำขอเมื่อสลับร้าน ออกจากหน้า/ระบบ หรือซ่อนแท็บ; คำตอบเก่าไม่ทับร้านใหม่ มีสถานะกำลังโหลด/ไม่มีข้อมูล/ผิดพลาดและลองใหม่ ไม่ล้าง session เพราะ 503 แต่ล้างเมื่อ 401
+- คู่มือและนิยามอยู่ใน `docs/conversations.md`; งานนี้เป็นหน้าอ่านประวัติ/สถานะ ยังไม่ทำปุ่มรับช่วง ส่งข้อความ และ Pause/Resume ของข้อ 10
+
+### ผลตรวจข้อ 9
+
+- `npm test` ผ่าน 60 รายการ, `npm run api:check`, `npm run build` และ `git diff --check` ผ่าน
+- `tests/conversation-api.test.js` ตรวจสถิติที่รู้ยอดแน่นอน ห้องว่าง ข้ามร้าน 105 ห้อง กรองก่อนแบ่งหน้า ข้อความเวลาเดียวกัน และ signed LINE webhook ที่ประวัติ/ตัวเลขตรงกันและข้อความซ้ำไม่เพิ่มยอด
+- `tests/conversation-dashboard.test.js` ใช้ component/controller จริงกับ HTTP API และ SQLite ชั่วคราว ตรวจประวัติ 61 ข้อความ การแบ่งหน้าห้อง/ข้อความ ค้นหา XSS เปิดใหม่ซ้ำ สลับร้านระหว่างรอผล 503/401 และ polling/visibility
+- ตรวจด้วย Chrome บน production build ที่พอร์ต 3109 และฐานข้อมูลทดสอบแยก: เข้าสู่ระบบบัญชี demo เปิดหน้าด้วย URL โดยตรง เลือกห้องอ่านประวัติและดูสถิติได้ ตรวจหน้าจอปกติและมือถือ 390px พร้อม screenshot; ไม่พบเนื้อหาล้นแนวนอน คืน viewport เดิมหลังตรวจ และไม่เพิ่มข้อมูลลงฐานข้อมูลร้านจริง
+- เปิด Docker Desktop ที่ปิดอยู่ แล้ว `docker compose up -d --build app` ผ่าน คง volume เดิม; `docker compose exec -T app npm test` ผ่าน 60 รายการบน Node.js 24 และ `npm run api:check` ใน Docker ผ่าน
+- ตรวจพอร์ต 3000: URL หน้าบทสนทนาตอบ 200 มีแท็บใหม่ build ID ตรงกับคอนเทนเนอร์ OpenAPI มี statistics endpoint, `/api/health` ตอบว่าแอปและฐานข้อมูล ok และคอนเทนเนอร์ healthy
+- ข้อจำกัด: webhook test จำลองเฉพาะตัวส่ง LINE ไม่ได้ส่งถึงบัญชี LINE จริง; การสาธิตครบเส้นทางกับ LINE จริงและงาน AI หลัก–สำรอง/รับช่วงตอบยังเป็นงานตรวจรวม/ข้อ 5, 8, 10 ตามแผน ไม่ได้อ้างว่าผ่านจากเทสต์จำลอง
+
+## หน่วยงานก่อนหน้า: API บทสนทนาและสถิติ
+
+- เพิ่ม GET `/api/v1/shops/{shopId}/statistics` นับห้องและข้อความทุก role จากข้อมูลทั้งร้าน ไม่ใช้จำนวนเฉพาะหน้าที่โหลด และไม่ JOIN จนยอดคูณกัน
+- `human_conversations` หมายถึงห้องที่อยู่ในโหมด human ปัจจุบัน ไม่ใช่ยอดการส่งต่อสะสม; สถิติเป็นยอดทั้งหมดตั้งแต่เริ่มใช้ร้าน รวม LINE/เว็บ
+- รายการห้องค้นชื่อลูกค้า/รหัสลูกค้า และกรอง channel/status/bot_mode ก่อนนับและแบ่งหน้า เรียงห้องที่อัปเดตล่าสุด พร้อมจำนวนข้อความและข้อความล่าสุด
+- ข้อความเรียง created_at และ rowid เพื่อคงลำดับรับเมื่อเวลาเท่ากัน; ทุก endpoint ตรวจสมาชิกและ shop_id ตามเดิม
+- เขียนเทสต์ให้ล้มก่อนเพิ่ม endpoint/filters แล้วแก้จนผ่าน รวม 105 ห้อง, อักขระ %, ห้องว่าง, ข้อความเวลาเดียวกัน และการแยกร้าน
+- `npm test` ผ่าน 56 รายการ; สร้าง OpenAPI ใหม่แล้ว ส่วน UI และการตรวจ Docker จะทำต่อในหน่วยงานถัดไป ยังไม่ถือว่าข้อ 9 เสร็จครบ
 ## แก้ P1: LINE crash recovery ก่อน reply cutoff — 17 ตุลาคม 2026
 
 - ลด default lease จาก 60 เป็น 15 วินาที และ heartbeat จาก 15 เป็น 3 วินาที คง poll 1 วินาที/cutoff 45 วินาที/HTTP timeout 10 วินาที เพื่อมีเวลากู้ สร้างคำตอบ และส่งหลัง worker ล่มก่อน sending

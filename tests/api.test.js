@@ -126,6 +126,12 @@ test('shops can be created and updated with an atomic owner membership', async (
   assert.equal(listed.payload.meta.total, 2);
 });
 
+test('statistics endpoint matches its HTTP contract', async () => {
+  const statistics = await request('GET', '/api/v1/shops/shop-coffee/statistics', undefined, coffee);
+  assert.equal(statistics.status, 200);
+  assert.ok(statistics.payload.data.total_conversations >= 1);
+});
+
 test('all tenant routes reject the other shop; resource IDs cannot be mixed between shops', async () => {
   const shopList = await request('GET', '/api/v1/shops', undefined, flower);
   assert.deepEqual(shopList.payload.data.map(shop => shop.id), ['shop-flower']);

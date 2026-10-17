@@ -20,6 +20,8 @@ export function getDashboardElements() {
     settingsBusinessTab: document.querySelector("#settings-business-tab"),
     settingsKnowledgeTab: document.querySelector("#settings-knowledge-tab"),
     settingsLineTab: document.querySelector("#settings-line-tab"),
+    settingsConversationsTab: document.querySelector("#settings-conversations-tab"),
+    conversationsSection: document.querySelector("#conversations-section"),
     businessSettingsSection: document.querySelector("#business-settings-section"),
     knowledgeManagementSection: document.querySelector("#knowledge-management-section"),
 

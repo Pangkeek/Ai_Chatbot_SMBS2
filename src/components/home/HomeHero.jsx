@@ -1,9 +1,13 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import { useHomeAccount } from './HomeAccountProvider.jsx';
 
 const highlights = ['ข้อมูลร้านแยกเป็นสัดส่วน', 'FAQ และคลังความรู้', 'เชื่อมต่อ LINE'];
 
 export default function HomeHero() {
+  const { account } = useHomeAccount();
+  const signedIn = account.status === 'signed-in';
+  const actionLabel = signedIn ? 'จัดการร้าน' : account.status === 'guest' ? 'เข้าสู่ระบบ / เริ่มใช้งาน' : 'เริ่มใช้งาน';
   return (
     <section className="relative isolate overflow-hidden bg-[var(--home-blue)] text-white">
       <div aria-hidden="true" className="pointer-events-none absolute -left-24 bottom-0 size-80 rounded-full border-[54px] border-white/5" />
@@ -24,8 +28,9 @@ export default function HomeHero() {
           </p>
 
           <div className="mt-9 flex flex-col gap-3 sm:flex-row">
-            <Link href="/app" className="inline-flex min-h-13 items-center justify-center gap-3 rounded-2xl bg-white px-7 py-3 text-sm font-bold text-[#3855b8] shadow-lg shadow-blue-950/15 transition hover:-translate-y-0.5 hover:bg-blue-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
-              เข้าสู่ระบบ / เริ่มใช้งาน <span aria-hidden="true">→</span>
+            <Link id="home-primary-action" href="/app" className={`inline-flex items-center justify-center gap-3 rounded-2xl font-bold shadow-lg transition hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${signedIn ? 'min-h-14 bg-[#a4f0e4] px-8 py-4 text-base text-[#18345c] shadow-blue-950/20 hover:bg-[#c7fff5] ring-2 ring-white/25' : 'min-h-13 bg-white px-7 py-3 text-sm text-[#3855b8] shadow-blue-950/15 hover:bg-blue-50'}`}>
+              {signedIn && <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="size-6"><path strokeLinecap="round" strokeLinejoin="round" d="M4 10h16l-2-6H6l-2 6Zm2 0v10h12V10M10 20v-6h4v6" /></svg>}
+              {actionLabel} <span aria-hidden="true">→</span>
             </Link>
             <a href="#features" className="inline-flex min-h-13 items-center justify-center rounded-2xl border border-white/40 px-7 py-3 text-sm font-bold text-white transition hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
               สำรวจฟีเจอร์

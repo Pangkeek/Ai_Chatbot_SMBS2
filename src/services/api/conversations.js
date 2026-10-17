@@ -3,10 +3,36 @@ import { transaction } from '../../lib/db.js';
 import { ApiError } from '../../utils/validation.js';
 
 import { now, wrap } from './common.js';
+import { countToNumber } from '../../lib/postgresql-schema.js';
 
 export function createConversationsOperations(db, { get, page, patch }) {
   return {
-    async listConversations({ params, query }) { return page('conversations', 'shop_id = ?', [params.shopId], query); },
+    async listConversations({ params, query }) {
+      const values = [params.shopId];
+      const bind = value => { values.push(value); return `$${values.length}`; };
+      const conditions = ['c.shop_id = $1'];
+      for (const field of ['status', 'channel', 'bot_mode']) {
+        if (query[field]) conditions.push(`c.${field} = ${bind(query[field])}`);
+      }
+      if (query.search) {
+        // strpos ค้นเป็นข้อความตรงตัว ไม่ให้ % และ _ กลายเป็น wildcard
+        const search = bind(query.search);
+        conditions.push(`(strpos(lower(c.customer_name), lower(${search}::text)) > 0
+          OR strpos(lower(c.customer_external_id), lower(${search}::text)) > 0)`);
+      }
+      const where = conditions.join(' AND ');
+      const total = (await db.query(`SELECT count(*) AS n FROM conversations c WHERE ${where}`, values)).rows[0].n;
+      const { rows } = await db.query(`SELECT c.*,
+        (SELECT count(*) FROM messages m WHERE m.shop_id = c.shop_id AND m.conversation_id = c.id) AS message_count,
+        (SELECT m.content FROM messages m WHERE m.shop_id = c.shop_id AND m.conversation_id = c.id
+          ORDER BY m.created_at DESC, m.id DESC LIMIT 1) AS last_message
+        FROM conversations c WHERE ${where} ORDER BY c.updated_at DESC, c.id DESC
+        LIMIT $${values.length + 1} OFFSET $${values.length + 2}`, [...values, query.limit, query.offset]);
+      return {
+        data: rows.map(row => ({ ...row, message_count: countToNumber(row.message_count) })),
+        meta: { limit: query.limit, offset: query.offset, total: countToNumber(total) },
+      };
+    },
     async createConversation({ params, body }) {
       const id = randomUUID(), time = now();
       await db.query('INSERT INTO conversations (id,shop_id,channel,customer_external_id,customer_name,status,bot_mode,created_at,updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)', [id, params.shopId, body.channel, body.customer_external_id, body.customer_name, 'open', 'active', time, time]);
@@ -20,6 +46,7 @@ export function createConversationsOperations(db, { get, page, patch }) {
     },
     async listMessages({ params, query }) {
       await get('conversations', params.shopId, params.conversationId);
+      // PostgreSQL ไม่มี rowid; ใช้ลำดับ created_at, id ตาม helper ของ master
       return page('messages', 'shop_id = ? AND conversation_id = ?', [params.shopId, params.conversationId], query);
     },
     async createMessage({ params, body, user }) {

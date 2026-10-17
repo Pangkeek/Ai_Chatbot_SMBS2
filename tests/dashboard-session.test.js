@@ -11,6 +11,8 @@ const bundle = await build({
       import { createRoot } from 'react-dom/client';
       import Dashboard from './src/components/Dashboard.jsx';
       import HomeHeader from './src/components/home/HomeHeader.jsx';
+      import HomeHero from './src/components/home/HomeHero.jsx';
+      import HomeAccountProvider from './src/components/home/HomeAccountProvider.jsx';
       let root;
       globalThis.testUI = {
         async mount() {
@@ -20,7 +22,7 @@ const bundle = await build({
         async unmount() { await act(async () => root.unmount()); },
         async mountHome() {
           root = createRoot(document.getElementById('root'));
-          await act(async () => root.render(<React.StrictMode><HomeHeader /></React.StrictMode>));
+          await act(async () => root.render(<React.StrictMode><HomeAccountProvider><HomeHeader /><HomeHero /></HomeAccountProvider></React.StrictMode>));
         },
         async key(key) { await act(async () => document.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }))); },
         async clickOutside() { await act(async () => document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }))); },
@@ -38,11 +40,13 @@ const bundle = await build({
   plugins: [{
     name: 'test-next-navigation',
     setup(builder) {
-      builder.onResolve({ filter: /^next\/(router|link)$/ }, args => ({ path: args.path, namespace: 'test-navigation' }));
+      builder.onResolve({ filter: /^next\/(router|link|image)$/ }, args => ({ path: args.path, namespace: 'test-navigation' }));
       builder.onLoad({ filter: /.*/, namespace: 'test-navigation' }, args => ({
         contents: args.path === 'next/router'
           ? 'export default globalThis.testRouter; export const useRouter = () => globalThis.testRouter;'
-          : `import React from 'react'; export default function Link({children, ...props}) { return React.createElement('a', props, children); }`,
+          : args.path === 'next/image'
+            ? `import React from 'react'; export default function Image(props) { return React.createElement('img', props); }`
+            : `import React from 'react'; export default function Link({children, ...props}) { return React.createElement('a', props, children); }`,
         resolveDir: process.cwd(),
       }));
     },
@@ -214,6 +218,9 @@ test('homepage shows the signed-in account with shop navigation and working logo
     assert.ok(trigger, 'Homepage must show the signed-in account');
     assert.match(trigger.getAttribute('aria-label'), /Test owner/);
     assert.equal(trigger.getAttribute('aria-expanded'), 'false');
+    const primaryAction = app.window.document.querySelector('section a[href="/app"]');
+    assert.match(primaryAction.textContent, /จัดการร้าน/);
+    assert.doesNotMatch(primaryAction.textContent, /เข้าสู่ระบบ/);
     await app.ui.click('home-account-button');
     const dropdown = app.window.document.getElementById('home-account-dropdown');
     assert.ok(dropdown);
@@ -229,6 +236,7 @@ test('homepage shows the signed-in account with shop navigation and working logo
     assert.equal(app.window.sessionStorage.getItem('smb_access_token'), null);
     assert.equal(app.window.document.getElementById('home-account-button'), null);
     assert.match(app.window.document.querySelector('header').textContent, /เข้าสู่ระบบ/);
+    assert.match(primaryAction.textContent, /เข้าสู่ระบบ/);
     assert.deepEqual(app.errors, []);
     await app.ui.unmount();
   } finally {
@@ -268,6 +276,7 @@ for (const options of [{ loggedIn: false }, { rejectSession: true }]) {
       await app.ui.settle();
       assert.equal(app.window.document.getElementById('home-account-button'), null);
       assert.match(app.window.document.querySelector('header').textContent, /เข้าสู่ระบบ/);
+      assert.match(app.window.document.querySelector('section a[href="/app"]').textContent, /เข้าสู่ระบบ/);
       assert.equal(app.window.sessionStorage.getItem('smb_access_token'), null);
       if (options.loggedIn === false) assert.equal(app.requests.length, 0);
       assert.deepEqual(app.errors, []);
@@ -284,6 +293,7 @@ test('a failed account lookup preserves the session and offers account actions',
     await app.ui.mountHome();
     await app.ui.settle();
     assert.equal(app.window.sessionStorage.getItem('smb_access_token'), 'existing-session');
+    assert.match(app.window.document.querySelector('section a[href="/app"]').textContent, /จัดการร้าน/);
     await app.ui.click('home-account-button');
     const dropdown = app.window.document.getElementById('home-account-dropdown');
     assert.match(dropdown.textContent, /โหลดชื่อบัญชีไม่สำเร็จ/);

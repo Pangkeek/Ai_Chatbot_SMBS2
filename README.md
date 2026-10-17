@@ -250,6 +250,10 @@ Imported LINE events คง raw history และรายงาน received/pro
 
 หาก connection ขาดระหว่าง COMMIT รายงานจะระบุ `commit-uncertain` ให้รัน verify กับ target เดิมก่อนตัดสินใจ ห้ามล้างฐานหรือ import ทับ ถ้า commit สำเร็จแต่เขียนรายงานสุดท้ายไม่สำเร็จ อาจเหลือ receipt `verified-before-commit`; ใช้ verify เพื่อยืนยันผล
 
+## บทสนทนาและสถิติ (งานข้อ 9)
+
+เปิดร้านแล้วเลือกแท็บ **บทสนทนาและสถิติ** เพื่ออ่านประวัติ ค้นหา/กรองห้อง ดูสถานะบอท และยอดรวมจริงแยกตามร้าน รองรับแบ่งหน้ารายการห้องและข้อความ พร้อมอัปเดตทุก 15 วินาทีขณะเปิดหน้า สถิติรวมข้อมูลทั้งหมดของร้าน ไม่เปลี่ยนตามตัวกรองห้อง และ “ส่งต่อแอดมินปัจจุบัน” ไม่ใช่ยอดการส่งต่อสะสม ดูวิธีใช้และนิยามตัวเลขใน [docs/conversations.md](docs/conversations.md)
+
 ## Repository
 
 โปรเจกต์มี Git repository และ origin แล้ว การเปลี่ยนแปลงระยะ G ในรอบนี้ยังไม่ได้ commit/push ให้เลือก commit ที่ผ่าน CI เมื่อนำขึ้น staging ดูขั้นตอน release ใน `CONTRIBUTING.md` และ `docs/render-staging.md`
