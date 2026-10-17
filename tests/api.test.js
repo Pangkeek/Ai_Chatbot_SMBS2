@@ -119,6 +119,9 @@ test('shops can be created and updated with an atomic owner membership', async (
 });
 
 test('AI preview shows only this shop data, evidence and prompt', async () => {
+  const statistics = await request('GET', '/api/v1/shops/shop-coffee/statistics', undefined, coffee);
+  assert.equal(statistics.status, 200);
+  assert.ok(statistics.payload.data.total_conversations >= 1);
   const preview = await request('POST', '/api/v1/shops/shop-coffee/ai/preview',
     { question: 'ร้านเปิดกี่โมงครับ' }, coffee);
   assert.equal(preview.status, 200);

@@ -220,6 +220,18 @@ schemas.Auth = object({
   token_type: choice("Bearer"),
   expires_at: date,
 });
+schemas.ShopStatistics = object({
+  total_conversations: integer(), open_conversations: integer(), closed_conversations: integer(),
+  active_conversations: integer(), paused_conversations: integer(), human_conversations: integer(),
+  line_conversations: integer(), web_conversations: integer(),
+  total_messages: integer(), customer_messages: integer(), assistant_messages: integer(),
+  agent_messages: integer(), system_messages: integer(), generated_at: date,
+});
+schemas.ConversationSummary = object({
+  ...schemas.Conversation.properties,
+  message_count: integer(),
+  last_message: { anyOf: [str(10000, 0), { type: "null" }] },
+});
 const data = (schema) => object({ data: schema });
 const list = (schema) =>
   object({
@@ -299,6 +311,9 @@ export const routes = [
     { body: schemas.ShopCreate, status: 201 }
   ),
   route("GET", base, "getShop", "Read a shop", data(schemas.Shop)),
+  route("GET", `${base}/statistics`, "getShopStatistics",
+    "All-time shop counts; human_conversations counts current human mode, not historical handovers",
+    data(schemas.ShopStatistics)),
   route(
     "POST",
     `${base}/ai/preview`,
@@ -359,8 +374,11 @@ export const routes = [
     `${base}/conversations`,
     "listConversations",
     "List shop conversations",
-    list(schemas.Conversation),
-    { paginated: true }
+    list(schemas.ConversationSummary),
+    { paginated: true, filters: {
+      search: str(200, 0), status: choice("open", "closed"),
+      channel: choice("line", "web"), bot_mode: choice("active", "paused", "human"),
+    } }
   ),
   route(
     "POST",
@@ -497,6 +515,9 @@ for (const r of routes) {
     schema: id,
   }));
   if (r.paginated) parameters.push(...pagination);
+  for (const [name, schema] of Object.entries(r.filters || {})) {
+    parameters.push({ name, in: "query", required: false, schema });
+  }
   const responses = Object.fromEntries(
     Object.entries(errorDescriptions).map(([code, description]) => [
       code,

@@ -57,11 +57,19 @@ function readBody(req) {
   });
 }
 
-function getPagination(url, paginated) {
+function getPagination(url, paginated, filters = {}) {
   const query = { limit: 50, offset: 0 };
   for (const key of url.searchParams.keys()) {
     const values = url.searchParams.getAll(key);
     const value = values[0];
+    if (Object.hasOwn(filters, key)) {
+      const errors = validate(value, filters[key], `query.${key}`);
+      if (values.length !== 1 || errors.length) {
+        throw new ApiError(400, "INVALID_QUERY", "Invalid conversation filter", errors);
+      }
+      query[key] = value.trim();
+      continue;
+    }
     if (
       !paginated ||
       !["limit", "offset"].includes(key) ||
@@ -128,7 +136,7 @@ export function createRequestHandler(
       }
       const context = {
         params,
-        query: getPagination(url, route.paginated),
+        query: getPagination(url, route.paginated, route.filters),
         headers: req.headers,
       };
       if (["login", "register"].includes(route.operationId)) {

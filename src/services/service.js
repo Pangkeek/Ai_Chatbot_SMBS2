@@ -5,6 +5,7 @@ import { createKnowledgeOperations } from './api/knowledge.js';
 import { createConversationsOperations } from './api/conversations.js';
 import { createLineChannelOperations } from './api/lineChannel.js';
 import { createAiPreviewOperations } from './api/aiPreview.js';
+import { createStatisticsOperations } from './api/statistics.js';
 
 export { publicUser } from './api/common.js';
 
@@ -19,6 +20,7 @@ export function createService(db, options = {}) {
     ...createConversationsOperations(db, helpers),
     ...createLineChannelOperations(db, worker, options),
     ...createAiPreviewOperations(db),
+    ...createStatisticsOperations(db),
     worker,
   };
 }
