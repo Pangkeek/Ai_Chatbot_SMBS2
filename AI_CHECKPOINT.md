@@ -1,5 +1,14 @@
 # จุดพักงานล่าสุด
 
+## 20 ตุลาคม 2026 — เปลี่ยนเป็นรัน local ถาวร
+
+- ผู้ใช้ยืนยันไม่ deploy; ใช้ `compose.local.yaml` โปรเจกต์ `smb-chatbot-local` บน `127.0.0.1:55434` กับ Docker volume `smb-chatbot-local_postgres_local_data` แยกจากคอนเทนเนอร์เดิม ไม่มี SQLite ต้นทาง จึงเริ่ม PostgreSQL ใหม่
+- เพิ่ม `.env.local.example`, `scripts/local-start.ps1`, `docs/local-run.md`; คำสั่ง `& ./scripts/local-start.ps1 -SeedDemo` เปิดฐาน ตรวจ Node/npm, migrate, seed และเว็บ `http://127.0.0.1:3131` สคริปต์ตรวจ URL ใน `.env` ก่อนใช้ เพื่อไม่ชี้ไปฐานอื่น
+- ตรวจ PostgreSQL 18.6, migrations 001–005, seed สองร้าน; restart container แล้วร้านยัง 2 แห่ง; pg_dump 48,891 bytes/pg_restore ลงฐานแยกแล้วนับร้าน 2 แห่ง; local starter รันซ้ำ migrations unchanged 5 และเว็บพร้อม
+- preflight 4/4 HTTP 200, login ร้านดอกไม้ เห็นร้านเดียว, Simulator ตอบแบบ extractive พร้อม source 1; runtime tests 108/108, PostgreSQL 2/2, schema 3/3 ผ่านบนฐาน local ถาวร
+- ปรับ README, คู่มือสาธิต, วิธีรันสั้น และรายงานข้อ 12 ให้ local เป็นวิธีหลัก ไม่มีขั้น deploy; LINE/AI ภายนอกยังไม่ได้ตรวจเพราะไม่มี channel/keys, คะแนนมนุษย์ใน `reports/task11/human-review.csv` ยังว่าง
+- ไฟล์ `.env` และ backup `data/backups/chatbot_local.dump` อยู่เฉพาะเครื่อง ไม่เข้า Git; ก่อนสาธิตครั้งถัดไปเปิด Docker Desktop แล้วรัน local starter ตรวจ preflight อีกครั้ง
+
 ## 20 ตุลาคม 2026 — AI หลัก/สำรอง และความพร้อมสาธิต
 
 - ผู้ใช้ให้ทำตาม PLAN และ `.agent/skills/myskill` โดยทำงานให้เสร็จเท่าที่ไม่ต้องใช้บริการภายนอก ผู้ใช้ยืนยันว่าไม่มี Render/LINE test channel และไม่มีไฟล์ SQLite ต้นทาง จึงเลือก PostgreSQL ใหม่สำหรับสาธิต ไม่อ้างว่าย้ายข้อมูล SQLite เดิมแล้ว

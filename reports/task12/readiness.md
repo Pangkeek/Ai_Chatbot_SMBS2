@@ -1,4 +1,4 @@
-# สถานะเตรียมสาธิต — 20 ตุลาคม 2026
+# สถานะรันและเตรียมสาธิตบนเครื่อง — 20 ตุลาคม 2026
 
 ## สิ่งที่ตรวจในเครื่อง
 
@@ -10,13 +10,17 @@
 - `test:evaluation` ล่าสุด: คำถาม 28/28, failover HTTP fixture 7/7, handover 7/7; latency local p50 84.45 ms, p95 142.11 ms ตาม `reports/task11/results.json` ไม่รวมเครือข่าย LINE/AI จริง
 - `test:browser` 11 ขั้นตอนผ่าน, page errors 0, ตรวจภาพ desktop/mobile แล้ว; `npm run build` และ `npm run api:check` ผ่าน
 - สร้างฐาน `chatbot_demo` แยกใน PostgreSQL ชั่วคราว, migrations 001–005 ผ่าน, seed ข้อมูลสมมติสองร้าน, เปิด Next แบบ development ที่ `http://127.0.0.1:3131` และ `demo:preflight` ได้ HTTP 200 ทั้ง 4 เส้นทาง; login ร้านดอกไม้, รายการร้าน, AI preview ที่มีหลักฐาน 1 รายการ และ LINE Simulator ที่ตอบ `extractive` พร้อมแหล่งอ้างอิง 1 รายการผ่าน
+- หลังผู้ใช้เปลี่ยนเป็น local-only จัด `compose.local.yaml` แยกจาก Compose เดิม เปิด PostgreSQL 18.6 ที่ `127.0.0.1:55434` พร้อม volume `smb-chatbot-local_postgres_local_data` และฐาน `chatbot_local`/`chatbot_test`; migration 001–005 และ seed สองร้านผ่าน
+- รีสตาร์ต PostgreSQL แล้วตรวจจำนวนร้านก่อน/หลังเท่ากัน 2/2; สำรอง `pg_dump` แบบ custom ลง `data/backups/chatbot_local.dump` (48,891 bytes) แล้ว `pg_restore` ลงฐานแยกและพบ 2 ร้าน จากนั้นลบเฉพาะฐานตรวจ restore
+- `scripts/local-start.ps1` เปิดระบบซ้ำได้: toolchain Node 24.19.0/npm 11.19.0 ผ่าน, PostgreSQL healthy, migration ซ้ำ applied 0/unchanged 5, index 6 entries/6 chunks, Next พร้อมที่ `http://127.0.0.1:3131`; preflight 4/4 HTTP 200, login, เห็นร้านเดียว, Simulator processed/`extractive`/source 1 ผ่าน
+- ทดสอบซ้ำบนฐาน local ถาวร: runtime 108/108, PostgreSQL 2/2 และ schema 3/3 ผ่าน
 
-## สิ่งที่ยังขาดก่อนอ้างว่าเป็นระบบใช้งานจริง
+## ขอบเขตที่ยังต้องมีคนหรือบริการจริง
 
-1. ยังไม่มี Render staging/production หรือ LINE test channel ตามคำตอบผู้ใช้ จึงไม่มี URL ภายนอกหรือผลส่งถึงอุปกรณ์จริง
+1. ผู้ใช้เลือกรัน local เท่านั้น ไม่ต้องมี Render URL; ยังไม่มี LINE test channel/HTTPS webhook จึงไม่มีผลส่งถึงอุปกรณ์จริง
 2. ยังไม่กำหนด API keys, สิทธิ์โมเดล หรือ budget ของ Gemini/OpenAI; ต้องทดสอบทั้งสอง API จริงและบันทึก tokens, ราคา และเวลาเครือข่ายหลังตั้งค่า
 3. `reports/task11/human-review.csv` ยังต้องให้คนให้คะแนนคำตอบจริง; ผลอัตโนมัติไม่แทนคะแนนมนุษย์
-4. ต้องเลือกบริการ/แผนค่าใช้จ่าย, ตั้ง secret store, backup/restore, ตรวจ persistence หลัง redeploy และผ่าน staging gate ใน `docs/render-staging.md` ก่อนเปิด LINE จริง
-5. Docker PostgreSQL สำหรับรอบตรวจนี้เป็นคอนเทนเนอร์ `--rm` แยก ไม่มี volume ถาวร ไม่ใช่ฐาน deploy หรือ backup ของผู้ใช้
+4. หากจะเปิด LINE จริงในอนาคต ต้องตั้ง channel, HTTPS webhook ที่ LINE เข้าถึงได้ และทดสอบ flow/backup โดยเจ้าของบัญชี; ส่วนนี้ไม่ใช่เงื่อนไขของการสาธิต local
+5. ผล AI และ LINE ปัจจุบันเป็น simulator/HTTP doubles ไม่มีการเรียกบัญชีภายนอกจริงหรือค่าใช้จ่ายจริง
 
-ลำดับสาธิตและรายการหลักฐานอยู่ใน `docs/demo-runbook.md` คำตอบและภาพจากการทดสอบอัตโนมัติอยู่ใน `reports/task11/`
+วิธีเปิด/หยุด/สำรองข้อมูลอยู่ใน `docs/local-run.md` ลำดับสาธิตอยู่ใน `docs/demo-runbook.md` คำตอบและภาพจากการทดสอบอัตโนมัติอยู่ใน `reports/task11/`

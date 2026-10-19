@@ -4,13 +4,13 @@
 
 ## รันครั้งแรก
 
-> สถานะก่อน merge: รวมงานหน้าเว็บและ RAG จาก master เข้ากับ PostgreSQL แล้ว ดูผลตรวจล่าสุดที่ [pre-merge review](docs/pre-merge-review.md) ผู้ใช้รายงาน staging/LINE ผ่าน แต่ยังต้องยืนยันหลักฐาน DB, backup/restore และ production cutover ตาม [คู่มือ production](docs/production-cutover.md)
+> วิธีใช้งานปัจจุบันคือรันบนเครื่องด้วย PostgreSQL ที่เก็บข้อมูลใน Docker volume แยก ดูคำสั่งสั้น ๆ ใน [คู่มือรัน local](docs/local-run.md) ไม่มีการ deploy ไป Render และไม่มีไฟล์ SQLite เดิมให้นำเข้า
 
 ### PostgreSQL สำหรับพัฒนา
 
-ใช้ PostgreSQL 18 แยก `chatbot_dev` และ `chatbot_test` หากมี Docker ให้เปิดด้วย `docker compose up -d postgres` ซึ่งเก็บข้อมูลใน named volume และเปิดฐานข้อมูลที่ `127.0.0.1:55432` พร้อมพอร์ตเว็บที่ `127.0.0.1:${PORT:-3000}` ค่ารหัสผ่านใน Compose เป็นตัวอย่างสำหรับ local เท่านั้น SQL init สร้าง test DB เฉพาะครั้งแรกที่ volume ว่าง
+ใช้ PostgreSQL 18 แยก `chatbot_local` และ `chatbot_test` เปิดด้วย `docker compose -f compose.local.yaml -p smb-chatbot-local up -d` ซึ่งเก็บข้อมูลใน named volume และเปิดฐานข้อมูลที่ `127.0.0.1:55434` ค่ารหัสผ่านใน Compose เป็นตัวอย่างสำหรับ local เท่านั้น SQL init สร้าง test DB เฉพาะครั้งแรกที่ volume ว่าง
 
-เพิ่มค่า PostgreSQL จาก `.env.example` ลง `.env` โดยรักษาค่าเดิมไว้ จากนั้นรัน:
+สคริปต์ใน [คู่มือรัน local](docs/local-run.md) จัดการขั้นตอนเริ่มต้นให้ หากต้องการรันคำสั่งตรวจแยก ให้คัดลอก `.env.local.example` เป็น `.env` เฉพาะเมื่อยังไม่มีไฟล์ แล้วรัน:
 
 ```powershell
 npm run db:check:postgres
@@ -30,25 +30,23 @@ Scripts โหลด `.env` ผ่าน `--env-file-if-exists` และ fail �
 
 `getRuntimeDatabase()` ตรวจ schema/required migration versions แบบ read-only และ fail เมื่อยังไม่พร้อม ให้รัน migration ก่อนเปิด runtime ไม่สร้างตารางระหว่างรับ request ใช้ schema `public` โดย default; `DB_SCHEMA` ใช้เลือก schema ที่สร้างไว้แล้ว โดย tests สร้าง schema สุ่มแยกต่อ suite และ cleanup เฉพาะของตัวเอง ดู [รีวิวระยะ C](PLAN/phase-c-review.md)
 
-เครื่องนี้ทดสอบด้วย PostgreSQL 18.4 ที่ติดตั้งไว้ (ไม่มี Docker CLI) ใน cluster แยก `data/postgresql-phase-b` ดูผลทดสอบและวิธีเปิดใน [รีวิวระยะ B](PLAN/phase-b-review.md)
+บันทึกการทดสอบ PostgreSQL 18.4 ระยะแรกอยู่ใน [รีวิวระยะ B](PLAN/phase-b-review.md) ส่วนการสาธิต local ปัจจุบันใช้ PostgreSQL 18 ใน Docker
 
 ### เปิดแอปและเติม demo เฉพาะ local
 
-ต้องมี **Node.js 24.19.0 ขึ้นไปในสาย 24.x** และ **npm 11.19.0** ติดตั้งแพ็กเกจด้วยคำสั่ง:
+ต้องมี **Node.js 24.19.0 ขึ้นไปในสาย 24.x** และ **npm 11.19.0** บนเครื่องนี้สคริปต์เลือก toolchain ที่ตรงเวอร์ชันให้
 
 เปิด terminal ในโฟลเดอร์โครงการแล้วรัน:
 
 ```powershell
-npm install
-# เพิ่มค่าจาก .env.example ลง .env และเปิด PostgreSQL ก่อน
-npm run db:migrate
-npm run db:seed
-npm run dev
+& ./scripts/local-start.ps1 -SeedDemo
 ```
 
-เปิด **http://127.0.0.1:3000/** เพื่อเข้าสู่หน้าแนะนำ `/home` ก่อนล็อกอิน จากนั้นกด **เข้าสู่ระบบ** หรือ **จัดการร้านค้า** เพื่อไป `/app` กด **สมัครสมาชิก** เพื่อเปิดแบบฟอร์มสร้างบัญชีโดยตรง ส่วน **http://127.0.0.1:3000/docs** ใช้ API Console และ **http://127.0.0.1:3000/health** ใช้ตรวจการเชื่อมต่อฐานข้อมูล หยุด server ด้วย `Ctrl+C`
+เปิด **http://127.0.0.1:3131/** เพื่อเข้าสู่หน้าแนะนำ `/home` ก่อนล็อกอิน จากนั้นกด **เข้าสู่ระบบ** หรือ **จัดการร้านค้า** เพื่อไป `/app` กด **สมัครสมาชิก** เพื่อเปิดแบบฟอร์มสร้างบัญชีโดยตรง ส่วน **http://127.0.0.1:3131/docs** ใช้ API Console และ **http://127.0.0.1:3131/health** ใช้ตรวจการเชื่อมต่อฐานข้อมูล หยุด server ด้วย `Ctrl+C`
 
 ## รันด้วย Docker Compose
+
+สำหรับการใช้งานบนเครื่องครั้งนี้ ให้ใช้ [คู่มือรัน local](docs/local-run.md) ซึ่งเปิดเฉพาะ PostgreSQL ใน Compose และรัน Next.js ที่ `127.0.0.1:3131` ด้วย Node บน Windows ขั้นตอนต่อไปนี้เป็นทางเลือกสำหรับการรันแอปทั้งชุดใน Docker:
 
 ติดตั้งและเปิด Docker Desktop ก่อน แล้วรันคำสั่งเดียวจากโฟลเดอร์โปรเจค:
 
@@ -56,7 +54,7 @@ npm run dev
 docker compose up --build -d
 ```
 
-เปิด `http://localhost:3000` เพื่อใช้งาน ระบบ build แอปและรัน migration ให้อัตโนมัติเมื่อเริ่ม container ข้อมูล SQLite อยู่ใน Docker volume `postgres_data` จึงยังอยู่เมื่อสั่ง `docker compose down` หากพอร์ต 3000 ถูกใช้งาน ให้กำหนด `PORT` ในไฟล์ `.env` แล้วเปิด URL ตามพอร์ตนั้น
+เปิด `http://localhost:3000` เพื่อใช้งาน ระบบ build แอปและรัน migration ให้อัตโนมัติเมื่อเริ่ม container ข้อมูล PostgreSQL อยู่ใน Docker volume `postgres_data` จึงยังอยู่เมื่อสั่ง `docker compose down` หากพอร์ต 3000 ถูกใช้งาน ให้กำหนด `PORT` ในไฟล์ `.env` แล้วเปิด URL ตามพอร์ตนั้น
 
 ```powershell
 docker compose ps       # ดูสถานะ
@@ -228,7 +226,7 @@ Webhook URL ต้องเป็น HTTPS ที่ LINE เข้าถึง�
 
 การเปลี่ยน `bot_mode` จะถูกตรวจอีกครั้งหลังเตรียมคำตอบและก่อนส่ง LINE Endpoint บันทึกข้อความไม่ใช่หลักฐานว่าส่งถึง LINE แล้ว
 
-ดู [รีวิวระยะ G](PLAN/phase-g-review.md), [คู่มือ Render staging](docs/render-staging.md) และ [วิธีดูแลคิว LINE](docs/line-jobs.md) ต้องผ่าน staging จริงก่อน cutover H ส่วนการตั้งค่าและ deploy Render ผู้ใช้ดำเนินการเอง
+ดู [รีวิวระยะ G](PLAN/phase-g-review.md) และ [วิธีดูแลคิว LINE](docs/line-jobs.md) สำหรับงานระบบ การรัน local ครั้งนี้ใช้ LINE Simulator จึงยังไม่มี webhook จาก LINE จริง
 
 ก่อนสาธิตให้ทำตาม [คู่มือสาธิตและตรวจความพร้อม](docs/demo-runbook.md) รวมผลตรวจ PostgreSQL, AI failover, LINE, Handover และรายงานที่ยังต้องวัดจากบริการจริง
 
@@ -250,7 +248,7 @@ Batch เริ่มต้น 200 แถว (`SQLITE_IMPORT_BATCH_SIZE`, สู
 
 เครื่องมือตรวจ snapshot checksum, baseline SQLite migrations, timestamps/NUL, lower(email) ตาม PostgreSQL, FK/owner memberships และ counts/checksums ทั้ง 9 ตารางเรียง PK รายงานไม่เก็บ email, message text, password/token hashes หรือ LINE credential values คีย์ของแถวที่ผิดใช้ SHA-256 fingerprint เพื่อให้เทียบได้โดยไม่เผย token_hash ของ sessions
 
-Imported LINE events คง raw history และรายงาน received/processing เป็น unresolved ไม่สร้าง jobs หรือส่ง LINE reply เก่า Snapshot ยังคงมีข้อมูลลับทั้งหมด ต้องเก็บในพื้นที่จำกัดสิทธิ์ การนำเข้าจริง/ตั้งค่าฐาน Render ให้ผู้ใช้ดำเนินการตามขั้นตอนที่เตรียมไว้
+Imported LINE events คง raw history และรายงาน received/processing เป็น unresolved ไม่สร้าง jobs หรือส่ง LINE reply เก่า Snapshot ยังคงมีข้อมูลลับทั้งหมด ต้องเก็บในพื้นที่จำกัดสิทธิ์ ปัจจุบันไม่มีไฟล์ SQLite เดิม จึงเริ่มฐาน PostgreSQL ใหม่บนเครื่อง
 
 หาก connection ขาดระหว่าง COMMIT รายงานจะระบุ `commit-uncertain` ให้รัน verify กับ target เดิมก่อนตัดสินใจ ห้ามล้างฐานหรือ import ทับ ถ้า commit สำเร็จแต่เขียนรายงานสุดท้ายไม่สำเร็จ อาจเหลือ receipt `verified-before-commit`; ใช้ verify เพื่อยืนยันผล
 
@@ -268,4 +266,4 @@ Imported LINE events คง raw history และรายงาน received/pro
 
 ## Repository
 
-โปรเจกต์มี Git repository และ origin แล้ว เลือก commit ที่ผ่าน CI ก่อนนำขึ้น staging ดูขั้นตอน release ใน `CONTRIBUTING.md`, `docs/render-staging.md` และ `docs/demo-runbook.md`
+โปรเจกต์มี Git repository และ origin แล้ว วิธีเปิดระบบปัจจุบันอยู่ใน `docs/local-run.md` และลำดับสาธิตอยู่ใน `docs/demo-runbook.md`

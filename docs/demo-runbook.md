@@ -1,57 +1,34 @@
-# คู่มือตรวจความพร้อมและสาธิต
+# คู่มือสาธิตบนเครื่อง
 
-สถานะ ณ 20 ตุลาคม 2026: ระบบใช้ PostgreSQL เป็น runtime อยู่แล้ว ผู้ใช้ยืนยันว่าไม่มีไฟล์ SQLite ต้นทาง จึงใช้ฐาน PostgreSQL ใหม่สำหรับการสาธิต ไม่ทำ import ข้อมูลเก่า ไม่สร้างบริการ Render หรือ LINE channel จากคู่มือนี้โดยอัตโนมัติ
+สถานะ 20 ตุลาคม 2026: ผู้ใช้เลือกรัน local เท่านั้น ฐาน PostgreSQL เริ่มใหม่เพราะไม่มีไฟล์ SQLite ต้นทาง ดูคำสั่งเปิด/หยุดและสำรองข้อมูลใน [local-run.md](local-run.md)
 
-## 1. เตรียมฐานและ release
+## เตรียมก่อนสาธิต
 
-1. ใช้ Node 24.19.0, npm 11.19.0 และ PostgreSQL 18; ตั้ง `DATABASE_URL` ไปยังฐาน **สาธิต** ที่ตั้งใจใช้ และ `TEST_DATABASE_URL` ไปยังฐาน `chatbot_test` แยกกัน
-2. ตั้ง `DB_SSL_MODE` ให้ตรงกับการเชื่อมต่อ และเก็บ credentials ใน secret store ของ host ห้าม commit `.env`
-3. รัน `npm ci`, `npm run check:toolchain`, `npm run db:migrate`, `npm run rag:reindex`, `npm run build` ตามลำดับ ตรวจ exit code ทุกขั้น ก่อนเปิด worker
-4. ใช้ข้อมูลสมมติ: `npm run db:seed` เฉพาะ local/development; production seed ถูกปฏิเสธ สมัครบัญชีและสร้างร้านผ่านหน้าเว็บแทน
-5. ก่อนเปิด LINE จริง ตรวจ backup/restore บนฐานแยกและขั้น cutover ใน [production-cutover.md](production-cutover.md)
+1. เปิด Docker Desktop แล้วรัน `& ./scripts/local-start.ps1 -SeedDemo` ใน PowerShell ของโครงการ
+2. เปิด `http://127.0.0.1:3131` และตรวจ `npm run demo:preflight -- http://127.0.0.1:3131` ให้ทั้ง 4 URL ตอบ 200
+3. ใช้ข้อมูลสมมติของร้านกาแฟและร้านดอกไม้เท่านั้น อย่าใส่ข้อมูลลูกค้าจริงในฐานสาธิต
+4. เปิด `LINE_WORKER_ENABLED=false` ไว้ใน `.env` เมื่อยังไม่มี LINE channel จริง
 
-สำหรับการซ้อมบนเครื่องหลังเตรียมฐาน local ให้ตั้ง `LINE_WORKER_ENABLED=false` แล้วรัน `npm run dev -- --port 3131` เปิด `http://127.0.0.1:3131` และใช้ LINE Simulator ในหน้าตั้งค่าร้าน ทดสอบ webhook/การส่ง LINE จริงไม่ได้จาก localhost เมื่อใช้ข้อมูล seed ให้เปิดเฉพาะเครื่องตัวเอง
+## ลำดับสาธิต
 
-## 2. ตรวจอัตโนมัติ
+1. สมัครบัญชีใหม่หรือเข้าสู่ระบบด้วย `flower@example.test` / `DemoPass!2026` แล้วดูว่าบัญชีเห็นเฉพาะร้านของตน
+2. เปิด **ตั้งค่าธุรกิจ** เปลี่ยนรายละเอียดสินค้า เวลาเปิด และบุคลิกบอท แล้วบันทึก
+3. เปิด **FAQ/ข้อมูลความรู้** เพิ่มรายการ `published` และ `draft` ถามเรื่องที่เผยแพร่แล้วและเรื่องที่ยังเป็นร่างเพื่อแสดงการคัดเลือกหลักฐาน
+4. เปิด **LINE Simulator** ถาม “ช่อกุหลาบราคาเท่าไหร่” ดูคำตอบ `extractive` พร้อมแหล่งอ้างอิง แล้วถามเรื่องที่ไม่มีข้อมูลเพื่อดูการปฏิเสธอย่างปลอดภัย
+5. เปิด **บทสนทนาและสถิติ** ดูข้อความที่ Simulator บันทึก ห้องสนทนา และการแยกข้อมูลร้าน
+6. สาธิตรับช่วง, Pause และ Resume ด้วยชุดทดสอบ handover อัตโนมัติ การส่งข้อความแอดมินไป LINE จริงต้องมี channel และผู้รับจริง จึงไม่ควรกดส่งในห้องจำลองแล้วอ้างว่าส่งถึงอุปกรณ์
+7. สาธิต Gemini หลัก/OpenAI สำรองด้วย `npm run test:evaluation` และ `npm run test:runtime` ซึ่งใช้ HTTP doubles ถ้าตั้งคีย์จริงภายหลัง ให้บันทึกผลแยกจาก fixture
+
+## คำสั่งตรวจ
 
 ```powershell
-npm run test:sqlite
 npm run test:runtime
-npm run test:evaluation
-npm run test:import
 npm run test:postgres
 npm run test:postgres:schema
-npm run test:line:runtime
-npm run test:production
+npm run test:evaluation
 npm run api:check
 npm run build
-npm run test:browser
-npm audit --audit-level=high
-npm run demo:preflight -- http://127.0.0.1:3000
+npm run demo:preflight -- http://127.0.0.1:3131
 ```
 
-`demo:preflight` ทำ GET แบบอ่านอย่างเดียวกับ health, หน้าแอป และ OpenAPI ของ URL ที่ระบุ; URL ภายนอกต้องเป็น HTTPS ผลผ่านนี้ไม่แทนการตรวจ login, ข้อมูลร้าน, LINE หรือ AI จริง เก็บ commit SHA, เวลาทดสอบ, ผลคำสั่ง และข้อผิดพลาดที่พบในรายงาน
-
-## 3. ลำดับสาธิตบนระบบที่เตรียมแล้ว
-
-1. สมัครบัญชี → สร้างร้าน → ตั้งชื่อ ประเภทธุรกิจ สินค้า/บริการ และเวลาเปิด
-2. เพิ่ม FAQ สถานะ `published` และรายการ `draft` ถามคำถามที่ตรง FAQ แล้วแสดงว่าร่างไม่ถูกใช้
-3. เปิดหน้าดูข้อมูลที่บอทใช้ตอบ แสดงแหล่งอ้างอิงจากร้านนั้นและกรณีไม่มีหลักฐาน
-4. ตั้งค่า LINE test channel แยกจาก channel จริงใน LINE Developers Console เปิด webhook และตรวจ URL ด้วยปุ่มในแอป ตั้ง `LINE_WORKER_ENABLED=true` บน instance ที่ประมวลผลงาน
-5. ส่งข้อความจาก LINE test account ไปที่ร้าน ตรวจข้อความ customer และ assistant ในหน้าบทสนทนาและบนโทรศัพท์ เทียบ event ID เพื่อยืนยันว่า webhook ซ้ำไม่ส่งข้อความซ้ำ
-6. รับช่วงโดยแอดมิน ส่งข้อความผ่าน LINE แล้วทดสอบ Pause → ส่งคำถามขณะพัก → Resume → ส่งคำถามใหม่ ตรวจว่าบอทไม่ตอบแทรกหรือย้อนตอบงานเก่า
-7. หากเปิด `GEMINI_API_KEY`/`OPENAI_API_KEY` ให้บันทึกผลของโมเดลหลักและการสลับไปสำรองจากสภาพทดสอบที่ควบคุมได้; อย่าทำให้บริการจริงของลูกค้าล้มเพื่อสาธิต ใช้ชุดทดสอบอัตโนมัติแทน
-
-## 4. สิ่งที่ต้องกรอกในรายงานก่อนอ้างว่าใช้งานจริงผ่าน
-
-| หลักฐาน | สิ่งที่บันทึก |
-|---|---|
-| Release | commit SHA, URL, ชื่อ Web Service/DB, เวลา deploy และผู้ตรวจ โดยไม่ใส่ secret |
-| คุณภาพคำตอบ | คะแนนคนใน `reports/task11/human-review.csv` และตัวอย่างที่ผิด/แก้แล้ว |
-| AI | รุ่นโมเดลจริง, คำขอหลัก/สำรอง, input/output tokens, latency p50/p95, ราคา/ค่าใช้จ่ายจาก usage จริง |
-| LINE | channel ทดสอบ, เวลา, event/request ID, ข้อความถึงอุปกรณ์, DB customer/assistant, ผลการส่งซ้ำ |
-| Handover | เวลารับช่วง/ส่ง agent/Pause/Resume และหลักฐานว่าบอทไม่ตอบแทรก |
-| ข้อมูล | migration version, backup และผล restore rehearsal บนฐานแยก, persistence หลัง restart |
-| ข้อจำกัด | สิ่งที่ยังไม่ทดสอบจริง รวม browser/device, ภาระงาน และค่า hosting |
-
-หากไม่มีบริการ staging และ LINE test channel ให้ใช้ local PostgreSQL กับตัวส่งจำลองเพื่อซ้อม flow ได้ แต่รายงานต้องระบุชัดว่าเป็นผลจำลอง ไม่ถือว่าผ่าน production cutover หรือ LINE จริง
+ใช้ Node 24.19.0 และ npm 11.19.0 ตาม [local-run.md](local-run.md) ผลล่าสุดและข้อจำกัดอยู่ใน [รายงานความพร้อม](../reports/task12/readiness.md) แบบประเมินคน `reports/task11/human-review.csv` ยังว่าง ผล fixture ไม่ใช่ผล LINE หรือ AI ภายนอกจริง
