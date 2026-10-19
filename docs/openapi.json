@@ -212,6 +212,21 @@
               "human"
             ]
           },
+          "handover_reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "AI_UNAVAILABLE",
+                  "AI_SAFETY_REFUSAL"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "readOnly": true
+          },
           "bot_revision": {
             "type": "integer",
             "minimum": 0,
@@ -245,6 +260,7 @@
           "customer_name",
           "status",
           "bot_mode",
+          "handover_reason",
           "bot_revision",
           "bot_changed_at",
           "created_at",
@@ -1095,7 +1111,8 @@
                   "faq",
                   "generator",
                   "extractive",
-                  "no_evidence"
+                  "no_evidence",
+                  "handover"
                 ]
               },
               {
@@ -1544,6 +1561,21 @@
               "human"
             ]
           },
+          "handover_reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "AI_UNAVAILABLE",
+                  "AI_SAFETY_REFUSAL"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "readOnly": true
+          },
           "bot_revision": {
             "type": "integer",
             "minimum": 0,
@@ -1594,6 +1626,7 @@
           "customer_name",
           "status",
           "bot_mode",
+          "handover_reason",
           "bot_revision",
           "bot_changed_at",
           "created_at",

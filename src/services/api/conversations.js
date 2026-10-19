@@ -6,6 +6,8 @@ import { now, wrap } from './common.js';
 import { countToNumber } from '../../lib/postgresql-schema.js';
 import { recoverAgentDeliveries } from './agentReplies.js';
 
+const publicConversation = ({ handover_job_id, ...conversation }) => conversation;
+
 export function createConversationsOperations(db, { get, page }) {
   return {
     async listConversations({ params, query }) {
@@ -30,16 +32,16 @@ export function createConversationsOperations(db, { get, page }) {
         FROM conversations c WHERE ${where} ORDER BY c.updated_at DESC, c.id DESC
         LIMIT $${values.length + 1} OFFSET $${values.length + 2}`, [...values, query.limit, query.offset]);
       return {
-        data: rows.map(row => ({ ...row, message_count: countToNumber(row.message_count) })),
+        data: rows.map(row => ({ ...publicConversation(row), message_count: countToNumber(row.message_count) })),
         meta: { limit: query.limit, offset: query.offset, total: countToNumber(total) },
       };
     },
     async createConversation({ params, body }) {
       const id = randomUUID(), time = now();
       await db.query('INSERT INTO conversations (id,shop_id,channel,customer_external_id,customer_name,status,bot_mode,created_at,updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)', [id, params.shopId, body.channel, body.customer_external_id, body.customer_name, 'open', 'active', time, time]);
-      return wrap(await get('conversations', params.shopId, id));
+      return wrap(publicConversation(await get('conversations', params.shopId, id)));
     },
-    async getConversation({ params }) { return wrap(await get('conversations', params.shopId, params.conversationId)); },
+    async getConversation({ params }) { return wrap(publicConversation(await get('conversations', params.shopId, params.conversationId))); },
     async updateConversation({ params, body }) {
       return transaction(db, async tx => {
         const { shopId, conversationId } = params;
@@ -54,7 +56,7 @@ export function createConversationsOperations(db, { get, page }) {
         const values = Object.values(body);
         await tx.query(`UPDATE conversations SET ${fields.map((field, i) => `${field}=$${i + 1}`).join(',')},updated_at=clock_timestamp()
           WHERE shop_id=$${values.length + 1} AND id=$${values.length + 2}`, [...values, shopId, conversationId]);
-        return wrap(await get('conversations', shopId, conversationId, tx));
+        return wrap(publicConversation(await get('conversations', shopId, conversationId, tx)));
       });
     },
     async listMessages({ params, query }) {

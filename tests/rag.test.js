@@ -130,7 +130,7 @@ test('RAG uses OpenAI after Gemini fails and keeps the verified source', () => w
   const result = await answerQuestion(db, { shopId: 'shop-flower', query: 'ค่าจัดส่งเท่าไร', generator });
   assert.equal(result.method, 'generator');
   assert.equal(result.sources[0].knowledge_entry_id, 'shop-flower-kb-3');
-  assert.equal(requests.length, 3);
+  assert.equal(requests.length, 4);
 }));
 
 test('RAG falls back to local evidence when both AI providers fail', () => withDemo(async db => {

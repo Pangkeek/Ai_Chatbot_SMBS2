@@ -1,112 +1,23 @@
-const answerSchema = {
-  type: 'object',
-  properties: {
-    text: { type: 'string' },
-    sourceChunkIds: { type: 'array', items: { type: 'string' } },
-    insufficient: { type: 'boolean' },
-  },
-  required: ['text', 'sourceChunkIds', 'insufficient'],
-  additionalProperties: false,
-};
+// Preserve the original (input, signal) adapter interface for ai:check and existing callers.
+import { AiError, createBuddyShareGeminiProvider as buddy, createGeminiProvider as gemini,
+  createOpenAiProvider as openai } from './ai/providers.js';
+import { validateGeneratedAnswer } from './ai/answerValidation.js';
 
-export class AiProviderError extends Error {
-  constructor(code, retryable = false) {
-    super(code);
-    this.code = code;
-    this.retryable = retryable;
-  }
+export class AiProviderError extends AiError {
+  constructor(code, retryable = false) { super(code, { retryable }); }
 }
 
-async function readResponse(response) {
-  if (!response.ok) {
-    const retryable = response.status === 408 || response.status === 429 || response.status >= 500;
-    throw new AiProviderError(`AI_HTTP_${response.status}`, retryable);
-  }
-  try { return await response.json(); }
-  catch { throw new AiProviderError('AI_INVALID_JSON'); }
-}
-
-function checkedAnswer(value, context) {
-  if (!value || typeof value !== 'object') throw new AiProviderError('AI_INVALID_ANSWER');
-  if (value.insufficient === true) return { insufficient: true };
-  const ids = value.sourceChunkIds;
-  const text = value.text?.trim();
-  const source = context.find(row => row.chunkId === ids?.[0]);
-  // ตรวจหลักฐานก่อนเลือกสำรอง ไม่ปล่อยคำตอบที่อ้างแหล่งผิดไปถึง LINE
-  if (typeof text !== 'string' || !text || text.length > 5000 || !Array.isArray(ids) || ids.length !== 1 ||
-      !source || !source.content.includes(text)) throw new AiProviderError('AI_UNSUPPORTED_ANSWER');
-  return { text, sourceChunkIds: ids };
-}
-
-export function createGeminiProvider({ apiKey, model = 'gemini-3.6-flash', fetchImpl = fetch }) {
+function adapt(factory, { apiKey, ...options }) {
   if (!apiKey) return null;
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
-  return {
-    name: 'gemini', model,
-    async generate({ prompt, context }, signal) {
-      const response = await fetchImpl(endpoint, {
-        method: 'POST', signal,
-        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: prompt.messages[0].content }] },
-          contents: [{ role: 'user', parts: [{ text: prompt.messages[1].content }] }],
-          generationConfig: { responseFormat: { text: { mimeType: 'APPLICATION_JSON', schema: answerSchema } } },
-        }),
-      });
-      const data = await readResponse(response);
-      const output = data.candidates?.[0]?.content?.parts?.filter(part => typeof part.text === 'string').map(part => part.text).join('');
-      if (!output) throw new AiProviderError('AI_EMPTY_ANSWER');
-      try { return checkedAnswer(JSON.parse(output), context); }
-      catch (error) { if (error instanceof AiProviderError) throw error; throw new AiProviderError('AI_INVALID_ANSWER'); }
-    },
-  };
+  const provider = factory({ ...options, key: apiKey });
+  return { name: provider.name, model: provider.model,
+    async generate(input, signal) {
+      const result = validateGeneratedAnswer(await provider.generate({ ...input, signal }), input.context, { strict: true });
+      if (!result) throw new AiProviderError('AI_INVALID_ANSWER');
+      return result.insufficient ? { insufficient: true } : { text: result.text, sourceChunkIds: result.sourceChunkIds };
+    } };
 }
 
-export function createOpenAiProvider({ apiKey, model = 'gpt-5.6-luna', fetchImpl = fetch,
-  endpoint = 'https://api.openai.com/v1/responses', name = 'openai', acceptChatCompletions = false }) {
-  if (!apiKey) return null;
-  return {
-    name, model,
-    async generate({ prompt, context }, signal) {
-      const response = await fetchImpl(endpoint, {
-        method: 'POST', signal,
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-        body: JSON.stringify({
-          model, store: false,
-          input: [{ role: 'developer', content: prompt.messages[0].content },
-            { role: 'user', content: prompt.messages[1].content }],
-          text: { format: { type: 'json_schema', name: 'grounded_shop_answer', strict: true, schema: answerSchema } },
-        }),
-      });
-      const data = await readResponse(response);
-      let output;
-      if (data.status === 'completed') {
-        output = data.output?.filter(item => item.type === 'message')
-          .flatMap(item => item.content || []).filter(item => item.type === 'output_text')
-          .map(item => item.text).join('');
-      } else if (acceptChatCompletions && Array.isArray(data.choices)) {
-        // BuddyShare อาจคืน Chat Completions แม้เรียกเส้นทาง Responses
-        const choice = data.choices[0];
-        if (choice?.finish_reason !== 'stop') throw new AiProviderError('AI_INCOMPLETE_ANSWER');
-        output = choice.message?.content;
-        if (typeof output === 'string') {
-          const fenced = /^\x60{3}(?:json)?\s*\n([\s\S]*?)\n\x60{3}$/i.exec(output.trim());
-          if (fenced) output = fenced[1];
-        }
-      } else {
-        throw new AiProviderError('AI_INCOMPLETE_ANSWER');
-      }
-      if (!output) throw new AiProviderError('AI_EMPTY_ANSWER');
-      try { return checkedAnswer(JSON.parse(output), context); }
-      catch (error) { if (error instanceof AiProviderError) throw error; throw new AiProviderError('AI_INVALID_ANSWER'); }
-    },
-  };
-}
-
-export function createBuddyShareGeminiProvider({ apiKey, model = 'gemini-3.1-flash-lite',
-  fetchImpl = fetch }) {
-  // BuddyShare ใช้ Responses API แต่คีย์นี้ไม่ใช่ Google Gemini API key
-  return createOpenAiProvider({ apiKey, model, fetchImpl,
-    endpoint: 'https://router.buddyshare.cloud/v1/responses', name: 'buddyshare-gemini',
-    acceptChatCompletions: true });
-}
+export const createGeminiProvider = options => adapt(gemini, { ...options, model: options.model || 'gemini-3.6-flash' });
+export const createOpenAiProvider = options => adapt(openai, { ...options, model: options.model || 'gpt-5.6-luna' });
+export const createBuddyShareGeminiProvider = options => adapt(buddy, options);
