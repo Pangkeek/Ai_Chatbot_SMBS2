@@ -1,4 +1,4 @@
-import { AiProviderError, createGeminiProvider, createOpenAiProvider } from './aiProviders.js';
+import { AiProviderError, createBuddyShareGeminiProvider, createGeminiProvider, createOpenAiProvider } from './aiProviders.js';
 import { createHttpRagGenerator } from './ragGenerator.js';
 
 export function createAiGateway({ primary, fallback, timeoutMs = 8500, attemptTimeoutMs = 2000,
@@ -44,7 +44,10 @@ export function createAiGateway({ primary, fallback, timeoutMs = 8500, attemptTi
 }
 
 export function createConfiguredRagGenerator({ env = process.env, fetchImpl = fetch } = {}) {
-  const primary = createGeminiProvider({ apiKey: env.GEMINI_API_KEY, model: env.GEMINI_MODEL || undefined, fetchImpl });
+  const primary = env.BUDDYSHARE_API_KEY
+    ? createBuddyShareGeminiProvider({ apiKey: env.BUDDYSHARE_API_KEY,
+      model: env.BUDDYSHARE_MODEL || undefined, fetchImpl })
+    : createGeminiProvider({ apiKey: env.GEMINI_API_KEY, model: env.GEMINI_MODEL || undefined, fetchImpl });
   const fallback = createOpenAiProvider({ apiKey: env.OPENAI_API_KEY, model: env.OPENAI_MODEL || undefined, fetchImpl });
   if (primary || fallback) return createAiGateway({ primary, fallback });
   return createHttpRagGenerator({ url: env.RAG_GENERATOR_URL, token: env.RAG_GENERATOR_TOKEN, fetchImpl });
@@ -53,7 +56,8 @@ export function createConfiguredRagGenerator({ env = process.env, fetchImpl = fe
 let cachedSettings;
 let cachedGenerator;
 export function getConfiguredRagGenerator() {
-  const settings = [process.env.GEMINI_API_KEY, process.env.GEMINI_MODEL, process.env.OPENAI_API_KEY,
+  const settings = [process.env.BUDDYSHARE_API_KEY, process.env.BUDDYSHARE_MODEL,
+    process.env.GEMINI_API_KEY, process.env.GEMINI_MODEL, process.env.OPENAI_API_KEY,
     process.env.OPENAI_MODEL, process.env.RAG_GENERATOR_URL, process.env.RAG_GENERATOR_TOKEN];
   if (!cachedSettings || settings.some((value, index) => value !== cachedSettings[index])) {
     cachedGenerator = createConfiguredRagGenerator();

@@ -55,7 +55,7 @@ deliver({ shopId, conversationId, messageId, text }) -> { deliveryId, status }
 
 `shopId` ต้องมาจากการตรวจสิทธิ์หรือ channel mapping ที่เชื่อถือได้ ตรวจ conversation ยัง open และ bot_mode ยัง active ก่อน generate และก่อน deliver อีกครั้ง ต้องแยกสถานะจัดเก็บ message ออกจากสถานะส่งออกจริง เพิ่ม outbox/queue สำหรับ retry และ idempotency ไม่ถือว่าการ insert สำเร็จหมายถึงลูกค้าได้รับข้อความแล้ว
 
-Gemini เป็น provider หลักและ OpenAI เป็นสำรอง Gateway จำกัดเวลา ลองซ้ำข้อผิดพลาดชั่วคราว และพัก provider ที่ล้มซ้ำเป็นเวลา 30 วินาที ก่อนลองใหม่ สถานะ circuit breaker อยู่ในแต่ละ process ข้อมูลที่ส่งให้ provider จำกัดตามร้านและเฉพาะหลักฐานที่ค้นได้
+Gemini เป็น provider หลัก ผ่าน Google API โดยตรงหรือ BuddyShare Responses API เมื่อมี `BUDDYSHARE_API_KEY`; OpenAI เป็นสำรองเมื่อมีคีย์แยก Gateway จำกัดเวลา ลองซ้ำข้อผิดพลาดชั่วคราว และพัก provider ที่ล้มซ้ำเป็นเวลา 30 วินาที ก่อนลองใหม่ สถานะ circuit breaker อยู่ในแต่ละ process ข้อมูลที่ส่งให้ provider จำกัดตามร้านและเฉพาะหลักฐานที่ค้นได้
 
 ## การขยายฐานข้อมูล
 

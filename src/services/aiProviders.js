@@ -62,12 +62,13 @@ export function createGeminiProvider({ apiKey, model = 'gemini-3.6-flash', fetch
   };
 }
 
-export function createOpenAiProvider({ apiKey, model = 'gpt-5.6-luna', fetchImpl = fetch }) {
+export function createOpenAiProvider({ apiKey, model = 'gpt-5.6-luna', fetchImpl = fetch,
+  endpoint = 'https://api.openai.com/v1/responses', name = 'openai' }) {
   if (!apiKey) return null;
   return {
-    name: 'openai', model,
+    name, model,
     async generate({ prompt, context }, signal) {
-      const response = await fetchImpl('https://api.openai.com/v1/responses', {
+      const response = await fetchImpl(endpoint, {
         method: 'POST', signal,
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
         body: JSON.stringify({
@@ -87,4 +88,11 @@ export function createOpenAiProvider({ apiKey, model = 'gpt-5.6-luna', fetchImpl
       catch (error) { if (error instanceof AiProviderError) throw error; throw new AiProviderError('AI_INVALID_ANSWER'); }
     },
   };
+}
+
+export function createBuddyShareGeminiProvider({ apiKey, model = 'gemini-3.1-flash-lite',
+  fetchImpl = fetch }) {
+  // BuddyShare ใช้ Responses API แต่คีย์นี้ไม่ใช่ Google Gemini API key
+  return createOpenAiProvider({ apiKey, model, fetchImpl,
+    endpoint: 'https://router.buddyshare.cloud/v1/responses', name: 'buddyshare-gemini' });
 }

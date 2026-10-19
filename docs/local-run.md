@@ -47,4 +47,4 @@ docker cp smb-chatbot-local-postgres-1:/tmp/chatbot_local.dump data/backups/chat
 
 ## ขอบเขตการสาธิต local
 
-หน้า LINE Simulator และชุดทดสอบจำลองแสดง flow รับข้อความ ค้นความรู้ ตอบกลับ บันทึกบทสนทนา และสลับ AI ได้โดยไม่ต้องมี LINE channel หรือ AI API key เมื่อไม่ตั้งคีย์ Gemini/OpenAI ระบบตอบจากหลักฐานในฐานข้อมูล การรับ webhook จาก LINE จริงต้องมี HTTPS URL ที่ LINE เข้าถึงได้พร้อม channel ของคุณ จึงยังไม่ใช่ส่วนของการรัน local ครั้งนี้
+หน้า LINE Simulator และชุดทดสอบจำลองแสดง flow รับข้อความ ค้นความรู้ ตอบกลับ บันทึกบทสนทนา และสลับ AI ได้โดยไม่ต้องมี LINE channel หรือ AI API key เมื่อไม่ตั้งคีย์ AI ระบบตอบจากหลักฐานในฐานข้อมูล หากตั้ง `BUDDYSHARE_API_KEY` ใน `.env` จะเรียก Gemini ผ่าน BuddyShare จากฝั่งเซิร์ฟเวอร์; `OPENAI_API_KEY` เป็น AI สำรองแยกต่างหาก ห้ามใส่คีย์ลงไฟล์ที่ Git ติดตาม การรับ webhook จาก LINE จริงต้องมี HTTPS URL ที่ LINE เข้าถึงได้พร้อม channel ของคุณ

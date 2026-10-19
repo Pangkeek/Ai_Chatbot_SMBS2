@@ -1,5 +1,14 @@
 # จุดพักงานล่าสุด
 
+## 20 ตุลาคม 2026 — รองรับ BuddyShare Gemini
+
+- ผู้ใช้ส่งภาพการตั้งค่า BuddyShare Responses API รุ่น `gemini-3.1-flash-lite` ซึ่งเป็นคีย์ของบริการตัวกลาง ไม่ใช่ `GEMINI_API_KEY` ของ Google จึงเพิ่ม `BUDDYSHARE_API_KEY`/`BUDDYSHARE_MODEL` เป็น Gemini หลัก โดยยังคง OpenAI สำรองและ extractive fallback
+- คีย์อ่านจากภาพด้วย OCR สองตัวและเก็บเฉพาะ `.env` ที่ Git ไม่ติดตาม ไม่พิมพ์ค่าคีย์ในโค้ด/รายงาน/ผลทดสอบ
+- เพิ่ม tests ของ endpoint, Bearer header, structured JSON, การส่งหลักฐานเฉพาะร้าน และ fallback เมื่อ BuddyShare ตอบ 401; targeted tests 8/8, runtime 110/110, build และ api:check ผ่าน
+- ทดลองเรียก BuddyShare จริงจากเครื่องด้วย Bearer และ x-api-key: `/v1/models`, `/v1/responses`, `/v1/chat/completions` ได้ HTTP 401 `API key required for remote API access` แม้ผู้ใช้ยืนยันว่า key active จึงยังไม่อ้างว่า live AI สำเร็จ ขอให้คัดลอก key จากหน้าเว็บลง `.env` โดยตรงแล้วตรวจซ้ำ; ไม่มี OpenAI key จริง
+- เปิด local app หลังแก้แล้ว AI preview แสดง configured; LINE Simulator ตอบ `extractive` พร้อม source 1 เมื่อ provider 401 โดยไม่ส่งคำตอบที่ไม่มีหลักฐาน
+- ปรับข้อความ AI preview ให้สื่อว่า configured ยังไม่เท่ากับทดสอบคีย์ผ่าน เพื่อไม่ให้หน้าเว็บบอกว่าเชื่อมต่อสำเร็จทั้งที่บริการตอบ 401; build หลังแก้ผ่าน
+
 ## 20 ตุลาคม 2026 — เปลี่ยนเป็นรัน local ถาวร
 
 - ผู้ใช้ยืนยันไม่ deploy; ใช้ `compose.local.yaml` โปรเจกต์ `smb-chatbot-local` บน `127.0.0.1:55434` กับ Docker volume `smb-chatbot-local_postgres_local_data` แยกจากคอนเทนเนอร์เดิม ไม่มี SQLite ต้นทาง จึงเริ่ม PostgreSQL ใหม่

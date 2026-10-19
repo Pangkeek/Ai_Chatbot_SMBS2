@@ -43,6 +43,42 @@ test('Gemini HTTP failures retry and OpenAI answers as backup', async () => {
   assert.equal(body.text.format.type, 'json_schema');
 });
 
+test('BuddyShare Gemini uses its Responses endpoint and never sends the key to Google', async () => {
+  const requests = [];
+  const generator = createConfiguredRagGenerator({ env: {
+    BUDDYSHARE_API_KEY: 'buddy-test', BUDDYSHARE_MODEL: 'gemini-3.1-flash-lite',
+    GEMINI_API_KEY: 'google-test', OPENAI_API_KEY: 'openai-test',
+  }, fetchImpl: async (url, options) => {
+    requests.push({ url: String(url), options });
+    return openAiResponse(answer);
+  } });
+  assert.deepEqual(await generator.generate(input), { text: source.content, sourceChunkIds: [source.chunkId] });
+  assert.equal(requests.length, 1);
+  assert.equal(requests[0].url, 'https://router.buddyshare.cloud/v1/responses');
+  assert.equal(requests[0].options.headers.Authorization, 'Bearer buddy-test');
+  assert.equal(requests[0].options.headers['x-goog-api-key'], undefined);
+  const body = JSON.parse(requests[0].options.body);
+  assert.equal(body.model, 'gemini-3.1-flash-lite');
+  assert.equal(body.store, false);
+  assert.equal(body.text.format.type, 'json_schema');
+  assert.equal(body.input[1].content, input.prompt.messages[1].content);
+});
+
+test('BuddyShare authorization failure uses OpenAI backup without retrying', async () => {
+  const requests = [];
+  const generator = createConfiguredRagGenerator({ env: {
+    BUDDYSHARE_API_KEY: 'buddy-test', OPENAI_API_KEY: 'openai-test',
+  }, fetchImpl: async (url, options) => {
+    requests.push({ url: String(url), options });
+    return String(url).includes('buddyshare.cloud')
+      ? new Response(JSON.stringify({ error: 'invalid key' }), { status: 401 })
+      : openAiResponse(answer);
+  } });
+  assert.equal((await generator.generate(input)).text, source.content);
+  assert.equal(requests.length, 2);
+  assert.equal(requests[1].url, 'https://api.openai.com/v1/responses');
+});
+
 test('unsupported or foreign evidence from primary uses backup without a retry', async () => {
   let primaryCalls = 0, backupCalls = 0;
   const generator = createConfiguredRagGenerator({ env: { GEMINI_API_KEY: 'gemini-test', OPENAI_API_KEY: 'openai-test' },
