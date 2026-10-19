@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-17T19:24:31.945Z",
+  "generated_at": "2026-10-19T18:17:22.206Z",
   "browser": "Chrome headless",
   "steps": [
     {
@@ -81,187 +81,187 @@
     },
     {
       "method": "GET",
-      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47",
+      "path": "/api/v1/shops/9c4753c1-8991-424c-bc5c-8f397b227033",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/knowledge",
+      "path": "/api/v1/shops/9c4753c1-8991-424c-bc5c-8f397b227033/knowledge",
       "status": 200
     },
     {
       "method": "POST",
-      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/knowledge",
+      "path": "/api/v1/shops/9c4753c1-8991-424c-bc5c-8f397b227033/knowledge",
       "status": 201
     },
     {
       "method": "GET",
-      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/knowledge",
+      "path": "/api/v1/shops/9c4753c1-8991-424c-bc5c-8f397b227033/knowledge",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/line/config",
+      "path": "/api/v1/shops/9c4753c1-8991-424c-bc5c-8f397b227033/line/config",
       "status": 200
     },
     {
       "method": "PUT",
-      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/line/config",
+      "path": "/api/v1/shops/9c4753c1-8991-424c-bc5c-8f397b227033/line/config",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/line/config",
+      "path": "/api/v1/shops/9c4753c1-8991-424c-bc5c-8f397b227033/line/config",
       "status": 200
     },
     {
       "method": "POST",
-      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/line/simulate",
+      "path": "/api/v1/shops/9c4753c1-8991-424c-bc5c-8f397b227033/line/simulate",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/statistics",
+      "path": "/api/v1/shops/9c4753c1-8991-424c-bc5c-8f397b227033/statistics",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/conversations",
+      "path": "/api/v1/shops/9c4753c1-8991-424c-bc5c-8f397b227033/conversations",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/conversations/ad5ad4bd-e688-4513-8e13-1c35b5a89672",
+      "path": "/api/v1/shops/9c4753c1-8991-424c-bc5c-8f397b227033/conversations/05d3b707-33de-4268-a8ca-1cef829a98f9",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/conversations/ad5ad4bd-e688-4513-8e13-1c35b5a89672/messages",
+      "path": "/api/v1/shops/9c4753c1-8991-424c-bc5c-8f397b227033/conversations/05d3b707-33de-4268-a8ca-1cef829a98f9/messages",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/conversations/ad5ad4bd-e688-4513-8e13-1c35b5a89672/replies",
+      "path": "/api/v1/shops/9c4753c1-8991-424c-bc5c-8f397b227033/conversations/05d3b707-33de-4268-a8ca-1cef829a98f9/replies",
       "status": 200
     },
     {
       "method": "PATCH",
-      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/conversations/ad5ad4bd-e688-4513-8e13-1c35b5a89672",
+      "path": "/api/v1/shops/9c4753c1-8991-424c-bc5c-8f397b227033/conversations/05d3b707-33de-4268-a8ca-1cef829a98f9",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/statistics",
+      "path": "/api/v1/shops/9c4753c1-8991-424c-bc5c-8f397b227033/statistics",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/conversations",
+      "path": "/api/v1/shops/9c4753c1-8991-424c-bc5c-8f397b227033/conversations",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/conversations/ad5ad4bd-e688-4513-8e13-1c35b5a89672",
+      "path": "/api/v1/shops/9c4753c1-8991-424c-bc5c-8f397b227033/conversations/05d3b707-33de-4268-a8ca-1cef829a98f9",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/conversations/ad5ad4bd-e688-4513-8e13-1c35b5a89672/replies",
+      "path": "/api/v1/shops/9c4753c1-8991-424c-bc5c-8f397b227033/conversations/05d3b707-33de-4268-a8ca-1cef829a98f9/messages",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/conversations/ad5ad4bd-e688-4513-8e13-1c35b5a89672/messages",
+      "path": "/api/v1/shops/9c4753c1-8991-424c-bc5c-8f397b227033/conversations/05d3b707-33de-4268-a8ca-1cef829a98f9/replies",
       "status": 200
     },
     {
       "method": "POST",
-      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/conversations/ad5ad4bd-e688-4513-8e13-1c35b5a89672/replies",
+      "path": "/api/v1/shops/9c4753c1-8991-424c-bc5c-8f397b227033/conversations/05d3b707-33de-4268-a8ca-1cef829a98f9/replies",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/statistics",
+      "path": "/api/v1/shops/9c4753c1-8991-424c-bc5c-8f397b227033/statistics",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/conversations",
+      "path": "/api/v1/shops/9c4753c1-8991-424c-bc5c-8f397b227033/conversations",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/conversations/ad5ad4bd-e688-4513-8e13-1c35b5a89672",
+      "path": "/api/v1/shops/9c4753c1-8991-424c-bc5c-8f397b227033/conversations/05d3b707-33de-4268-a8ca-1cef829a98f9",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/conversations/ad5ad4bd-e688-4513-8e13-1c35b5a89672/messages",
+      "path": "/api/v1/shops/9c4753c1-8991-424c-bc5c-8f397b227033/conversations/05d3b707-33de-4268-a8ca-1cef829a98f9/replies",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/conversations/ad5ad4bd-e688-4513-8e13-1c35b5a89672/replies",
+      "path": "/api/v1/shops/9c4753c1-8991-424c-bc5c-8f397b227033/conversations/05d3b707-33de-4268-a8ca-1cef829a98f9/messages",
       "status": 200
     },
     {
       "method": "PATCH",
-      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/conversations/ad5ad4bd-e688-4513-8e13-1c35b5a89672",
+      "path": "/api/v1/shops/9c4753c1-8991-424c-bc5c-8f397b227033/conversations/05d3b707-33de-4268-a8ca-1cef829a98f9",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/statistics",
+      "path": "/api/v1/shops/9c4753c1-8991-424c-bc5c-8f397b227033/statistics",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/conversations",
+      "path": "/api/v1/shops/9c4753c1-8991-424c-bc5c-8f397b227033/conversations",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/conversations/ad5ad4bd-e688-4513-8e13-1c35b5a89672",
+      "path": "/api/v1/shops/9c4753c1-8991-424c-bc5c-8f397b227033/conversations/05d3b707-33de-4268-a8ca-1cef829a98f9",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/conversations/ad5ad4bd-e688-4513-8e13-1c35b5a89672/messages",
+      "path": "/api/v1/shops/9c4753c1-8991-424c-bc5c-8f397b227033/conversations/05d3b707-33de-4268-a8ca-1cef829a98f9/replies",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/conversations/ad5ad4bd-e688-4513-8e13-1c35b5a89672/replies",
+      "path": "/api/v1/shops/9c4753c1-8991-424c-bc5c-8f397b227033/conversations/05d3b707-33de-4268-a8ca-1cef829a98f9/messages",
       "status": 200
     },
     {
       "method": "PATCH",
-      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/conversations/ad5ad4bd-e688-4513-8e13-1c35b5a89672",
+      "path": "/api/v1/shops/9c4753c1-8991-424c-bc5c-8f397b227033/conversations/05d3b707-33de-4268-a8ca-1cef829a98f9",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/statistics",
+      "path": "/api/v1/shops/9c4753c1-8991-424c-bc5c-8f397b227033/statistics",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/conversations",
+      "path": "/api/v1/shops/9c4753c1-8991-424c-bc5c-8f397b227033/conversations",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/conversations/ad5ad4bd-e688-4513-8e13-1c35b5a89672",
+      "path": "/api/v1/shops/9c4753c1-8991-424c-bc5c-8f397b227033/conversations/05d3b707-33de-4268-a8ca-1cef829a98f9",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/conversations/ad5ad4bd-e688-4513-8e13-1c35b5a89672/replies",
+      "path": "/api/v1/shops/9c4753c1-8991-424c-bc5c-8f397b227033/conversations/05d3b707-33de-4268-a8ca-1cef829a98f9/messages",
       "status": 200
     },
     {
       "method": "GET",
-      "path": "/api/v1/shops/98e327b0-bd01-4a11-a5e6-6968b11bbe47/conversations/ad5ad4bd-e688-4513-8e13-1c35b5a89672/messages",
+      "path": "/api/v1/shops/9c4753c1-8991-424c-bc5c-8f397b227033/conversations/05d3b707-33de-4268-a8ca-1cef829a98f9/replies",
       "status": 200
     },
     {

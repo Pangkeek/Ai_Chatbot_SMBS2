@@ -10,6 +10,8 @@
 4. ใช้ข้อมูลสมมติ: `npm run db:seed` เฉพาะ local/development; production seed ถูกปฏิเสธ สมัครบัญชีและสร้างร้านผ่านหน้าเว็บแทน
 5. ก่อนเปิด LINE จริง ตรวจ backup/restore บนฐานแยกและขั้น cutover ใน [production-cutover.md](production-cutover.md)
 
+สำหรับการซ้อมบนเครื่องหลังเตรียมฐาน local ให้ตั้ง `LINE_WORKER_ENABLED=false` แล้วรัน `npm run dev -- --port 3131` เปิด `http://127.0.0.1:3131` และใช้ LINE Simulator ในหน้าตั้งค่าร้าน ทดสอบ webhook/การส่ง LINE จริงไม่ได้จาก localhost เมื่อใช้ข้อมูล seed ให้เปิดเฉพาะเครื่องตัวเอง
+
 ## 2. ตรวจอัตโนมัติ
 
 ```powershell
