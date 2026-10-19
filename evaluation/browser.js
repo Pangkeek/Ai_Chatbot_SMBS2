@@ -14,6 +14,7 @@ import { createApp } from '../src/lib/app.js';
 import { createLineWorker } from '../src/services/worker.js';
 
 process.env.RAG_GENERATOR_URL = ''; process.env.RAG_GENERATOR_TOKEN = '';
+process.env.AI_MODE = 'offline';
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 async function freePort() {
   const server = createServer(); server.listen(0, '127.0.0.1'); await once(server, 'listening');

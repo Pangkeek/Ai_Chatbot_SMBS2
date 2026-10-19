@@ -90,6 +90,7 @@ export function createLineSimulator({ elements, listen, apiRequest, getSelectedS
           generator: "AI เลือกคำตอบจากข้อมูลที่ค้นได้",
           extractive: "คัดคำตอบจากข้อมูลร้านหรือคลังความรู้",
           no_evidence: "ไม่พบหลักฐานเพียงพอ",
+          handover: "ส่งต่อให้เจ้าหน้าที่ดูแล",
         };
         const sourceIds = Array.isArray(result.reply_source_ids) ? result.reply_source_ids : [];
         appendSimulatorMessage("system", [

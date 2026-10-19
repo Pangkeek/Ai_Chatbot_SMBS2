@@ -19,6 +19,7 @@ import { formatChatbotReply } from '../src/services/chatbotReply.js';
 // ผลนี้มาจาก fixtures เท่านั้น ไม่ใช้บัญชีจริง และห้าม fallback ไปหา AI ที่ตั้งในเครื่อง
 process.env.RAG_GENERATOR_URL = '';
 process.env.RAG_GENERATOR_TOKEN = '';
+process.env.AI_MODE = 'offline';
 const report = { generated_at: new Date().toISOString(), fixture: 'seedDemo + isolated PostgreSQL schema',
   evidence_level: 'real HTTP + PostgreSQL + durable worker; LINE transport/local AI boundary are test doubles',
   cases: [], failover: [], handover: [], costs: { external_ai_requests: 0, external_line_requests: 0,

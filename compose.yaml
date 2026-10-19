@@ -10,12 +10,13 @@ services:
       APP_MAINTENANCE_MODE: ${APP_MAINTENANCE_MODE:-false}
       RAG_GENERATOR_URL: ${RAG_GENERATOR_URL:-}
       RAG_GENERATOR_TOKEN: ${RAG_GENERATOR_TOKEN:-}
+      AI_MODE: ${AI_MODE:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-}
       BUDDYSHARE_API_KEY: ${BUDDYSHARE_API_KEY:-}
       BUDDYSHARE_MODEL: ${BUDDYSHARE_MODEL:-gemini-3.1-flash-lite}
-      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
-      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.6-flash}
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5.6-luna}
     depends_on:
       postgres:
         condition: service_healthy

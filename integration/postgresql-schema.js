@@ -2,10 +2,38 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, cp, readFile, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { migratePostgresql } from '../scripts/postgresql/migrations.js';
+import { join, dirname } from 'node:path';
+import { migratePostgresql, readMigrations } from '../scripts/postgresql/migrations.js';
 import { assertSchemaReady, countToNumber, timestampToIso, requiredTables, requiredMigrations } from '../src/lib/postgresql-schema.js';
 import { withTestSchema } from './postgresql-fixture.js';
+
+test('upgrade from existing master preserves handover history and bot revisions', async () => withTestSchema(async ({ db, config }) => {
+  const dir = await mkdtemp(join(tmpdir(), 'ai-upgrade-'));
+  try {
+    for (const migration of (await readMigrations()).filter(item => item.version < '006')) {
+      await writeFile(join(dir, migration.version), migration.sql);
+    }
+    await migratePostgresql({ config, directory: dir });
+    await db.query("INSERT INTO shops(id,name,created_at,updated_at) VALUES('upgrade-shop','fixture',now(),now())");
+    await db.query(`INSERT INTO conversations(id,shop_id,channel,customer_external_id,customer_name,status,bot_mode,created_at,updated_at)
+      VALUES('upgrade-room','upgrade-shop','line','fixture-user','fixture','open','active',now(),now())`);
+    await db.query("UPDATE conversations SET bot_mode='human' WHERE id='upgrade-room'");
+    await assert.rejects(assertSchemaReady(db), /migrations are incomplete/);
+    assert.deepEqual((await migratePostgresql({ config })).applied, ['006_ai_handover.sql']);
+    await assertSchemaReady(db);
+    const existing = (await db.query("SELECT * FROM conversations WHERE id='upgrade-room'")).rows[0];
+    assert.equal(existing.bot_mode, 'human'); assert.equal(existing.bot_revision, 1); assert.equal(existing.handover_reason, null);
+    await db.query("UPDATE conversations SET bot_mode='active' WHERE id='upgrade-room'");
+    await db.query("UPDATE conversations SET bot_mode='human',handover_reason='AI_UNAVAILABLE',handover_job_id='fixture-job' WHERE id='upgrade-room'");
+    const handed = (await db.query("SELECT * FROM conversations WHERE id='upgrade-room'")).rows[0];
+    assert.equal(handed.bot_revision, 3); assert.equal(handed.handover_job_id, 'fixture-job');
+    await db.query("UPDATE conversations SET bot_mode='human' WHERE id='upgrade-room'");
+    assert.equal((await db.query("SELECT handover_job_id FROM conversations WHERE id='upgrade-room'")).rows[0].handover_job_id, null);
+  } finally {
+    assert.equal(dirname(dir), tmpdir());
+    await rm(dir, { recursive: true, force: true });
+  }
+}));
 
 test('fresh/concurrent/rerun migrations, checksum preflight, failed SQL atomicity and lock release', async () => withTestSchema(async ({ db, config }) => {
   await assert.rejects(assertSchemaReady(db), /schema is not ready/);
@@ -24,25 +52,25 @@ test('fresh/concurrent/rerun migrations, checksum preflight, failed SQL atomicit
     await writeFile(first, sql.replaceAll('\n', '\r\n'));
     assert.equal((await migratePostgresql({ config, directory: dir })).applied.length, 0);
     await writeFile(first, sql + '\n-- changed\n');
-    await writeFile(join(dir, '006_probe.sql'), 'CREATE TABLE probe(id integer);');
+    await writeFile(join(dir, '007_probe.sql'), 'CREATE TABLE probe(id integer);');
     await assert.rejects(migratePostgresql({ config, directory: dir }), /Applied migration changed/);
     assert.equal((await db.query("SELECT to_regclass('probe') AS value")).rows[0].value, null);
     await writeFile(first, sql);
-    await writeFile(join(dir, '006_probe.sql'), 'CREATE TABLE probe(id integer); INSERT INTO probe VALUES (1); SELECT missing_column FROM probe;');
-    await assert.rejects(migratePostgresql({ config, directory: dir }), /migration failed: 006/);
+    await writeFile(join(dir, '007_probe.sql'), 'CREATE TABLE probe(id integer); INSERT INTO probe VALUES (1); SELECT missing_column FROM probe;');
+    await assert.rejects(migratePostgresql({ config, directory: dir }), /migration failed: 007/);
     assert.equal((await db.query("SELECT to_regclass('probe') AS value")).rows[0].value, null);
     assert.deepEqual((await db.query('SELECT * FROM schema_migrations ORDER BY version')).rows, before);
     // Retry acquires the lock after failure, and commits exactly once.
-    await writeFile(join(dir, '006_probe.sql'), 'CREATE TABLE probe(id integer);');
-    assert.deepEqual((await migratePostgresql({ config, directory: dir })).applied, ['006_probe.sql']);
+    await writeFile(join(dir, '007_probe.sql'), 'CREATE TABLE probe(id integer);');
+    assert.deepEqual((await migratePostgresql({ config, directory: dir })).applied, ['007_probe.sql']);
     // Failure while recording the migration must roll back its DDL as well.
     await db.query(`CREATE FUNCTION reject_migration_record() RETURNS trigger LANGUAGE plpgsql AS $$
-      BEGIN IF NEW.version = '007_record_failure.sql' THEN RAISE EXCEPTION 'fixture record failure'; END IF; RETURN NEW; END $$`);
+      BEGIN IF NEW.version = '008_record_failure.sql' THEN RAISE EXCEPTION 'fixture record failure'; END IF; RETURN NEW; END $$`);
     await db.query('CREATE TRIGGER reject_record BEFORE INSERT ON schema_migrations FOR EACH ROW EXECUTE FUNCTION reject_migration_record()');
-    await writeFile(join(dir, '007_record_failure.sql'), 'CREATE TABLE record_probe(id integer);');
-    await assert.rejects(migratePostgresql({ config, directory: dir }), /migration failed: 007/);
+    await writeFile(join(dir, '008_record_failure.sql'), 'CREATE TABLE record_probe(id integer);');
+    await assert.rejects(migratePostgresql({ config, directory: dir }), /migration failed: 008/);
     assert.equal((await db.query("SELECT to_regclass('record_probe') AS value")).rows[0].value, null);
-    assert.equal((await db.query("SELECT * FROM schema_migrations WHERE version = '007_record_failure.sql'")).rowCount, 0);
+    assert.equal((await db.query("SELECT * FROM schema_migrations WHERE version = '008_record_failure.sql'")).rowCount, 0);
     await db.query('DROP TRIGGER reject_record ON schema_migrations');
     assert.equal((await db.query("SELECT count(*) FROM pg_locks WHERE locktype = 'advisory' AND classid = 1936548461 AND objid::bigint = (hashtext($1)::bigint & 4294967295) AND database = (SELECT oid FROM pg_database WHERE datname = current_database())", [config.schema])).rows[0].count, '0');
   } finally { await rm(dir, { recursive: true, force: true }); }

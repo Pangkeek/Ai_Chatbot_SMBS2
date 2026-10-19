@@ -2,6 +2,8 @@ import { createHash } from 'node:crypto';
 import { transaction } from '../lib/db.js';
 import { buildBusinessEvidence, matchesBusinessQuestion } from './businessEvidence.js';
 import { buildAnswerPrompt } from './answerPrompt.js';
+import { validateGeneratedAnswer } from './ai/answerValidation.js';
+import { handoverAnswer } from './ai/handover.js';
 
 export const EMBEDDING_VERSION = 'local-chargram-v1-256';
 export const UNKNOWN_ANSWER = 'ขออภัย ยังไม่มีข้อมูลที่ยืนยันคำตอบนี้ได้ กรุณาติดต่อเจ้าหน้าที่';
@@ -138,7 +140,8 @@ export async function prepareAnswerContext(db, { shopId, query }) {
 }
 
 // หากยังไม่ได้ต่อบริการ AI ภายนอก ระบบจะคัดข้อความจากหลักฐานที่ค้นพบแทน
-export async function answerQuestion(db, { shopId, query, generator }) {
+export async function answerQuestion(db, { shopId, query, generator, signal, deadlineAt, jobId }) {
+  signal?.throwIfAborted();
   const prepared = await prepareAnswerContext(db, { shopId, query });
   const matches = prepared?.matches || [];
   if (!matches.length) return { text: UNKNOWN_ANSWER, sources: [], method: 'no_evidence' };
@@ -150,18 +153,24 @@ export async function answerQuestion(db, { shopId, query, generator }) {
     try {
       const { context, prompt } = prepared;
       const generated = await generator.generate({ shopId, query, context,
-        instruction: prompt.messages[0].content, prompt });
+        instruction: prompt.messages[0].content, prompt, signal, deadlineAt, jobId });
+      signal?.throwIfAborted();
       if (generated?.insufficient === true) {
         return { text: UNKNOWN_ANSWER, sources: [], method: 'no_evidence' };
       }
-      const ids = Array.isArray(generated?.sourceChunkIds) ? generated.sourceChunkIds : [];
+      const valid = validateGeneratedAnswer(generated, context);
+      const ids = valid?.sourceChunkIds || [];
       const sources = matches.filter(match => ids.includes(match.chunk_id));
-      if (typeof generated?.text === 'string' && generated.text.trim() && ids.length === 1 &&
-          sources.length === 1 && generated.text.length <= 5000 &&
-          sources[0].content.includes(generated.text.trim())) {
-        return { text: generated.text.trim(), sources, method: 'generator' };
+      if (valid && sources.length === 1) {
+        return { text: valid.text, sources, method: 'generator' };
       }
-    } catch { /* A failed provider cannot invent an answer. */ }
+      if (generator.failurePolicy === 'handover') return handoverAnswer('AI_UNAVAILABLE');
+    } catch (error) {
+      signal?.throwIfAborted();
+      if (generator.failurePolicy === 'handover') return handoverAnswer(
+        error.code === 'AI_SAFETY_REFUSAL' ? 'AI_SAFETY_REFUSAL' : 'AI_UNAVAILABLE');
+      // Legacy HTTP mode retains its grounded extractive fallback.
+    }
   }
   // Extractive fallback preserves the source wording and avoids unsupported claims.
   return { text: matches[0].content.slice(0, 5000), sources: [matches[0]], method: 'extractive' };

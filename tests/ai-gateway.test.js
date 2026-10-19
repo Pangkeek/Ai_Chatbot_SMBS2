@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createAiGateway, createConfiguredRagGenerator } from '../src/services/aiGateway.js';
-import { AiProviderError } from '../src/services/aiProviders.js';
+import { AiProviderError, createBuddyShareGeminiProvider, createGeminiProvider } from '../src/services/aiProviders.js';
 
 const source = { chunkId: 'shop-flower-kb-3:0', content: 'จัดส่งภายในเมือง ค่าจัดส่ง 50 บาท' };
 const input = { shopId: 'shop-flower', query: 'ค่าจัดส่งเท่าไร', context: [source], prompt: { messages: [
@@ -9,7 +9,7 @@ const input = { shopId: 'shop-flower', query: 'ค่าจัดส่งเท
   { role: 'user', content: JSON.stringify({ shopName: 'บ้านดอกไม้', evidence: [source] }) },
 ] } };
 const answer = { text: source.content, sourceChunkIds: [source.chunkId], insufficient: false };
-const geminiResponse = value => new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify(value) }] } }] }), { status: 200 });
+const geminiResponse = value => new Response(JSON.stringify({ candidates: [{ finishReason: 'STOP', content: { parts: [{ text: JSON.stringify(value) }] } }] }), { status: 200 });
 const openAiResponse = value => new Response(JSON.stringify({ status: 'completed', output: [{ type: 'message', content: [
   { type: 'output_text', text: JSON.stringify(value) },
 ] }] }), { status: 200 });
@@ -24,7 +24,8 @@ test('Gemini receives only selected shop evidence and returns a checked excerpt'
   assert.equal(requests[0].options.headers['x-goog-api-key'], 'gemini-test');
   const body = JSON.parse(requests[0].options.body);
   assert.equal(body.contents[0].parts[0].text, input.prompt.messages[1].content);
-  assert.equal(body.generationConfig.responseFormat.text.mimeType, 'APPLICATION_JSON');
+  assert.equal(body.generationConfig.responseMimeType, 'application/json');
+  assert.equal(body.generationConfig.responseJsonSchema.type, 'object');
 });
 
 test('Gemini HTTP failures retry and OpenAI answers as backup', async () => {
@@ -35,9 +36,9 @@ test('Gemini HTTP failures retry and OpenAI answers as backup', async () => {
       return String(url).includes('googleapis') ? new Response('{}', { status: 503 }) : openAiResponse(answer);
     } });
   assert.deepEqual(await generator.generate(input), { text: source.content, sourceChunkIds: [source.chunkId] });
-  assert.equal(requests.length, 3);
-  assert.equal(requests[2].options.headers.Authorization, 'Bearer openai-test');
-  const body = JSON.parse(requests[2].options.body);
+  assert.equal(requests.length, 4);
+  assert.equal(requests[3].options.headers.Authorization, 'Bearer openai-test');
+  const body = JSON.parse(requests[3].options.body);
   assert.equal(body.store, false);
   assert.equal(body.input[1].content, input.prompt.messages[1].content);
   assert.equal(body.text.format.type, 'json_schema');
@@ -89,13 +90,13 @@ test('BuddyShare chat-completion shaped response accepts only grounded fenced JS
 
   const unsupported = createConfiguredRagGenerator({ env: { BUDDYSHARE_API_KEY: 'buddy-test' },
     fetchImpl: async () => body({ ...answer, text: 'ข้อมูลที่ไม่มีในหลักฐาน' }) });
-  await assert.rejects(unsupported.generate(input), { code: 'AI_ALL_PROVIDERS_UNAVAILABLE' });
+  await assert.rejects(unsupported.generate(input), { code: 'AI_UNAVAILABLE' });
 
   const incomplete = createConfiguredRagGenerator({ env: { BUDDYSHARE_API_KEY: 'buddy-test' },
     fetchImpl: async () => new Response(JSON.stringify({ choices: [{
       finish_reason: 'length', message: { content: JSON.stringify(answer) },
     }] }), { status: 200 }) });
-  await assert.rejects(incomplete.generate(input), { code: 'AI_ALL_PROVIDERS_UNAVAILABLE' });
+  await assert.rejects(incomplete.generate(input), { code: 'AI_UNAVAILABLE' });
 });
 
 test('unsupported or foreign evidence from primary uses backup without a retry', async () => {
@@ -113,7 +114,7 @@ test('unsupported or foreign evidence from primary uses backup without a retry',
 test('both providers failing produces a bounded error for the extractive RAG fallback', async () => {
   const generator = createConfiguredRagGenerator({ env: { GEMINI_API_KEY: 'gemini-test', OPENAI_API_KEY: 'openai-test' },
     fetchImpl: async () => new Response('{}', { status: 503 }) });
-  await assert.rejects(generator.generate(input), { code: 'AI_ALL_PROVIDERS_UNAVAILABLE' });
+  await assert.rejects(generator.generate(input), { code: 'AI_UNAVAILABLE' });
 });
 
 test('timeout changes to backup and circuit breaker skips repeated primary failures', async () => {
@@ -145,4 +146,24 @@ test('without direct keys, the previous HTTP generator remains available', async
     fetchImpl: async () => { called = true; return new Response(JSON.stringify(answer), { status: 200 }); } });
   await generator.generate(input);
   assert.equal(called, true);
+});
+
+test('ai:check adapter interface preserves defaults, separate signal and grounded BuddyShare output', async () => {
+  const signal = new AbortController().signal;
+  for (const [factory, response, model] of [
+    [createGeminiProvider, () => geminiResponse(answer), 'gemini-3.6-flash'],
+    [createBuddyShareGeminiProvider, () => Response.json({ choices: [{ finish_reason: 'stop',
+      message: { content: JSON.stringify(answer) } }] }), 'gemini-3.1-flash-lite'],
+  ]) {
+    let receivedSignal;
+    const provider = factory({ apiKey: 'fixture-only', model: undefined,
+      fetchImpl: async (_url, options) => { receivedSignal = options.signal; return response(); } });
+    assert.equal(provider.model, model);
+    assert.deepEqual(await provider.generate(input, signal), { text: source.content, sourceChunkIds: [source.chunkId] });
+    assert.equal(receivedSignal, signal);
+  }
+  const invalid = createBuddyShareGeminiProvider({ apiKey: 'fixture-only', fetchImpl: async () => openAiResponse({
+    ...answer, sourceChunkIds: ['other-shop:0'],
+  }) });
+  await assert.rejects(invalid.generate(input, signal), { code: 'AI_INVALID_ANSWER' });
 });

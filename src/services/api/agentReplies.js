@@ -30,10 +30,15 @@ export function createAgentRepliesOperations(db, { get }, options = {}) {
         if (room.status !== 'open') throw new ApiError(409, 'CONVERSATION_CLOSED', 'Reopen the conversation before replying');
         if (room.bot_mode === 'active') throw new ApiError(409, 'BOT_ACTIVE', 'Pause or take over before replying');
         if (room.channel !== 'line') throw new ApiError(409, 'CHANNEL_UNSUPPORTED', 'External replies require a LINE conversation');
-        const pending = await tx.query("SELECT 1 FROM agent_deliveries WHERE shop_id=$1 AND conversation_id=$2 AND status='sending'", [shopId, conversationId]);
+        const pending = await tx.query(`SELECT 1 FROM agent_deliveries WHERE shop_id=$1 AND conversation_id=$2 AND status='sending'
+          UNION ALL SELECT 1 FROM line_jobs WHERE shop_id=$1 AND conversation_id=$2 AND status='processing' AND delivery_state='sending'`, [shopId, conversationId]);
         if (pending.rowCount) throw new ApiError(409, 'DELIVERY_IN_PROGRESS', 'Wait for the current message to finish sending');
         const channel = (await tx.query('SELECT channel_access_token FROM line_channels WHERE shop_id=$1', [shopId])).rows[0];
         if (!channel?.channel_access_token) throw new ApiError(409, 'LINE_NOT_CONFIGURED', 'Configure the shop LINE channel before replying');
+        // An agent can answer an automatically handed-over room without changing mode.
+        // Revoke its unsent bot notice under the same room lock before claiming the push.
+        if (room.handover_job_id) await tx.query(`UPDATE conversations SET handover_job_id=NULL,handover_reason=NULL,
+          updated_at=clock_timestamp() WHERE shop_id=$1 AND id=$2`, [shopId, conversationId]);
         const delivery = (await tx.query(`INSERT INTO agent_deliveries(id,shop_id,conversation_id,request_id,content,author_user_id,status)
           VALUES($1,$2,$3,$4,$5,$6,'sending') RETURNING *`, [randomUUID(), shopId, conversationId, body.request_id, body.content, user.id])).rows[0];
         return { delivery, channel, room };
