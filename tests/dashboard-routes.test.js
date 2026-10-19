@@ -6,7 +6,7 @@ test('dashboard routes keep shop and tab identity across direct URLs', () => {
   assert.deepEqual(parseDashboardRoute('/app'), { shopId: null, tab: null });
   assert.deepEqual(parseDashboardRoute('/app/'), { shopId: null, tab: null });
 
-  for (const tab of ['settings', 'knowledge', 'line']) {
+  for (const tab of ['settings', 'knowledge', 'line', 'conversations']) {
     const url = shopRoute('ร้าน กาแฟ', tab);
     assert.deepEqual(parseDashboardRoute(`${url}?from=menu`), {
       shopId: 'ร้าน กาแฟ',

@@ -22,7 +22,7 @@ async function bounded(action, { signal, timeoutMs }) {
 }
 
 export function createAiGateway({ providers, attemptTimeoutMs = 4000, providerBudgetMs = 14000,
-  totalBudgetMs = 28000, maxRetries = 2, breakerThreshold = 3, breakerCooldownMs = 30000,
+  totalBudgetMs = 28000, maxRetries = 2, backoffMs = 250, breakerThreshold = 3, breakerCooldownMs = 30000,
   now = Date.now, random = Math.random, sleep = (ms, signal) => delay(ms, undefined, { signal }),
   log = event => console.info('AI_GATEWAY', JSON.stringify(event)),
 }) {
@@ -77,7 +77,7 @@ export function createAiGateway({ providers, attemptTimeoutMs = 4000, providerBu
                 durationMs: now() - startedAt, code: failure.code });
               if (failure.code === 'AI_SAFETY_REFUSAL') throw failure;
               if (!failure.retryable || attempt === maxRetries || probe) break;
-              const waitMs = Math.max(failure.retryAfterMs, 250 * 2 ** attempt * (1 + random() * 0.2));
+              const waitMs = Math.max(failure.retryAfterMs, backoffMs * 2 ** attempt * (1 + random() * 0.2));
               if (now() + waitMs >= providerDeadline) break;
               await sleep(waitMs, input.signal);
             }

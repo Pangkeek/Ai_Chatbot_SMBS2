@@ -1,10 +1,10 @@
-const tabs = new Set(["settings", "knowledge", "line"]);
+const tabs = new Set(["settings", "knowledge", "line", "conversations"]);
 
 export function parseDashboardRoute(url) {
   const pathname = String(url).split(/[?#]/, 1)[0].replace(/\/+$/, "") || "/";
   if (pathname === "/app") return { shopId: null, tab: null };
 
-  const match = /^\/app\/shops\/([^/]+)\/(settings|knowledge|line)$/.exec(pathname);
+  const match = /^\/app\/shops\/([^/]+)\/(settings|knowledge|line|conversations)$/.exec(pathname);
   if (!match) return null;
 
   try {

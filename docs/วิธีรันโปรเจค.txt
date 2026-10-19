@@ -1,8 +1,19 @@
-โหลด docker มาพิมคำสั่งนี้
-
-docker compose up --build -d
-
-
-ระบบอยู่ที่ http://localhost:3000 และ /health ตอบ 200
--ฐานข้อมูล PostgreSQL เก็บใน Docker volume จึงไม่หายเมื่อหยุด container หยุดระบบด้วย docker compose down
-ระบบไม่สร้างบัญชี demo อัตโนมัติ ให้สมัครบัญชีผ่านหน้าเว็บได้เลย 
+1. ติดตั้งโปรแกรม
+ติดตั้ง Git, Docker Desktop, Node.js 24.19.0 แล้วเปิด Docker Desktop ให้ทำงาน จากนั้นเปิด PowerShell ตรวจว่าใช้คำสั่ง git, docker, node และ npm ได้
+2. ดาวน์โหลดโค้ดรุ่นที่แก้ล่าสุด
+git clone https://github.com/Pangkeek/Ai_Chatbot_SMBS2.git
+cd Ai_Chatbot_SMBS2
+git switch codex/ai-failover-demo
+npm install -g npm@11.19.0
+ต้องสลับ branch เพราะโค้ด Gemini/BuddyShare ล่าสุดอยู่ที่ codex/ai-failover-demo ส่วน branch หลักของ GitHub ยังเป็น master
+3. ตั้งค่าไฟล์ .env
+Copy-Item .env.local.example .env
+notepad .env
+ใส่คีย์ BuddyShare ของคุณในบรรทัด BUDDYSHARE_API_KEY= แล้วบันทึกไฟล์ อย่าส่งคีย์ในแชตหรือ commit .env ขึ้น Git เครื่องใหม่จะไม่มีข้อมูลร้านเดิมโดยอัตโนมัติ เพราะฐานข้อมูลเดิมอยู่ใน Docker volume ของเครื่องเก่า
+4. เปิดระบบ
+.\scripts\local-start.ps1
+ครั้งแรกสคริปต์จะเปิด PostgreSQL, ติดตั้ง dependencies, สร้างตาราง และเปิดเว็บ จากนั้นเข้า http://127.0.0.1:3131 แล้วสมัครบัญชีและเพิ่มข้อมูลร้านผ่านเว็บได้เลย หากต้องการข้อมูลร้านสมมติเพื่อสาธิต ให้ใช้ .\scripts\local-start.ps1 -SeedDemo ในครั้งแรก
+หาก PowerShell ไม่ยอมรันสคริปต์ ให้รัน Set-ExecutionPolicy -Scope Process Bypass ในหน้าต่างนั้น แล้วลองคำสั่งเปิดระบบอีกครั้ง
+5. ครั้งต่อไป
+เปิด Docker Desktop แล้วรัน .\scripts\local-start.ps1 อีกครั้ง หยุดเว็บด้วย Ctrl+C อย่าใช้ docker compose down --volumes หากต้องการเก็บข้อมูลร้าน
+ข้อสำคัญ: วิธีนี้ใช้เว็บและ LINE Simulator ได้บนเครื่องใหม่ แต่การรับข้อความจาก LINE จริงยังต้องตั้ง LINE channel, HTTPS tunnel และเปิด LINE worker เพิ่ม ส่วน docker compose up --build -d เป็นอีกวิธีที่เปิดแอปทั้งชุดที่พอร์ต 3000 แต่รันแบบ production ซึ่ง ไม่มี LINE Simulator ครับ

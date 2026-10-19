@@ -12,6 +12,7 @@ import { CHATBOT_PERSONA_STYLES, parseChatbotPersona, formatChatbotPersona } fro
 import { fillBusinessProfile, readBusinessProfile, setupBusinessProfileForm } from "./dashboard/businessProfileForm.js";
 import { summarizeBusinessProfile } from "../utils/businessProfile.js";
 import { createAiPreview } from "./dashboard/aiPreview.js";
+import { createConversationsManager } from "./dashboard/conversations.js";
 
 const TOKEN_KEY = "smb_access_token";
 
@@ -61,6 +62,14 @@ export function initializeDashboard() {
     getSelectedShopId: () => selectedShopId,
     setButtonLoading,
   });
+  const conversations = createConversationsManager({
+    listen,
+    apiRequest,
+    onUnauthorized(error) {
+      clearSession();
+      showNotification("error", "กรุณาเข้าสู่ระบบใหม่", error.message);
+    },
+  });
 
   function showAuthView() {
     elements.authView.classList.remove("hidden");
@@ -75,6 +84,7 @@ export function initializeDashboard() {
 
   // แสดงหน้าหลักที่รวมรายการร้านค้าของผู้ใช้
   function showDashboardHomeView() {
+    conversations.setActive(false);
     elements.businessSettingsView.classList.add("hidden");
     elements.dashboardHomeView.classList.remove("hidden");
 
@@ -85,6 +95,13 @@ export function initializeDashboard() {
   }
 
   const settingsContent = {
+    conversations: {
+      eyebrow: "Conversations & Statistics",
+      title: "บทสนทนาและสถิติ",
+      description: "อ่านประวัติลูกค้า ตรวจสถานะบอท และติดตามการใช้งานของร้าน",
+      tab: elements.settingsConversationsTab,
+      section: elements.conversationsSection,
+    },
     business: {
       eyebrow: "Business Settings",
       title: "ตั้งค่าข้อมูลธุรกิจ",
@@ -111,6 +128,7 @@ export function initializeDashboard() {
   function activateSettingsTab(name) {
     if (name === "line" && selectedShopRole !== "owner") return;
     const active = settingsContent[name] || settingsContent.business;
+    conversations.setActive(name === "conversations");
     for (const item of Object.values(settingsContent)) {
       const selected = item === active;
       item.section.classList.toggle("hidden", !selected);
@@ -164,6 +182,7 @@ export function initializeDashboard() {
     elements.businessSettingsForm.querySelector('button[type="submit"]').hidden = !owner;
     elements.settingsLineTab.hidden = !owner;
     knowledgeManager.setShop(shop);
+    conversations.setShop(shop);
 
     // อัปเดตข้อมูลส่วนสรุปเดิมให้ตรงกับค่าล่าสุดด้วย
     elements.selectedShopName.textContent = shop.name;
@@ -183,6 +202,7 @@ export function initializeDashboard() {
     resetSimulator();
     resetAiPreview();
     knowledgeManager.reset();
+    conversations.reset();
     openShopVersion++;
     accessToken = "";
     selectedShopId = "";
@@ -225,6 +245,7 @@ export function initializeDashboard() {
 
   async function openShop(shopId, tab = "business") {
     const version = ++openShopVersion;
+    conversations.setActive(false);
     try {
       const shop = await apiRequest(`/shops/${encodeURIComponent(shopId)}`);
       if (version !== openShopVersion) return false;
@@ -325,6 +346,9 @@ export function initializeDashboard() {
 
   listen(elements.settingsLineTab, "click", () => {
     Router.push(shopRoute(selectedShopId, "line"), undefined, { shallow: true, scroll: false });
+  });
+  listen(elements.settingsConversationsTab, "click", () => {
+    Router.push(shopRoute(selectedShopId, "conversations"), undefined, { shallow: true, scroll: false });
   });
 
   // ส่งข้อมูลที่แก้ไขไปบันทึกด้วย PATCH เฉพาะร้านที่กำลังเลือก
@@ -541,6 +565,7 @@ export function initializeDashboard() {
     disposed = true;
     openShopVersion++;
     lifetime.abort();
+    conversations.reset();
     knowledgeManager.reset();
     resetAiPreview();
     resetSimulator();

@@ -7,7 +7,7 @@
 ```mermaid
 flowchart LR
     Console[API Console ที่ทำงานแล้ว] --> API[REST API v1]
-    Dashboard[Dashboard ระยะถัดไป] -.-> API
+    Dashboard[Dashboard บทสนทนาและแอดมินรับช่วง] --> API
     API --> Auth[Session และ shop membership]
     Auth --> Service[Service และกฎบทสนทนา]
     Service --> DB[(PostgreSQL 18 พร้อม migrations)]
@@ -56,7 +56,7 @@ sendLineReply({ channelAccessToken, replyToken, messages, signal })
 
 `shopId` มาจากการตรวจสิทธิ์หรือ channel mapping ที่เชื่อถือได้ ตรวจ conversation ยัง open และ bot_mode ยัง active ก่อน generate และก่อน deliver อีกครั้ง โดยยกเว้นข้อความแจ้ง handover ของงานเจ้าของเมื่อห้องเป็น human ระบบแยกสถานะจัดเก็บ message ออกจากสถานะส่งออกจริง ใช้ durable queue/checkpoint สำหรับ retry และ idempotency และไม่ถือว่าการ insert สำเร็จหมายถึงลูกค้าได้รับข้อความแล้ว
 
-Task8 ทำ Gemini เป็น provider หลักและ OpenAI เป็นสำรองแล้ว โดย retry/backoff/circuit breaker อยู่ใน gateway และใช้ instance ร่วมต่อ process ข้อมูลที่ส่งให้ provider จำกัดตามร้าน เมื่อทั้งคู่ล้ม worker บันทึก checkpoint และเปลี่ยนห้องเป็น human ใน transaction เดียวกัน เฉพาะงานเจ้าของ handover เท่านั้นที่ส่งข้อความแจ้งได้ การเปลี่ยนสถานะโดยแอดมินล้างสิทธิ์ส่งข้อความเก่า และสถานะ human คงอยู่แม้ส่ง LINE ไม่สำเร็จ
+Task8 ใช้ Gemini ผ่าน Google โดยตรงหรือ BuddyShare เป็นหลักและ OpenAI เป็นสำรอง โดย retry/backoff/circuit breaker อยู่ใน gateway ที่ `src/services/ai/` และใช้ instance ร่วมต่อ process ส่วน `aiGateway.js` และ `aiProviders.js` เป็น interface รองรับ caller เดิม ข้อมูลที่ส่งให้ provider จำกัดตามร้าน เมื่อเปิด `AI_MODE=dual` และทั้งคู่ล้ม worker บันทึก checkpoint และเปลี่ยนห้องเป็น human ใน transaction เดียวกัน เฉพาะงานเจ้าของ handover ที่มี bot_revision ตรงกันเท่านั้นที่ส่งข้อความแจ้งได้ การเปลี่ยนสถานะหรือส่งคำตอบโดยแอดมินล้างสิทธิ์ส่งข้อความเก่า สถานะ human คงอยู่แม้ส่ง LINE ไม่สำเร็จ ส่วนการตั้งค่า key เดิมโดยไม่ระบุโหมดยังคง extractive fallback
 
 ## การขยายฐานข้อมูล
 

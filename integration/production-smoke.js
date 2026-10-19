@@ -78,8 +78,21 @@ test('production CLI uses PORT, preserves imported accounts and API writes acros
     assert.equal((await call('POST',conversationPath+'/messages',{role:'agent',content:'เจ้าหน้าที่ตอบ'},owner)).status,201);
     assert.equal((await call('PATCH',conversationPath,{status:'closed'},owner)).status,200);
     assert.equal((await call('POST',conversationPath+'/messages',{role:'customer',content:'closed'},owner)).status,409);
+    // ตรวจ API ใหม่กับ production CLI และ PostgreSQL ไม่ใช่ฐาน SQLite ของ branch เดิม
+    const statistics=await call('GET',base+'/statistics',undefined,owner);
+    assert.equal(statistics.status,200);
+    assert.equal(statistics.body.data.total_conversations,1);
+    assert.equal(statistics.body.data.total_messages,2);
+    assert.equal(statistics.body.data.human_conversations,1);
+    const rooms=await call('GET',base+'/conversations?search=smoke-customer&channel=web&status=closed&bot_mode=human&limit=1&offset=0',undefined,owner);
+    assert.equal(rooms.status,200);assert.equal(rooms.body.meta.total,1);
+    assert.equal(rooms.body.data[0].message_count,2);
+    assert.equal(rooms.body.data[0].last_message,'เจ้าหน้าที่ตอบ');
+    assert.equal((await call('GET',base+'/statistics')).status,401);
+    assert.equal((await call('GET',base+'/statistics',undefined,token)).status,404);
     await db.query("INSERT INTO shop_memberships(shop_id,user_id,role,created_at) VALUES($1,$2,'agent',clock_timestamp())",[shop.body.data.id,coffee.body.data.user.id]);
     assert.equal((await call('GET',base,undefined,token)).status,200);
+    assert.equal((await call('GET',base+'/statistics',undefined,token)).status,200);
     assert.equal((await call('POST',base+'/knowledge',{kind:'faq',title:'blocked',content:'blocked',status:'published'},token)).status,403);
     const before=(await db.query('SELECT count(*) FROM line_events')).rows[0].count;
     assert.equal((await fetch(server.base+base+'/line/simulate',{method:'POST',headers:{'Content-Type':'application/json'},body:'{bad'})).status,404);
@@ -89,6 +102,7 @@ test('production CLI uses PORT, preserves imported accounts and API writes acros
     server=await start(config);
     assert.equal((await call('GET',base,undefined,owner)).status,200);
     const messages=await call('GET',conversationPath+'/messages',undefined,owner);assert.equal(messages.status,200);
+    assert.equal((await call('GET',base+'/statistics',undefined,owner)).body.data.total_messages,2);
     assert.deepEqual(messages.body.data.map(row=>row.content),['ทดสอบ 🌿','เจ้าหน้าที่ตอบ']);
     assert.equal((await call('GET',base+'/knowledge/'+knowledge.body.data.id,undefined,owner)).body.data.content,'10:00-18:00');
     assert.equal((await call('DELETE',base+'/knowledge/'+knowledge.body.data.id,undefined,owner)).status,204);

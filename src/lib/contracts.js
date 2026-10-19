@@ -62,6 +62,8 @@ export const schemas = {
     status: choice("open", "closed"),
     bot_mode: choice("active", "paused", "human"),
     handover_reason: { anyOf: [choice("AI_UNAVAILABLE", "AI_SAFETY_REFUSAL"), { type: "null" }], readOnly: true },
+    bot_revision: integer(),
+    bot_changed_at: { anyOf: [date, { type: 'null' }] },
     created_at: date,
     updated_at: date,
   }),
@@ -94,6 +96,15 @@ export const schemas = {
   MessageCreate: object({
     role: choice("customer", "agent"),
     content: str(10000),
+  }),
+  AgentReplyCreate: object({
+    request_id: { ...str(36), pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$' },
+    content: str(5000),
+  }),
+  AgentDelivery: object({
+    id, shop_id: id, conversation_id: id, request_id: str(36), content: str(5000), author_user_id: id,
+    status: choice('sending', 'sent', 'failed', 'unknown'), message_id: nullableId,
+    created_at: date, updated_at: date,
   }),
   LineConfig: object({
     configured: { type: "boolean" },
@@ -222,6 +233,18 @@ schemas.Auth = object({
   token_type: choice("Bearer"),
   expires_at: date,
 });
+schemas.ShopStatistics = object({
+  total_conversations: integer(), open_conversations: integer(), closed_conversations: integer(),
+  active_conversations: integer(), paused_conversations: integer(), human_conversations: integer(),
+  line_conversations: integer(), web_conversations: integer(),
+  total_messages: integer(), customer_messages: integer(), assistant_messages: integer(),
+  agent_messages: integer(), system_messages: integer(), generated_at: date,
+});
+schemas.ConversationSummary = object({
+  ...schemas.Conversation.properties,
+  message_count: integer(),
+  last_message: { anyOf: [str(10000, 0), { type: "null" }] },
+});
 const data = (schema) => object({ data: schema });
 const list = (schema) =>
   object({
@@ -301,6 +324,9 @@ export const routes = [
     { body: schemas.ShopCreate, status: 201 }
   ),
   route("GET", base, "getShop", "Read a shop", data(schemas.Shop)),
+  route("GET", `${base}/statistics`, "getShopStatistics",
+    "All-time shop counts; human_conversations counts current human mode, not historical handovers",
+    data(schemas.ShopStatistics)),
   route(
     "POST",
     `${base}/ai/preview`,
@@ -361,8 +387,11 @@ export const routes = [
     `${base}/conversations`,
     "listConversations",
     "List shop conversations",
-    list(schemas.Conversation),
-    { paginated: true }
+    list(schemas.ConversationSummary),
+    { paginated: true, filters: {
+      search: str(200, 0), status: choice("open", "closed"),
+      channel: choice("line", "web"), bot_mode: choice("active", "paused", "human"),
+    } }
   ),
   route(
     "POST",
@@ -403,6 +432,12 @@ export const routes = [
     data(schemas.Message),
     { body: schemas.MessageCreate, status: 201 }
   ),
+  route('POST', `${base}/conversations/{conversationId}/replies`, 'sendAgentReply',
+    'Send an idempotent agent reply to the stored LINE customer; sent means LINE accepted, not read',
+    data(schemas.AgentDelivery), { body: schemas.AgentReplyCreate }),
+  route('GET', `${base}/conversations/{conversationId}/replies`, 'listAgentReplies',
+    'Read the latest 20 agent delivery outcomes; never automatically retry uncertain sends',
+    data({ type: 'array', items: schemas.AgentDelivery })),
   route(
     "GET",
     `${base}/line/config`,
@@ -500,6 +535,9 @@ for (const r of routes) {
     schema: id,
   }));
   if (r.paginated) parameters.push(...pagination);
+  for (const [name, schema] of Object.entries(r.filters || {})) {
+    parameters.push({ name, in: "query", required: false, schema });
+  }
   const responses = Object.fromEntries(
     Object.entries(errorDescriptions).map(([code, description]) => [
       code,

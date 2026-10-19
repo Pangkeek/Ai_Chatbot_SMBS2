@@ -3,7 +3,7 @@
 ## Enable
 
 Run `npm run db:migrate:postgres` before starting the new release. Migration
-`005_ai_handover.sql` adds the handover reason and internal notification owner;
+`006_ai_handover.sql` adds the handover reason and internal notification owner;
 the runtime refuses to start against an older schema. No migration runs in an API request.
 
 Configure these **server-side** environment variables and restart the application:
@@ -16,17 +16,21 @@ OPENAI_API_KEY=<server-secret>
 OPENAI_MODEL=<enabled-model-supporting-structured-output>
 ```
 
-Both providers and explicit model IDs are required. Use models available to your
-accounts that support the JSON schema used in the adapters. No model is selected
-automatically. Docker Compose passes these variables to the application. On Render,
+Both providers and explicit model IDs are required in dual mode. To keep using
+BuddyShare as the primary, set `BUDDYSHARE_API_KEY` and `BUDDYSHARE_MODEL` instead
+of the Google key/model; the BuddyShare key is never sent to Google. Use models available to your
+accounts that support the JSON schema used in the adapters. Dual mode does not select
+a model automatically. Docker Compose passes these variables to the application. On Render,
 set them in the service environment and run the normal predeploy migration; this
 change does not deploy or provision services. Never use `NEXT_PUBLIC_` for keys.
 
 `AI_MODE=offline` uses local extractive answers. `AI_MODE=http` uses the existing
 `RAG_GENERATOR_URL` / `RAG_GENERATOR_TOKEN` service. When `AI_MODE` is omitted,
-the presence of `RAG_GENERATOR_URL` selects HTTP mode, otherwise offline. An HTTP
-failure retains the previous extractive behavior. A lone Gemini key does not enable
-dual mode. Invalid dual configuration fails initialization rather than silently
+the existing BuddyShare, Gemini or OpenAI key setup takes precedence, followed by
+`RAG_GENERATOR_URL`, then offline. Key-based setup keeps the previous extractive
+fallback and existing model defaults, and can run with just the primary key for
+local demos. Explicit dual mode enables automatic human handover and requires both
+providers. Invalid dual configuration fails initialization rather than silently
 running with incomplete failover. The AI context preview only reports configuration;
 it does not call either provider or confirm provider availability.
 
@@ -46,7 +50,9 @@ timeouts, HTTP 408/429/5xx get at most two retries per provider: 250ms then 500m
 backoff plus up to 20% jitter. `Retry-After` is honored only within the remaining
 budget; otherwise the gateway moves to the backup without retrying early.
 
-Each HTTP attempt including its response body has a 4s timeout. A provider has a
+Each direct HTTP attempt including its response body has a 4s timeout. BuddyShare
+retains its 9.5s attempt timeout for the slower local demo route, with no retries
+when a backup is configured and at most one retry otherwise. A provider has a
 14s budget and the total generation budget is 28s. LINE generation also uses the
 remaining DB-clock reply window minus 12s for persistence/delivery (45s cutoff).
 Requests without generation time remaining go straight to the failure policy.
@@ -57,7 +63,7 @@ up or discarded. Provider calls and LINE delivery never hold a database transact
 After three consecutive failed logical requests to a provider (not three individual
 attempts), its circuit opens for 30s. After that, one concurrent probe is allowed;
 success closes the circuit and failure reopens it. Circuit state is shared within
-each server process and resets on restart. Multiple processes have independent
+each server process and resets on restart or an actual environment configuration change. Multiple processes have independent
 circuits; this release does not provide a distributed breaker.
 
 `insufficient:true` is a successful no-evidence result, not an outage. A safety refusal
@@ -80,6 +86,8 @@ without calling AI again. Any explicit change to conversation status or bot mode
 clears the internal notification owner and reason, including `human` to `human`,
 so an old notice cannot be sent after an admin has taken over. State is rechecked
 at the send checkpoint; an HTTP request already dispatched cannot be recalled.
+Bot revisions fence answers across Pause/Resume. Starting an agent reply also revokes
+an unsent handover notice; a notice already sending blocks the agent push until it finishes.
 
 The conversation stays `human` if the LINE reply token is missing, the window
 expires, or delivery fails. No assistant message is recorded as delivered unless
@@ -88,13 +96,13 @@ retried. The simulator applies the same handover policy. The existing conversati
 API exposes the reason read-only; ownership tokens remain internal. Re-enable the
 bot with the existing conversation PATCH setting `bot_mode` to `active`.
 
-Task8 does not add an external admin notification channel or the task9–10 inbox
-and agent messaging UI. A human state means the conversation awaits an agent;
+The existing task9–10 inbox and agent messaging UI remain available. This change
+does not add an external admin notification channel. A human state means the conversation awaits an agent;
 it does not assert that an agent has read or accepted it.
 
 ## Verification and operation
 
-- `node --test tests/ai-gateway.test.js` tests providers, retry, circuit transitions,
+- `node --test tests/ai-gateway.test.js tests/ai-resilience.test.js` tests providers, retry, circuit transitions,
   deadlines, refusal and redacted logs without network or paid API calls.
 - `npm run test:runtime` includes `tests/ai-handover.test.js`, with real PostgreSQL
   transactions in isolated test schemas. It covers failover, concurrent handover,

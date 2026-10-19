@@ -47,13 +47,13 @@ export function createLineSimulator(db, options = {}) {
     const ownerId = `simulator:${customerMsgId}`;
     const allowed = await transaction(db, async tx => {
       const latest = (await tx.query('SELECT * FROM conversations WHERE shop_id=$1 AND id=$2 FOR UPDATE', [shopId, conversation.id])).rows[0];
-      if (!maySendReply(latest, { method: 'generator' })) return false;
+      if (!maySendReply(latest, { method: 'generator', revision: conversation.bot_revision })) return false;
       if (answer.method === 'handover') return claimHandover(tx, { shopId, conversationId: conversation.id,
         ownerId, reason: answer.handoverReason });
-      return true;
+      return latest;
     });
     const latest = (await db.query('SELECT * FROM conversations WHERE shop_id=$1 AND id=$2', [shopId, conversation.id])).rows[0];
-    if (!allowed || !maySendReply(latest, { method: answer.method, ownerId })) {
+    if (!allowed || !maySendReply(latest, { method: answer.method, ownerId, revision: allowed.bot_revision })) {
       await updateEvent(db, shopId, event.webhookEventId, 'completed');
       return { ...base, reason: latest?.bot_mode || 'closed' };
     }

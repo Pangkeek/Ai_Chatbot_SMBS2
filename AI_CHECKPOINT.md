@@ -1,5 +1,144 @@
 # จุดพักงานล่าสุด
 
+## 20 ตุลาคม 2026 — ตรวจ Gemini หลักกับบริการจริงสำเร็จ
+
+- ผู้ใช้คัดลอกคีย์ BuddyShare จากต้นทางลง `.env` เอง; ไฟล์นี้ถูก Git ignore และไม่มีคีย์ใน commit หรือผลทดสอบ
+- แก้ตัวอ่านผล BuddyShare ที่คืน `choices` และ JSON code fence จาก `/v1/responses` พร้อมคงการตรวจว่าคำตอบตรงกับหลักฐานของร้าน
+- เพิ่มเวลารอเฉพาะ BuddyShare และกำชับ prompt ให้ `text` เท่ากับข้อความหลักฐานทุกตัวอักษร
+- `npm run ai:check` ผ่านกับ Gemini จริง; RAG บนฐาน local ตอบคำถามช่อกุหลาบด้วย `generator` และแหล่งอ้างอิงหนึ่งรายการในเวลาประมาณ 4.7 วินาที
+- ยังค้าง OpenAI key สำหรับทดสอบบริการสำรองจริงและ LINE channel/HTTPS webhook สำหรับ LINE จริง; ผู้ใช้เลือกสาธิตแบบ local
+
+## 20 ตุลาคม 2026 — รองรับ BuddyShare Gemini
+
+- ผู้ใช้ส่งภาพการตั้งค่า BuddyShare Responses API รุ่น `gemini-3.1-flash-lite` ซึ่งเป็นคีย์ของบริการตัวกลาง ไม่ใช่ `GEMINI_API_KEY` ของ Google จึงเพิ่ม `BUDDYSHARE_API_KEY`/`BUDDYSHARE_MODEL` เป็น Gemini หลัก โดยยังคง OpenAI สำรองและ extractive fallback
+- คีย์อ่านจากภาพด้วย OCR สองตัวและเก็บเฉพาะ `.env` ที่ Git ไม่ติดตาม ไม่พิมพ์ค่าคีย์ในโค้ด/รายงาน/ผลทดสอบ
+- เพิ่ม tests ของ endpoint, Bearer header, structured JSON, การส่งหลักฐานเฉพาะร้าน และ fallback เมื่อ BuddyShare ตอบ 401; targeted tests 8/8, runtime 110/110, build และ api:check ผ่าน
+- ทดลองเรียก BuddyShare จริงจากเครื่องด้วย Bearer และ x-api-key: `/v1/models`, `/v1/responses`, `/v1/chat/completions` ได้ HTTP 401 `API key required for remote API access` แม้ผู้ใช้ยืนยันว่า key active จึงยังไม่อ้างว่า live AI สำเร็จ ขอให้คัดลอก key จากหน้าเว็บลง `.env` โดยตรงแล้วตรวจซ้ำ; ไม่มี OpenAI key จริง
+- เปิด local app หลังแก้แล้ว AI preview แสดง configured; LINE Simulator ตอบ `extractive` พร้อม source 1 เมื่อ provider 401 โดยไม่ส่งคำตอบที่ไม่มีหลักฐาน
+- ปรับข้อความ AI preview ให้สื่อว่า configured ยังไม่เท่ากับทดสอบคีย์ผ่าน เพื่อไม่ให้หน้าเว็บบอกว่าเชื่อมต่อสำเร็จทั้งที่บริการตอบ 401; build หลังแก้ผ่าน
+- เพิ่ม `npm run ai:check` ส่งเพียงข้อมูลสมมติ BLUE ไปตรวจ provider และพิมพ์รหัสข้อผิดพลาดแบบไม่เผยคีย์; รอบนี้ได้ `AI_HTTP_401` ผู้ใช้ต้องคัดลอก key จากปุ่มหน้า BuddyShare ลง `.env` แล้วรันซ้ำ
+
+## 20 ตุลาคม 2026 — เปลี่ยนเป็นรัน local ถาวร
+
+- ผู้ใช้ยืนยันไม่ deploy; ใช้ `compose.local.yaml` โปรเจกต์ `smb-chatbot-local` บน `127.0.0.1:55434` กับ Docker volume `smb-chatbot-local_postgres_local_data` แยกจากคอนเทนเนอร์เดิม ไม่มี SQLite ต้นทาง จึงเริ่ม PostgreSQL ใหม่
+- เพิ่ม `.env.local.example`, `scripts/local-start.ps1`, `docs/local-run.md`; คำสั่ง `& ./scripts/local-start.ps1 -SeedDemo` เปิดฐาน ตรวจ Node/npm, migrate, seed และเว็บ `http://127.0.0.1:3131` สคริปต์ตรวจ URL ใน `.env` ก่อนใช้ เพื่อไม่ชี้ไปฐานอื่น
+- ตรวจ PostgreSQL 18.6, migrations 001–005, seed สองร้าน; restart container แล้วร้านยัง 2 แห่ง; pg_dump 48,891 bytes/pg_restore ลงฐานแยกแล้วนับร้าน 2 แห่ง; local starter รันซ้ำ migrations unchanged 5 และเว็บพร้อม
+- preflight 4/4 HTTP 200, login ร้านดอกไม้ เห็นร้านเดียว, Simulator ตอบแบบ extractive พร้อม source 1; runtime tests 108/108, PostgreSQL 2/2, schema 3/3 ผ่านบนฐาน local ถาวร
+- ปรับ README, คู่มือสาธิต, วิธีรันสั้น และรายงานข้อ 12 ให้ local เป็นวิธีหลัก ไม่มีขั้น deploy; LINE/AI ภายนอกยังไม่ได้ตรวจเพราะไม่มี channel/keys, คะแนนมนุษย์ใน `reports/task11/human-review.csv` ยังว่าง
+- ไฟล์ `.env` และ backup `data/backups/chatbot_local.dump` อยู่เฉพาะเครื่อง ไม่เข้า Git; ก่อนสาธิตครั้งถัดไปเปิด Docker Desktop แล้วรัน local starter ตรวจ preflight อีกครั้ง
+
+## 20 ตุลาคม 2026 — AI หลัก/สำรอง และความพร้อมสาธิต
+
+- ผู้ใช้ให้ทำตาม PLAN และ `.agent/skills/myskill` โดยทำงานให้เสร็จเท่าที่ไม่ต้องใช้บริการภายนอก ผู้ใช้ยืนยันว่าไม่มี Render/LINE test channel และไม่มีไฟล์ SQLite ต้นทาง จึงเลือก PostgreSQL ใหม่สำหรับสาธิต ไม่อ้างว่าย้ายข้อมูล SQLite เดิมแล้ว
+- เพิ่ม `aiProviders.js` เรียก Gemini GenerateContent และ OpenAI Responses แบบ structured JSON โดยรับคีย์จาก environment, ส่งเฉพาะ prompt/หลักฐานของร้าน, ปิดการเก็บ response ในคำขอ OpenAI และปฏิเสธข้อความที่ไม่เป็น substring ของหลักฐานเดียวกัน
+- เพิ่ม `aiGateway.js` ให้ Gemini เป็นหลัก/OpenAI สำรอง จำกัดเวลารวม 8.5 วินาทีและครั้งละ 2 วินาที ลองซ้ำหนึ่งครั้งเฉพาะ transient error โดยเว้น 150 ms พัก provider ที่ล้มสองคำขอเป็นเวลา 30 วินาทีและลอง half-open อีกครั้ง; หากทั้งคู่ล้ม RAG เดิมตอบแบบคัดหลักฐาน/ไม่มีข้อมูล
+- คง HTTP generator เดิมเมื่อไม่ได้ตั้งคีย์สองราย เพิ่มสถานะ AI ใน preview และ env/Compose/docs; `test:runtime` รวมชุด `ai-gateway` ใหม่
+- ตรวจด้วย Node 24.19.0/npm 11.19.0 และ PostgreSQL 18 แยกจากแอปเดิม: runtime บนโค้ดสุดท้าย 108/108, SQLite 3/3, import 8/8, PostgreSQL 2/2, schema 3/3, LINE lifecycle 1/1, production 2/2, browser 11 ขั้นตอน, evaluation 28/28 + failover 7/7 + handover 7/7, build, api:check, audit 0 vulnerabilities ผ่าน
+- สร้างฐาน `chatbot_demo` ในคอนเทนเนอร์ PostgreSQL ทดสอบแยก รัน migrations 001–005 และ seed สองร้านสำเร็จ เปิด Next development ที่ `http://127.0.0.1:3131` เพื่อตรวจ preflight 4 URL, login/preview และ LINE Simulator (ตอบ extractive พร้อมหลักฐาน) ผ่าน; คอนเทนเนอร์นี้ใช้ `--rm` ไม่มี volume ถาวร และ LINE จริงยังปิด
+- เพิ่ม `scripts/demo-preflight.js`, `docs/demo-runbook.md` และ `reports/task12/readiness.md` สำหรับตรวจ release/สาธิตและแยกผลจำลองจากผลจริง
+- สิ่งที่ยังต้องทำเมื่อมีบริการ: ตั้ง Render/LINE test channel และ secret store, ทดสอบ API จริงทั้งสองรายและ LINE ถึงอุปกรณ์, ให้คนให้คะแนน `human-review.csv`, วัด tokens/ค่าใช้จ่าย/latency จริง, ซ้อม backup/restore และตรวจ staging/cutover ห้ามนับผล fixture เป็น production ผ่าน
+
+
+## ข้อ 11 — ชุดทดสอบอัตโนมัติ/รายงานเสร็จ และข้อจำกัดที่ต้องตรวจจริง
+
+- ทำต่อบน branch task11-integration-testing จาก task10-human-handover; ข้อ 10 มี commits 89e1ab8 (API) และ 34bbe04 (UI) ส่วนข้อ 11 แยกแก้ RAG 55a3983 และ UI 69822c7 แล้ว หน่วยเครื่องมือ/รายงาน/patch dependencies บันทึกต่อใน commit นี้ ไม่มี push/merge
+- อัปเดต Next 16.3.5→16.3.8, sharp 0.35.4→0.35.5, source-map-js 1.2.1→1.2.2 ตาม advisory และ lockfile เพิ่ม Playwright สำหรับ QA เท่านั้น; audit จาก Critical 1/High 2 packages เหลือ 0 ไม่ใช้ audit fix --force และไม่ได้อ้างว่าเคย exploit แอปได้
+- npm run test:evaluation ผ่าน 3 tests: gold 28/28 (correctness/relevance/grounded/tenant ทุกมิติ 28), AI boundary/failover 7/7, handover 7/7 เวลา local webhook→worker→DB p50 114.35ms / p95 157.9ms / max 174.04ms ตาม results.json รอบที่เก็บ ไม่ใช่ production SLA
+- npm run test:browser ผ่าน 1 test / 11 ขั้นตอนบน Chrome headless production frontend ทั้ง 1440px/390px ไม่มี page error และไม่มี document overflow ตรวจภาพแล้ว; API browser ถูกส่งต่อไป real HTTP/PG service ที่ฉีด LINE test transport ผล production API/CLI แยกตรวจใน smoke
+- runtime ล่าสุด 99/99 ผ่าน; schema/PostgreSQL/import/backup/production/LINE lifecycle รวม 19/19 ผ่าน; build Next 16.3.8, api:check, check:toolchain, diff --check ผ่าน
+- Docker smoke rebuild รุ่นล่าสุดใน project task10-smoke แยกพอร์ต 3110/55510 สำเร็จ app/PG healthy, HTTP health database ok และ container ยืนยัน next@16.3.8 ใช้เฉพาะ test volume ไม่แตะ runtime เดิม
+- หลักฐานอยู่ docs/task11-review.md และ reports/task11/: expected/actual JSON+Markdown, baseline 27/28 ก่อนแก้, before/after audit, browser/network/screenshot และ CSV คะแนนมนุษย์ว่าง 28 แถว ตรวจไฟล์/JSON/จำนวน/ลิงก์ภาพมีจริงแล้ว
+- เพิ่ม CI evaluation/browser/audit gates และ artifact ใน reports/ci-task11 แยกจากรายงาน Git เพื่อไม่เอาผลเก่าไปแทนรอบ CI ที่ยังไม่ได้รัน ยังไม่ได้ยืนยัน remote CI เพราะไม่ได้ push
+- ค่า LINE/AI ภายนอกรอบ fixtures เป็น 0 เพราะไม่มีการเรียกจริง; billable tokens/ค่า hosting/ค่า production ยังไม่วัด ไม่สร้างตัวเลขแทนสิ่งที่ไม่ทราบ
+- งานที่ยังต้องยืนยันด้วยคน/บัญชีที่ได้รับอนุญาตก่อนข้อ 12: คะแนนมนุษย์ใน human-review.csv, LINE bot→human push→Pause/Resume ถึงอุปกรณ์จริง, provider/model/token/ราคาและเวลาเครือข่ายจริง รวมถึงสิทธิ์ Vercel/Render และ remote checks ของ commit ที่จะรวม
+- รันซ้ำใช้ TEST_DATABASE_URL แบบ loopback chatbot_test แยกจาก runtime; browser ต้อง build ก่อนและมี Chrome หรือ PLAYWRIGHT_CHANNEL=chromium หลังติดตั้ง browser ที่เข้ากัน ไม่อ่าน credentials หรือ deploy เพื่อทดสอบ
+
+## ข้อ 11 — แก้หน้าจอและตรวจ Chrome
+
+- พบ Chrome flow กรอก Secret เร็วแล้ว GET โหลด LINE config ที่ช้าล้างค่าทิ้ง จนฟอร์มไม่ส่ง PUT และ signed webhook ตอบ 404; สร้าง deferred GET regression ให้ล้มก่อนแก้
+- lineSettings ล็อก input/save ระหว่างโหลด ใช้ request version และ shopId ที่จับตอนบันทึก ป้องกันคำตอบเก่า/ร้านเก่าแก้หน้าปัจจุบัน; โหลดล้มเหลวยังคงปิดการกรอกและแนะนำเปิดแท็บใหม่เพื่อลองอีกครั้ง
+- แก้ HomeJourney ที่ยังบอกข้อ 9–10 เป็นงานอนาคต ให้มีการ์ดบทสนทนา/รับช่วง/Pause/Resume ผ่าน /app ตามหน้าที่ใช้งานจริง
+- DOM integration ผ่าน regression ใหม่และทั้ง runtime 99/99; dashboard-session 13 tests ผ่าน การตรวจ Chrome headless บน production frontend ผ่านครบ 11 ขั้นตอน มีภาพ 1440px/390px ไม่มี document overflow และไม่มี page error (ไม่ใช่ accessibility audit เต็มรูปแบบ)
+- Chrome ใช้ HTTP/PostgreSQL test service จริงผ่าน browser API forwarding และแทนเฉพาะ LINE transport ไม่มีการส่งหาลูกค้าจริง เครื่องมือ/ภาพ/รายงานจะบันทึกแยกอีก commit; ยังไม่ push/merge
+
+## ข้อ 11 — แก้การเลือกหลักฐานผิดเรื่องจาก Unicode ภาษาไทย
+
+- เพิ่ม gold fixtures 28 ข้อแล้วพบ 1 เคส: ถามรับโอนธนาคาร แต่ตอบรายละเอียดร้านซึ่งไม่มีธนาคาร เก็บ expected เดิมไว้ ไม่เปลี่ยนเฉลยให้ผ่าน
+- probe พบ NFKC แยกสระอำใน “สำหรับ” ทำให้ Intl.Segmenter เกิด token “รับ” ร่วมกับคำถาม แล้วคะแนน cosine ผ่าน threshold
+- คืนรูปสระอำเฉพาะ terms() ไม่เปลี่ยน embedding/version หรือบังคับ reindex; เพิ่ม regression ทั้งกรณีไม่มีข้อมูล (ต้องปฏิเสธ) และเพิ่ม policy ธนาคารแล้ว (ต้องตอบถูก)
+- RED ก่อนแก้และ GREEN หลังแก้ผ่าน; evaluation ชุดเดิม 28/28 โดย correctness/relevance/grounded/tenant ทุกมิติผ่าน 28/28 รายงานและเครื่องมือจะบันทึกอีกหน่วยงาน
+- runtime ล่าสุดทั้งชุด 99/99 ผ่านบน Node 24.19.0 โดยมี dependency patch และ UI fixes ใน working tree ซึ่งจะบันทึกแยกต่อไป ยังไม่ push/merge
+
+## ข้อ 10 — หน้าจอและคู่มือเสร็จ
+
+- เพิ่มรับช่วง/Pause/Resume ในห้องเดิม พร้อมช่องพิมพ์ ส่งไป LINE และผลการส่ง 20 รายการล่าสุด; disable ตามโหมด/สถานะห้อง/ระหว่างส่ง แสดง sent ว่า LINE รับแล้ว ไม่ใช่อ่านแล้ว
+- unknown คงร่างและ request ID ปุ่มตรวจสถานะไม่ส่ง LINE ซ้ำ ผลเก็บในฐานและอ่านหลัง remount ได้ สลับห้อง/ร้านไม่พาข้อมูลหรือผลคำขอเก่าไปทับห้องใหม่
+- tests/conversation-dashboard.test.js ผ่านทั้ง 5 tests กับ HTTP/PostgreSQL จริง รวม flow รับช่วง→ส่ง→Pause→Resume, XSS, remount, unknown, paging/filter, stale shop response และ visibility
+- README/docs/conversations.md อธิบาย API ใหม่ migration ลำดับ deploy ข้อจำกัดการส่ง และกรณี unknown; OpenAPI ตรงกับ runtime
+- บันทึกแยก API และ UI ตาม skill; ยังไม่ push/merge ทั้งสองหน่วย การทดสอบ LINE เป็น boundary จำลองและไม่มี browser สำหรับ visual QA ข้อ 10
+- ขั้นต่อไปข้อ 11 ตามคำสั่งผู้ใช้: สร้างชุดวัดผลซ้ำได้ เก็บ expected/actual/เวลา/ขอบเขตต้นทุน และรายงานช่องว่างจริง
+
+## ข้อ 10 — API รับช่วงและส่งข้อความ (branch task10-human-handover)
+
+- เพิ่ม API `POST/GET .../conversations/{conversationId}/replies` ส่ง LINE Push ไปยังลูกค้าที่เก็บในห้อง ด้วย token ร้านเดียวกัน ไม่ใช้ API messages เดิมซึ่งบันทึกอย่างเดียว
+- เก็บ delivery ใน PostgreSQL พร้อม request UUID กันซ้ำ สถานะ sending/sent/failed/unknown และ author; สร้างข้อความ agent เฉพาะเมื่อ LINE รับคำขอแล้ว ไม่กล่าวอ้างว่าอ่านแล้ว
+- จำกัดส่ง 5,000 ตัวอักษร ตรวจสมาชิก owner/agent ห้องเปิด โหมดพัก/มนุษย์ และ LINE config; ไม่ส่งซ้ำเมื่อ timeout/5xx/ผลไม่แน่นอน มี timeout จริง 10s และ recovery sending ค้าง 30s
+- Migration 005 เพิ่ม outbox, revision และเวลาเปลี่ยนโหมด; trigger ยกเลิก AI รุ่นเก่าแม้ Pause→Resume และ worker ไม่ย้อนส่งคิวก่อน Resume เปรียบเทียบ timestamp ใน PostgreSQL เพื่อไม่เสีย microseconds
+- เปลี่ยนโหมดใช้ row lock เดียวกับจุดเริ่มส่ง หากเริ่มส่งอยู่ตอบ 409 รอจนจบ ไม่ยืนยัน Pause ทั้งที่ยังส่งไม่เสร็จ
+- ตรวจ Node 24.19.0/npm 11.19.0: runtime รอบรวม 95 ผ่าน; หลังเพิ่ม regression microsecond ทดสอบ handover ล่าสุด 8/8 ผ่าน รวม timeout จริงและ DB ล้มเหลวหลัง LINE รับแล้ว; API contract tests ผ่านครบ endpoints
+- schema/PostgreSQL/SQLite import+backup รวม 16 tests ผ่าน; production smoke+LINE runtime รวม 3 ผ่าน; build ล่าสุด, api:check, check:toolchain และ diff --check ผ่าน
+- Docker smoke แบบแยก project task10-smoke ใช้พอร์ต 3110/55510 healthy และ health ตอบ database ok; migration 001–005 ครบ ไม่ใช้ volume/ฐาน runtime เดิม ตัว Docker build เริ่มก่อนปรับการเปรียบเทียบ microsecond ขั้นสุดท้าย ส่วน source build/targeted test ตรวจหลังแก้แล้ว
+- LINE ใช้ test transport เท่านั้น ไม่มีข้อความไปหาลูกค้าจริงและไม่มีการ deploy/push/merge; ก่อนใช้จริงหยุด worker รุ่นเก่าทุก instance รัน db:migrate:postgres แล้วเปิดรุ่นใหม่
+- หน้าจอข้อ 10 ทำและทดสอบ DOM/HTTP/PostgreSQL แล้ว จะบันทึกแยกอีก commit พร้อมคู่มือ ไม่มี browser เชื่อมต่อสำหรับตรวจภาพ
+- ผู้ใช้สั่งให้ต่อข้อ 11 หลังจบข้อ 10: ทดสอบรวม ความถูกต้อง/เกี่ยวข้อง/ไร้หลักฐาน ความเร็ว Handover Failover และต้นทุน พร้อมหลักฐานจริง ไม่แทนข้อมูลทดสอบเป็นผล production
+
+## งานล่าสุด: ปุ่มหลักหน้าแรกหลังเข้าสู่ระบบ
+
+- เปลี่ยนปุ่มกลาง HomeHero เป็น **จัดการร้าน** เมื่อยืนยัน session แล้ว ใช้สีมิ้นต์ #a4f0e4 ไอคอนร้าน ขนาดข้อความ 16px และความสูงอย่างน้อย 56px; ลิงก์ยังไป /app และคงรูปแบบ guest เดิม
+- ย้ายการตรวจ session ของหน้า home ไป HomeAccountProvider เพื่อให้เมนูบัญชีและปุ่มหลักอ่านสถานะเดียวกัน ไม่ยิง /users/me แยกคนละชุด; ออกจากระบบแล้วปุ่มกลับเป็นเข้าสู่ระบบทันที กรณี 401 เป็น guest ส่วน 503 คง token/ปุ่มจัดการร้าน
+- ทำ regression ให้ล้มก่อนแก้ โดยพบผู้ล็อกอินยังเห็น 'เข้าสู่ระบบ / เริ่มใช้งาน'; หลังแก้ dashboard-session tests ผ่าน 12 รายการ ครอบคลุม guest/หมดอายุ/เครือข่าย/ล็อกเอาต์และกลับหน้าแรก
+- ตรวจรวมล่าสุดบน Node 24.19.0/npm 11.19.0: test:runtime ผ่าน 85 รายการ (รวมชุดข้อ 9 บน PostgreSQL), build/api:check/git diff --check ผ่าน และ production smoke หลัง build ใหม่ผ่าน 2 รายการ
+- ตรวจ Chrome บน production CLI + PostgreSQL schema ทดสอบแยกที่พอร์ต 3109: login demo กลับหน้า home พบปุ่มจัดการร้านจริง ตรวจ computed background rgb(164,240,228), font 16px, สูง 56px, href /app และกดกลับแดชบอร์ดได้ ปิดแท็บ/เซิร์ฟเวอร์ทดสอบหลังตรวจ ไม่แก้ข้อมูลร้านจริง
+- บันทึกแยกจาก commit P1 d9af8bb; งานทั้งหมดอยู่บน task9-chat-page ยังไม่ push/merge PR #7 หรือ deploy Render และไม่ได้ทำ production cutover
+
+## งานล่าสุด: แก้ P1 ของ PR #7 ให้รวมกับ PostgreSQL master ได้
+
+- รวม master e695be7 เข้า branch task9-chat-page แบบ local และแก้ conflict โดยคงระบบ PostgreSQL/durable LINE worker ของ master พร้อมฟีเจอร์ข้อ 9 ไม่ได้ merge PR, push หรือ deploy
+- ทำซ้ำอาการบน PostgreSQL 18 จริง: statistics endpoint เดิมตอบ 500 แทน 200 เพราะใช้ SQLite API; แก้เป็น async db.query พร้อม $1 และ countToNumber ให้ count(*)/message_count เป็นจำนวนเต็มตาม HTTP contract ไม่ใช่ int8/string
+- รายการห้องยังค้น/กรองก่อนนับและแบ่งหน้า ใช้ strpos กับ bound parameters แทน instr และใช้ created_at,id เป็นลำดับคงที่ตาม master แทน rowid (เวลาเท่ากันเรียง id ไม่ใช่ลำดับ INSERT)
+- ย้าย tests/conversation-api.test.js และ tests/conversation-dashboard.test.js ไปใช้ PostgreSQL fixture/migrations จริง แยก random schema ในฐาน chatbot_test บน loopback; เพิ่มเข้า test:runtime ที่ CI ใช้จริง ไม่ทำ SQLite compatibility adapter
+- production smoke ตรวจ statistics/list filters/message_count/last_message ด้วย session จริงบน production CLI, การกันข้ามร้าน/401, agent access และยอดคงเดิมหลัง restart
+- ตรวจบน Node 24.19.0 + npm 11.19.0: runtime 85 tests ผ่าน, SQLite backup 3, import 8, PostgreSQL 2, schema 3, LINE runtime 1 และ production smoke 2 ผ่าน; build ผ่านขณะ DATABASE_URL ว่างและ parent worker=true, check:toolchain ผ่าน
+- ใช้ container ทดสอบเฉพาะ task9-review-postgres ที่พอร์ต 55439 ไม่แตะฐาน runtime หรือทำ production cutover; คำขอปรับปุ่มหน้าแรกหลัง login จะทำต่อเป็นอีกหน่วยงานแยก
+
+## งานล่าสุด: ข้อ 9 หน้าบทสนทนาและสถิติ — implementation เสร็จบน task9-chat-page
+
+- ย้ายงานทั้งหน่วย API และหน้าจอไป branch `task9-chat-page` ตามคำสั่งระหว่างทำงาน ไม่ได้ push/merge หรือเปลี่ยน remote; ตอนตรวจสุดท้าย master/origin/master อยู่ที่ 8c5d987 (แก้ CONTRIBUTING.md) โดยงานข้อ 9 ยังคงแยกใน feature branch
+- เพิ่มแท็บ **บทสนทนาและสถิติ** และ URL `/app/shops/{shopId}/conversations` รองรับเข้าโดยตรง/เปิดใหม่/กลับจากหน้าแรก โดยไม่ล้าง session
+- อ่านข้อมูลจริงผ่าน API: รายการห้องเรียงอัปเดตล่าสุด ข้อความล่าสุด จำนวนข้อความ สถานะห้อง/บอท ค้นชื่อลูกค้า/รหัสลูกค้า กรอง LINE/เว็บ เปิด/ปิด และโหมดบอท แบ่งห้อง 20 รายการและประวัติ 50 ข้อความต่อหน้า
+- เริ่มอ่านที่หน้าข้อความล่าสุด ภายในหน้าเรียงเก่าไปใหม่ แสดงผู้ส่งและเวลาไทย ใช้ textContent เพื่อไม่ตีความข้อความลูกค้าเป็น HTML
+- แสดงสถิติทั้งร้าน ไม่ใช่ยอดเฉพาะหน้าที่โหลด รวม role และ channel ชัดเจน; ห้อง human คือโหมดปัจจุบัน ไม่ใช่จำนวนครั้งส่งต่อสะสม และสถิตินับข้อมูลตัวอย่าง/Simulator ที่บันทึกด้วย
+- รีเฟรชด้วยปุ่มหรือทุก 15 วินาทีเฉพาะหน้านี้ ยกเลิกคำขอเมื่อสลับร้าน ออกจากหน้า/ระบบ หรือซ่อนแท็บ; คำตอบเก่าไม่ทับร้านใหม่ มีสถานะกำลังโหลด/ไม่มีข้อมูล/ผิดพลาดและลองใหม่ ไม่ล้าง session เพราะ 503 แต่ล้างเมื่อ 401
+- คู่มือและนิยามอยู่ใน `docs/conversations.md`; งานนี้เป็นหน้าอ่านประวัติ/สถานะ ยังไม่ทำปุ่มรับช่วง ส่งข้อความ และ Pause/Resume ของข้อ 10
+
+### ผลตรวจข้อ 9
+
+- `npm test` ผ่าน 60 รายการ, `npm run api:check`, `npm run build` และ `git diff --check` ผ่าน
+- `tests/conversation-api.test.js` ตรวจสถิติที่รู้ยอดแน่นอน ห้องว่าง ข้ามร้าน 105 ห้อง กรองก่อนแบ่งหน้า ข้อความเวลาเดียวกัน และ signed LINE webhook ที่ประวัติ/ตัวเลขตรงกันและข้อความซ้ำไม่เพิ่มยอด
+- `tests/conversation-dashboard.test.js` ใช้ component/controller จริงกับ HTTP API และ SQLite ชั่วคราว ตรวจประวัติ 61 ข้อความ การแบ่งหน้าห้อง/ข้อความ ค้นหา XSS เปิดใหม่ซ้ำ สลับร้านระหว่างรอผล 503/401 และ polling/visibility
+- ตรวจด้วย Chrome บน production build ที่พอร์ต 3109 และฐานข้อมูลทดสอบแยก: เข้าสู่ระบบบัญชี demo เปิดหน้าด้วย URL โดยตรง เลือกห้องอ่านประวัติและดูสถิติได้ ตรวจหน้าจอปกติและมือถือ 390px พร้อม screenshot; ไม่พบเนื้อหาล้นแนวนอน คืน viewport เดิมหลังตรวจ และไม่เพิ่มข้อมูลลงฐานข้อมูลร้านจริง
+- เปิด Docker Desktop ที่ปิดอยู่ แล้ว `docker compose up -d --build app` ผ่าน คง volume เดิม; `docker compose exec -T app npm test` ผ่าน 60 รายการบน Node.js 24 และ `npm run api:check` ใน Docker ผ่าน
+- ตรวจพอร์ต 3000: URL หน้าบทสนทนาตอบ 200 มีแท็บใหม่ build ID ตรงกับคอนเทนเนอร์ OpenAPI มี statistics endpoint, `/api/health` ตอบว่าแอปและฐานข้อมูล ok และคอนเทนเนอร์ healthy
+- ข้อจำกัด: webhook test จำลองเฉพาะตัวส่ง LINE ไม่ได้ส่งถึงบัญชี LINE จริง; การสาธิตครบเส้นทางกับ LINE จริงและงาน AI หลัก–สำรอง/รับช่วงตอบยังเป็นงานตรวจรวม/ข้อ 5, 8, 10 ตามแผน ไม่ได้อ้างว่าผ่านจากเทสต์จำลอง
+
+## หน่วยงานก่อนหน้า: API บทสนทนาและสถิติ
+
+- เพิ่ม GET `/api/v1/shops/{shopId}/statistics` นับห้องและข้อความทุก role จากข้อมูลทั้งร้าน ไม่ใช้จำนวนเฉพาะหน้าที่โหลด และไม่ JOIN จนยอดคูณกัน
+- `human_conversations` หมายถึงห้องที่อยู่ในโหมด human ปัจจุบัน ไม่ใช่ยอดการส่งต่อสะสม; สถิติเป็นยอดทั้งหมดตั้งแต่เริ่มใช้ร้าน รวม LINE/เว็บ
+- รายการห้องค้นชื่อลูกค้า/รหัสลูกค้า และกรอง channel/status/bot_mode ก่อนนับและแบ่งหน้า เรียงห้องที่อัปเดตล่าสุด พร้อมจำนวนข้อความและข้อความล่าสุด
+- ข้อความเรียง created_at และ rowid เพื่อคงลำดับรับเมื่อเวลาเท่ากัน; ทุก endpoint ตรวจสมาชิกและ shop_id ตามเดิม
+- เขียนเทสต์ให้ล้มก่อนเพิ่ม endpoint/filters แล้วแก้จนผ่าน รวม 105 ห้อง, อักขระ %, ห้องว่าง, ข้อความเวลาเดียวกัน และการแยกร้าน
+- `npm test` ผ่าน 56 รายการ; สร้าง OpenAPI ใหม่แล้ว ส่วน UI และการตรวจ Docker จะทำต่อในหน่วยงานถัดไป ยังไม่ถือว่าข้อ 9 เสร็จครบ
 ## แก้ P1: LINE crash recovery ก่อน reply cutoff — 17 ตุลาคม 2026
 
 - ลด default lease จาก 60 เป็น 15 วินาที และ heartbeat จาก 15 เป็น 3 วินาที คง poll 1 วินาที/cutoff 45 วินาที/HTTP timeout 10 วินาที เพื่อมีเวลากู้ สร้างคำตอบ และส่งหลัง worker ล่มก่อน sending

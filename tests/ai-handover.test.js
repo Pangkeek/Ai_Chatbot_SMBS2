@@ -60,6 +60,7 @@ test('both providers failing atomically hand over, notify once, and block subseq
     const saved = await job(e.webhookEventId), state = await conversation(saved.conversation_id);
     assert.equal(state.bot_mode, 'human'); assert.equal(state.handover_reason, 'AI_UNAVAILABLE');
     assert.equal(state.handover_job_id, saved.job_id); assert.equal(saved.reply_method, 'handover');
+    assert.equal(saved.bot_revision, state.bot_revision);
     sent.push(messages[0].text);
   } });
   await worker.runOnce();
@@ -159,6 +160,32 @@ test('missing LINE reply credentials retain human state without claiming a succe
   assert.equal(saved.reply_message_id, null); assert.equal((await conversation(saved.conversation_id)).bot_mode, 'human');
 }));
 
+test('agent reply cancels an unsent handover notice and cannot overlap one already sending', () => fixture(async ({ db, enqueue, job, service }) => {
+  const e = event(); await enqueue([e]);
+  const interrupted = { ...db, async query(sql, params) {
+    if (sql.startsWith('SELECT channel_access_token')) throw Object.assign(new Error('temporary DB failure'), { code: '40001' });
+    return db.query(sql, params);
+  } };
+  await makeWorker(interrupted).runOnce();
+  const saved = await job(e.webhookEventId);
+  const params = { shopId: 'shop-flower', conversationId: saved.conversation_id };
+  let pushes = 0;
+  const agent = createService(db, { worker: { wake() {} }, workerOptions: { generator: null }, sendPush: async () => { pushes++; } });
+  const result = await agent.sendAgentReply({ params, user: { id: 'user-flower' }, body: { request_id: randomUUID(), content: 'เจ้าหน้าที่รับช่วงแล้ว' } });
+  assert.equal(result.data.status, 'sent'); assert.equal(pushes, 1);
+  await db.query('UPDATE line_jobs SET available_at=clock_timestamp() WHERE job_id=$1', [saved.job_id]);
+  await makeWorker(db, { sendReply: async () => assert.fail('old handover notice sent after agent reply') }).runOnce();
+  assert.equal((await job(e.webhookEventId)).last_error_code, 'BOT_INACTIVE');
+
+  await service.updateConversation({ params, body: { bot_mode: 'active' } });
+  const next = event(); await enqueue([next]);
+  await makeWorker(db, { sendReply: async () => {
+    await assert.rejects(agent.sendAgentReply({ params, user: { id: 'user-flower' },
+      body: { request_id: randomUUID(), content: 'รอข้อความแจ้งเสร็จก่อน' } }), { code: 'DELIVERY_IN_PROGRESS' });
+  } }).runOnce();
+  assert.equal(pushes, 1);
+}));
+
 test('safety refusal hands over directly without invoking OpenAI', () => fixture(async ({ db, enqueue, job, conversation }) => {
   let backups = 0;
   const generator = gateway([provider('gemini', async () => { throw new AiError('AI_SAFETY_REFUSAL'); }),
@@ -169,11 +196,11 @@ test('safety refusal hands over directly without invoking OpenAI', () => fixture
 }));
 
 test('admin pause/close during generation prevents handover and delivery', () => fixture(async ({ db, enqueue, job, service, conversation }) => {
-  for (const body of [{ bot_mode: 'paused' }, { status: 'closed' }]) {
+  for (const changes of [[{ bot_mode: 'paused' }], [{ status: 'closed' }], [{ bot_mode: 'paused' }, { bot_mode: 'active' }]]) {
     const e = event({ source: { userId: randomUUID() } }); await enqueue([e]);
     const generator = { failurePolicy: 'handover', async generate() {
       const saved = await job(e.webhookEventId);
-      await service.updateConversation({ params: { shopId: 'shop-flower', conversationId: saved.conversation_id }, body });
+      for (const body of changes) await service.updateConversation({ params: { shopId: 'shop-flower', conversationId: saved.conversation_id }, body });
       throw new AiError('AI_UNAVAILABLE');
     } };
     await makeWorker(db, { generator, sendReply: async () => { assert.fail('inactive bot sent'); } }).runOnce();
@@ -241,7 +268,7 @@ test('simulator applies handover once; database trigger invalidates notice for e
   await service.updateConversation({ params, body: { bot_mode: 'active' } });
   await transaction(db, async tx => {
     assert.equal(await claimHandover(tx, { shopId: 'shop-coffee', conversationId: first.conversationId,
-      ownerId: 'wrong-shop', reason: 'AI_UNAVAILABLE' }), false);
+      ownerId: 'wrong-shop', reason: 'AI_UNAVAILABLE' }), null);
   });
   assert.equal((await conversation(first.conversationId)).bot_mode, 'active');
 }));
@@ -263,4 +290,16 @@ test('AI preview reflects dual configuration without calling AI or revealing cre
       if (value === undefined) delete process.env[key]; else process.env[key] = value;
     }
   }
+}));
+
+test('simulator API contract includes automatic handover and its read-only reason', () => fixture(async ({ db }) => {
+  const service = createService(db, { worker: { wake() {} }, workerOptions: { generator: failedGateway() } });
+  const result = await service.simulateLineMessage({ params: { shopId: 'shop-flower' }, body: {
+    user_id: 'contract-handover', text: 'ค่าจัดส่งเท่าไร',
+  } });
+  assert.equal(result.data.reply_method, 'handover');
+  assert.deepEqual(validate(result.data, schemas.LineSimulateResult), []);
+  const room = (await service.getConversation({ params: { shopId: 'shop-flower', conversationId: result.data.conversation_id } })).data;
+  assert.equal(room.bot_mode, 'human'); assert.equal(room.handover_reason, 'AI_UNAVAILABLE');
+  assert.deepEqual(validate(serializeDates(room), schemas.Conversation), []);
 }));

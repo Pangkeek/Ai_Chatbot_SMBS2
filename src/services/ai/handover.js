@@ -9,13 +9,14 @@ export function handoverAnswer(reason) {
 export async function claimHandover(tx, { shopId, conversationId, ownerId, reason }) {
   const result = await tx.query(`UPDATE conversations SET bot_mode='human',handover_reason=$4,
     handover_job_id=$3,updated_at=clock_timestamp()
-    WHERE shop_id=$1 AND id=$2 AND status='open' AND bot_mode='active' RETURNING id`,
+    WHERE shop_id=$1 AND id=$2 AND status='open' AND bot_mode='active' RETURNING id,bot_revision`,
   [shopId, conversationId, ownerId, reason]);
-  return result.rowCount === 1;
+  return result.rows[0] || null;
 }
 
-export function maySendReply(conversation, { method, ownerId }) {
+export function maySendReply(conversation, { method, ownerId, revision }) {
   if (!conversation || conversation.status !== 'open') return false;
+  if (revision !== undefined && conversation.bot_revision !== revision) return false;
   if (method === 'handover') return conversation.bot_mode === 'human' && conversation.handover_job_id === ownerId;
   return conversation.bot_mode === 'active';
 }
