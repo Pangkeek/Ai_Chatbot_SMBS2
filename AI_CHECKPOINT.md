@@ -1,5 +1,44 @@
 # จุดพักงานล่าสุด
 
+## 20 ตุลาคม 2026 — ตรวจ Gemini หลักกับบริการจริงสำเร็จ
+
+- ผู้ใช้คัดลอกคีย์ BuddyShare จากต้นทางลง `.env` เอง; ไฟล์นี้ถูก Git ignore และไม่มีคีย์ใน commit หรือผลทดสอบ
+- แก้ตัวอ่านผล BuddyShare ที่คืน `choices` และ JSON code fence จาก `/v1/responses` พร้อมคงการตรวจว่าคำตอบตรงกับหลักฐานของร้าน
+- เพิ่มเวลารอเฉพาะ BuddyShare และกำชับ prompt ให้ `text` เท่ากับข้อความหลักฐานทุกตัวอักษร
+- `npm run ai:check` ผ่านกับ Gemini จริง; RAG บนฐาน local ตอบคำถามช่อกุหลาบด้วย `generator` และแหล่งอ้างอิงหนึ่งรายการในเวลาประมาณ 4.7 วินาที
+- ยังค้าง OpenAI key สำหรับทดสอบบริการสำรองจริงและ LINE channel/HTTPS webhook สำหรับ LINE จริง; ผู้ใช้เลือกสาธิตแบบ local
+
+## 20 ตุลาคม 2026 — รองรับ BuddyShare Gemini
+
+- ผู้ใช้ส่งภาพการตั้งค่า BuddyShare Responses API รุ่น `gemini-3.1-flash-lite` ซึ่งเป็นคีย์ของบริการตัวกลาง ไม่ใช่ `GEMINI_API_KEY` ของ Google จึงเพิ่ม `BUDDYSHARE_API_KEY`/`BUDDYSHARE_MODEL` เป็น Gemini หลัก โดยยังคง OpenAI สำรองและ extractive fallback
+- คีย์อ่านจากภาพด้วย OCR สองตัวและเก็บเฉพาะ `.env` ที่ Git ไม่ติดตาม ไม่พิมพ์ค่าคีย์ในโค้ด/รายงาน/ผลทดสอบ
+- เพิ่ม tests ของ endpoint, Bearer header, structured JSON, การส่งหลักฐานเฉพาะร้าน และ fallback เมื่อ BuddyShare ตอบ 401; targeted tests 8/8, runtime 110/110, build และ api:check ผ่าน
+- ทดลองเรียก BuddyShare จริงจากเครื่องด้วย Bearer และ x-api-key: `/v1/models`, `/v1/responses`, `/v1/chat/completions` ได้ HTTP 401 `API key required for remote API access` แม้ผู้ใช้ยืนยันว่า key active จึงยังไม่อ้างว่า live AI สำเร็จ ขอให้คัดลอก key จากหน้าเว็บลง `.env` โดยตรงแล้วตรวจซ้ำ; ไม่มี OpenAI key จริง
+- เปิด local app หลังแก้แล้ว AI preview แสดง configured; LINE Simulator ตอบ `extractive` พร้อม source 1 เมื่อ provider 401 โดยไม่ส่งคำตอบที่ไม่มีหลักฐาน
+- ปรับข้อความ AI preview ให้สื่อว่า configured ยังไม่เท่ากับทดสอบคีย์ผ่าน เพื่อไม่ให้หน้าเว็บบอกว่าเชื่อมต่อสำเร็จทั้งที่บริการตอบ 401; build หลังแก้ผ่าน
+- เพิ่ม `npm run ai:check` ส่งเพียงข้อมูลสมมติ BLUE ไปตรวจ provider และพิมพ์รหัสข้อผิดพลาดแบบไม่เผยคีย์; รอบนี้ได้ `AI_HTTP_401` ผู้ใช้ต้องคัดลอก key จากปุ่มหน้า BuddyShare ลง `.env` แล้วรันซ้ำ
+
+## 20 ตุลาคม 2026 — เปลี่ยนเป็นรัน local ถาวร
+
+- ผู้ใช้ยืนยันไม่ deploy; ใช้ `compose.local.yaml` โปรเจกต์ `smb-chatbot-local` บน `127.0.0.1:55434` กับ Docker volume `smb-chatbot-local_postgres_local_data` แยกจากคอนเทนเนอร์เดิม ไม่มี SQLite ต้นทาง จึงเริ่ม PostgreSQL ใหม่
+- เพิ่ม `.env.local.example`, `scripts/local-start.ps1`, `docs/local-run.md`; คำสั่ง `& ./scripts/local-start.ps1 -SeedDemo` เปิดฐาน ตรวจ Node/npm, migrate, seed และเว็บ `http://127.0.0.1:3131` สคริปต์ตรวจ URL ใน `.env` ก่อนใช้ เพื่อไม่ชี้ไปฐานอื่น
+- ตรวจ PostgreSQL 18.6, migrations 001–005, seed สองร้าน; restart container แล้วร้านยัง 2 แห่ง; pg_dump 48,891 bytes/pg_restore ลงฐานแยกแล้วนับร้าน 2 แห่ง; local starter รันซ้ำ migrations unchanged 5 และเว็บพร้อม
+- preflight 4/4 HTTP 200, login ร้านดอกไม้ เห็นร้านเดียว, Simulator ตอบแบบ extractive พร้อม source 1; runtime tests 108/108, PostgreSQL 2/2, schema 3/3 ผ่านบนฐาน local ถาวร
+- ปรับ README, คู่มือสาธิต, วิธีรันสั้น และรายงานข้อ 12 ให้ local เป็นวิธีหลัก ไม่มีขั้น deploy; LINE/AI ภายนอกยังไม่ได้ตรวจเพราะไม่มี channel/keys, คะแนนมนุษย์ใน `reports/task11/human-review.csv` ยังว่าง
+- ไฟล์ `.env` และ backup `data/backups/chatbot_local.dump` อยู่เฉพาะเครื่อง ไม่เข้า Git; ก่อนสาธิตครั้งถัดไปเปิด Docker Desktop แล้วรัน local starter ตรวจ preflight อีกครั้ง
+
+## 20 ตุลาคม 2026 — AI หลัก/สำรอง และความพร้อมสาธิต
+
+- ผู้ใช้ให้ทำตาม PLAN และ `.agent/skills/myskill` โดยทำงานให้เสร็จเท่าที่ไม่ต้องใช้บริการภายนอก ผู้ใช้ยืนยันว่าไม่มี Render/LINE test channel และไม่มีไฟล์ SQLite ต้นทาง จึงเลือก PostgreSQL ใหม่สำหรับสาธิต ไม่อ้างว่าย้ายข้อมูล SQLite เดิมแล้ว
+- เพิ่ม `aiProviders.js` เรียก Gemini GenerateContent และ OpenAI Responses แบบ structured JSON โดยรับคีย์จาก environment, ส่งเฉพาะ prompt/หลักฐานของร้าน, ปิดการเก็บ response ในคำขอ OpenAI และปฏิเสธข้อความที่ไม่เป็น substring ของหลักฐานเดียวกัน
+- เพิ่ม `aiGateway.js` ให้ Gemini เป็นหลัก/OpenAI สำรอง จำกัดเวลารวม 8.5 วินาทีและครั้งละ 2 วินาที ลองซ้ำหนึ่งครั้งเฉพาะ transient error โดยเว้น 150 ms พัก provider ที่ล้มสองคำขอเป็นเวลา 30 วินาทีและลอง half-open อีกครั้ง; หากทั้งคู่ล้ม RAG เดิมตอบแบบคัดหลักฐาน/ไม่มีข้อมูล
+- คง HTTP generator เดิมเมื่อไม่ได้ตั้งคีย์สองราย เพิ่มสถานะ AI ใน preview และ env/Compose/docs; `test:runtime` รวมชุด `ai-gateway` ใหม่
+- ตรวจด้วย Node 24.19.0/npm 11.19.0 และ PostgreSQL 18 แยกจากแอปเดิม: runtime บนโค้ดสุดท้าย 108/108, SQLite 3/3, import 8/8, PostgreSQL 2/2, schema 3/3, LINE lifecycle 1/1, production 2/2, browser 11 ขั้นตอน, evaluation 28/28 + failover 7/7 + handover 7/7, build, api:check, audit 0 vulnerabilities ผ่าน
+- สร้างฐาน `chatbot_demo` ในคอนเทนเนอร์ PostgreSQL ทดสอบแยก รัน migrations 001–005 และ seed สองร้านสำเร็จ เปิด Next development ที่ `http://127.0.0.1:3131` เพื่อตรวจ preflight 4 URL, login/preview และ LINE Simulator (ตอบ extractive พร้อมหลักฐาน) ผ่าน; คอนเทนเนอร์นี้ใช้ `--rm` ไม่มี volume ถาวร และ LINE จริงยังปิด
+- เพิ่ม `scripts/demo-preflight.js`, `docs/demo-runbook.md` และ `reports/task12/readiness.md` สำหรับตรวจ release/สาธิตและแยกผลจำลองจากผลจริง
+- สิ่งที่ยังต้องทำเมื่อมีบริการ: ตั้ง Render/LINE test channel และ secret store, ทดสอบ API จริงทั้งสองรายและ LINE ถึงอุปกรณ์, ให้คนให้คะแนน `human-review.csv`, วัด tokens/ค่าใช้จ่าย/latency จริง, ซ้อม backup/restore และตรวจ staging/cutover ห้ามนับผล fixture เป็น production ผ่าน
+
+
 ## ข้อ 11 — ชุดทดสอบอัตโนมัติ/รายงานเสร็จ และข้อจำกัดที่ต้องตรวจจริง
 
 - ทำต่อบน branch task11-integration-testing จาก task10-human-handover; ข้อ 10 มี commits 89e1ab8 (API) และ 34bbe04 (UI) ส่วนข้อ 11 แยกแก้ RAG 55a3983 และ UI 69822c7 แล้ว หน่วยเครื่องมือ/รายงาน/patch dependencies บันทึกต่อใน commit นี้ ไม่มี push/merge

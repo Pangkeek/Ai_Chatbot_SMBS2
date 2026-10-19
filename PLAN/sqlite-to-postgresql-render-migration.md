@@ -1,5 +1,7 @@
 # แผนย้าย SQLite ไป PostgreSQL และ Deploy บน Render
 
+> อัปเดต 20 ตุลาคม 2026: แผน Render ด้านล่างเป็นบันทึกเดิม ผู้ใช้เลือก [รัน local ด้วย PostgreSQL](local-only-decision.md) และยืนยันว่าไม่มีไฟล์ SQLite ต้นทาง จึงไม่มีงานนำเข้าหรือ deploy ในเป้าหมายปัจจุบัน
+
 วันที่จัดทำ: 6 ตุลาคม 2026 (Asia/Bangkok)
 โปรเจกต์: SMB Chatbot Platform — `Ai_Chatbot_SMBS2`
 สถานะ: แผนสำหรับนำไปพัฒนา ยังไม่ได้เปลี่ยนฐานข้อมูลหรือสร้างบริการ Render

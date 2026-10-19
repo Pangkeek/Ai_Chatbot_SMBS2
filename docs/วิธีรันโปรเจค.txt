@@ -1,8 +1,12 @@
-โหลด docker มาพิมคำสั่งนี้
+รันบนเครื่อง Windows
 
-docker compose up --build -d
+1. เปิด Docker Desktop
+2. เปิด PowerShell ที่โฟลเดอร์โครงการ
+3. ครั้งแรก: & ./scripts/local-start.ps1 -SeedDemo
+4. ครั้งต่อไป: & ./scripts/local-start.ps1
+5. เปิด http://127.0.0.1:3131
 
-
-ระบบอยู่ที่ http://localhost:3000 และ /health ตอบ 200
--ฐานข้อมูล PostgreSQL เก็บใน Docker volume จึงไม่หายเมื่อหยุด container หยุดระบบด้วย docker compose down
-ระบบไม่สร้างบัญชี demo อัตโนมัติ ให้สมัครบัญชีผ่านหน้าเว็บได้เลย 
+ถ้า PowerShell ปฏิเสธไฟล์ .ps1 ให้รัน Set-ExecutionPolicy -Scope Process Bypass ในหน้าต่างนั้นแล้วลองใหม่
+หยุดเว็บด้วย Ctrl+C; หยุด PostgreSQL ด้วย docker compose -f compose.local.yaml -p smb-chatbot-local down
+ข้อมูลเก็บใน Docker volume ไม่หายเมื่อหยุดปกติ ห้ามใช้ down --volumes เมื่อต้องการเก็บข้อมูล
+รายละเอียดการตั้งค่า สำรองข้อมูล และข้อจำกัด LINE อยู่ใน docs/local-run.md

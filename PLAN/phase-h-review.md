@@ -1,5 +1,7 @@
 # ระยะ H — review ส่วนโค้ด
 
+อัปเดต 20 ตุลาคม 2026: ผู้ใช้เลือกสาธิตบนเครื่องและไม่ deploy แล้ว สถานะปัจจุบันและการแทนเป้าหมายข้อ 12 อยู่ใน [local-only-decision.md](local-only-decision.md) ข้อความด้านล่างเป็นบันทึก review ระยะ H เดิม
+
 เพิ่ม APP_MAINTENANCE_MODE=true เพื่อปฏิเสธ business API ทุก method ด้วย HTTP 503 ก่อน DB/auth/body และคง health ที่ตรวจฐานข้อมูลได้ Worker ไม่เริ่มเมื่อ maintenance แม้ LINE_WORKER_ENABLED=true
 
 | ไฟล์ | หน้าที่ |

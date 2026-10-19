@@ -4,13 +4,13 @@
 
 ## รันครั้งแรก
 
-> สถานะก่อน merge: รวมงานหน้าเว็บและ RAG จาก master เข้ากับ PostgreSQL แล้ว ดูผลตรวจล่าสุดที่ [pre-merge review](docs/pre-merge-review.md) ผู้ใช้รายงาน staging/LINE ผ่าน แต่ยังต้องยืนยันหลักฐาน DB, backup/restore และ production cutover ตาม [คู่มือ production](docs/production-cutover.md)
+> วิธีใช้งานปัจจุบันคือรันบนเครื่องด้วย PostgreSQL ที่เก็บข้อมูลใน Docker volume แยก ดูคำสั่งสั้น ๆ ใน [คู่มือรัน local](docs/local-run.md) ไม่มีการ deploy ไป Render และไม่มีไฟล์ SQLite เดิมให้นำเข้า
 
 ### PostgreSQL สำหรับพัฒนา
 
-ใช้ PostgreSQL 18 แยก `chatbot_dev` และ `chatbot_test` หากมี Docker ให้เปิดด้วย `docker compose up -d postgres` ซึ่งเก็บข้อมูลใน named volume และเปิดฐานข้อมูลที่ `127.0.0.1:55432` พร้อมพอร์ตเว็บที่ `127.0.0.1:${PORT:-3000}` ค่ารหัสผ่านใน Compose เป็นตัวอย่างสำหรับ local เท่านั้น SQL init สร้าง test DB เฉพาะครั้งแรกที่ volume ว่าง
+ใช้ PostgreSQL 18 แยก `chatbot_local` และ `chatbot_test` เปิดด้วย `docker compose -f compose.local.yaml -p smb-chatbot-local up -d` ซึ่งเก็บข้อมูลใน named volume และเปิดฐานข้อมูลที่ `127.0.0.1:55434` ค่ารหัสผ่านใน Compose เป็นตัวอย่างสำหรับ local เท่านั้น SQL init สร้าง test DB เฉพาะครั้งแรกที่ volume ว่าง
 
-เพิ่มค่า PostgreSQL จาก `.env.example` ลง `.env` โดยรักษาค่าเดิมไว้ จากนั้นรัน:
+สคริปต์ใน [คู่มือรัน local](docs/local-run.md) จัดการขั้นตอนเริ่มต้นให้ หากต้องการรันคำสั่งตรวจแยก ให้คัดลอก `.env.local.example` เป็น `.env` เฉพาะเมื่อยังไม่มีไฟล์ แล้วรัน:
 
 ```powershell
 npm run db:check:postgres
@@ -30,25 +30,23 @@ Scripts โหลด `.env` ผ่าน `--env-file-if-exists` และ fail �
 
 `getRuntimeDatabase()` ตรวจ schema/required migration versions แบบ read-only และ fail เมื่อยังไม่พร้อม ให้รัน migration ก่อนเปิด runtime ไม่สร้างตารางระหว่างรับ request ใช้ schema `public` โดย default; `DB_SCHEMA` ใช้เลือก schema ที่สร้างไว้แล้ว โดย tests สร้าง schema สุ่มแยกต่อ suite และ cleanup เฉพาะของตัวเอง ดู [รีวิวระยะ C](PLAN/phase-c-review.md)
 
-เครื่องนี้ทดสอบด้วย PostgreSQL 18.4 ที่ติดตั้งไว้ (ไม่มี Docker CLI) ใน cluster แยก `data/postgresql-phase-b` ดูผลทดสอบและวิธีเปิดใน [รีวิวระยะ B](PLAN/phase-b-review.md)
+บันทึกการทดสอบ PostgreSQL 18.4 ระยะแรกอยู่ใน [รีวิวระยะ B](PLAN/phase-b-review.md) ส่วนการสาธิต local ปัจจุบันใช้ PostgreSQL 18 ใน Docker
 
 ### เปิดแอปและเติม demo เฉพาะ local
 
-ต้องมี **Node.js 24.19.0 ขึ้นไปในสาย 24.x** และ **npm 11.19.0** ติดตั้งแพ็กเกจด้วยคำสั่ง:
+ต้องมี **Node.js 24.19.0 ขึ้นไปในสาย 24.x** และ **npm 11.19.0** บนเครื่องนี้สคริปต์เลือก toolchain ที่ตรงเวอร์ชันให้
 
 เปิด terminal ในโฟลเดอร์โครงการแล้วรัน:
 
 ```powershell
-npm install
-# เพิ่มค่าจาก .env.example ลง .env และเปิด PostgreSQL ก่อน
-npm run db:migrate
-npm run db:seed
-npm run dev
+& ./scripts/local-start.ps1 -SeedDemo
 ```
 
-เปิด **http://127.0.0.1:3000/** เพื่อเข้าสู่หน้าแนะนำ `/home` ก่อนล็อกอิน จากนั้นกด **เข้าสู่ระบบ** หรือ **จัดการร้านค้า** เพื่อไป `/app` กด **สมัครสมาชิก** เพื่อเปิดแบบฟอร์มสร้างบัญชีโดยตรง ส่วน **http://127.0.0.1:3000/docs** ใช้ API Console และ **http://127.0.0.1:3000/health** ใช้ตรวจการเชื่อมต่อฐานข้อมูล หยุด server ด้วย `Ctrl+C`
+เปิด **http://127.0.0.1:3131/** เพื่อเข้าสู่หน้าแนะนำ `/home` ก่อนล็อกอิน จากนั้นกด **เข้าสู่ระบบ** หรือ **จัดการร้านค้า** เพื่อไป `/app` กด **สมัครสมาชิก** เพื่อเปิดแบบฟอร์มสร้างบัญชีโดยตรง ส่วน **http://127.0.0.1:3131/docs** ใช้ API Console และ **http://127.0.0.1:3131/health** ใช้ตรวจการเชื่อมต่อฐานข้อมูล หยุด server ด้วย `Ctrl+C`
 
 ## รันด้วย Docker Compose
+
+สำหรับการใช้งานบนเครื่องครั้งนี้ ให้ใช้ [คู่มือรัน local](docs/local-run.md) ซึ่งเปิดเฉพาะ PostgreSQL ใน Compose และรัน Next.js ที่ `127.0.0.1:3131` ด้วย Node บน Windows ขั้นตอนต่อไปนี้เป็นทางเลือกสำหรับการรันแอปทั้งชุดใน Docker:
 
 ติดตั้งและเปิด Docker Desktop ก่อน แล้วรันคำสั่งเดียวจากโฟลเดอร์โปรเจค:
 
@@ -56,7 +54,7 @@ npm run dev
 docker compose up --build -d
 ```
 
-เปิด `http://localhost:3000` เพื่อใช้งาน ระบบ build แอปและรัน migration ให้อัตโนมัติเมื่อเริ่ม container ข้อมูล SQLite อยู่ใน Docker volume `postgres_data` จึงยังอยู่เมื่อสั่ง `docker compose down` หากพอร์ต 3000 ถูกใช้งาน ให้กำหนด `PORT` ในไฟล์ `.env` แล้วเปิด URL ตามพอร์ตนั้น
+เปิด `http://localhost:3000` เพื่อใช้งาน ระบบ build แอปและรัน migration ให้อัตโนมัติเมื่อเริ่ม container ข้อมูล PostgreSQL อยู่ใน Docker volume `postgres_data` จึงยังอยู่เมื่อสั่ง `docker compose down` หากพอร์ต 3000 ถูกใช้งาน ให้กำหนด `PORT` ในไฟล์ `.env` แล้วเปิด URL ตามพอร์ตนั้น
 
 ```powershell
 docker compose ps       # ดูสถานะ
@@ -82,7 +80,7 @@ Compose ใช้ `NODE_ENV=production` จึงไม่เติมบัญ�
 
 ในหน้า FAQ และคลังความรู้มีช่อง **ดูข้อมูลที่ Chatbot ใช้ตอบ** สำหรับลองคำถาม แล้วตรวจข้อมูลร้าน หลักฐานที่ระบบเลือก และโครงสร้าง prompt ที่จะส่งให้บริการ AI ได้ ระบบนำชื่อร้าน ประเภทธุรกิจ สินค้าหรือบริการ รูปแบบบริการ เวลาเปิด และรายละเอียดเพิ่มเติมมาเป็นหลักฐานโดยตรง ส่วน FAQ และความรู้อื่นจะใช้เฉพาะรายการที่เผยแพร่แล้ว FAQ ที่ตรงคำถามมีลำดับก่อนข้อมูลอื่น
 
-ก่อนส่งคำตอบ ระบบตรวจว่าข้อความที่บริการ AI เลือกเป็นข้อความตรงจากหลักฐานของร้านนั้น หากไม่มีหลักฐานหรือบริการ AI ไม่พร้อม ระบบจะตอบด้วยข้อความจากหลักฐานที่ค้นได้หรือแจ้งว่าไม่มีข้อมูลยืนยัน คำตอบและรหัสแหล่งข้อมูลถูกเก็บไว้กับบทสนทนา บริการ AI ภายนอกเป็นทางเลือกที่ตั้งผ่าน `RAG_GENERATOR_URL` และ `RAG_GENERATOR_TOKEN`; หากไม่ตั้งค่า ระบบยังตอบแบบคัดข้อความจากหลักฐานได้
+ก่อนส่งคำตอบ ระบบตรวจว่าข้อความที่บริการ AI เลือกเป็นข้อความตรงจากหลักฐานของร้านนั้น หากไม่มีหลักฐานหรือบริการ AI ไม่พร้อม ระบบจะตอบด้วยข้อความจากหลักฐานที่ค้นได้หรือแจ้งว่าไม่มีข้อมูลยืนยัน คำตอบและรหัสแหล่งข้อมูลถูกเก็บไว้กับบทสนทนา ตั้ง `GEMINI_API_KEY` เพื่อใช้ Gemini เป็นหลัก และ `OPENAI_API_KEY` เพื่อใช้ OpenAI สำรอง; หากไม่มีทั้งสองคีย์ ยังใช้ HTTP generator เดิมผ่าน `RAG_GENERATOR_URL`/`RAG_GENERATOR_TOKEN` หรือคัดข้อความจากหลักฐานในเครื่องได้
 
 ลิงก์จากหน้าแนะนำพาไป `/app` เพื่อใช้ขั้นตอนเข้าสู่ระบบเดิมของแดชบอร์ด หากยังไม่มีบัญชีให้ไป `/app?mode=register` เพื่อเปิดแท็บสมัครสมาชิก หน้าข้อมูลร้านและการเชื่อมต่อ LINE ต้องเลือกจากร้านที่บัญชีมีสิทธิ์เข้าถึง
 
@@ -222,11 +220,17 @@ Webhook URL ต้องเป็น HTTPS ที่ LINE เข้าถึง�
 
 ทดลองได้ในหน้า **LINE Simulator** หรือ `POST /api/v1/shops/{shopId}/line/simulate` โดยใช้บัญชีเจ้าของร้าน หน้า Simulator แสดงวิธีตอบและรหัสแหล่งความรู้ใต้คำตอบ ปุ่ม **ค้นข้อมูลสินค้า** ใช้คำถามที่ไม่ตรง FAQ เพื่อให้เห็นขั้นค้น chunks (`shop-coffee`: ลาเต้เย็นราคาเท่าไหร่; `shop-flower`: ช่อกุหลาบราคาเท่าไหร่) ผล API มี `reply_method` (`faq`, `extractive`, `generator`, `no_evidence`) และ `reply_source_ids` ส่วนข้อความ LINE จริงบันทึกหลักฐานไว้ใน `message_sources` (`shop_id`, `message_id`, `knowledge_entry_id`, `chunk_id`, `source_excerpt`) แม้ภายหลังลบความรู้นั้นไปแล้ว คำตอบที่ส่งไม่สำเร็จจะไม่ถูกบันทึกเป็นข้อความผู้ช่วย
 
-หากมีบริการ AI ของตนเอง ตั้ง `RAG_GENERATOR_URL` และ `RAG_GENERATOR_TOKEN` ใน `.env` เพื่อให้ worker ส่ง `POST` JSON `{ shopId, query, context, instruction }` ไปยังบริการนั้น `context` มีเฉพาะ chunk ของร้านที่เกี่ยวข้อง บริการต้องตอบ JSON เช่น `{ "text": "จัดส่งภายในเมือง ค่าจัดส่ง 50 บาท", "sourceChunkIds": ["shop-flower-kb-3:0"] }` โดย `text` ต้องคัดตรงจากเนื้อหา chunk ที่อ้างอิง หรือ `{ "insufficient": true }` เมื่อหลักฐานไม่พอ หากผลไม่ผ่านการตรวจ ระบบใช้ข้อความหลักฐานโดยตรงแทน จุด `generator.generate(...)` ยังฉีด implementation อื่นได้ **ถ้าไม่ได้ตั้ง URL ระบบทำเฉพาะ retrieval และตอบแบบคัดข้อความหลักฐาน จึงยังไม่มีขั้นสร้างคำตอบด้วย AI จริง** การเชื่อม Gemini/OpenAI, retry หรือ circuit breaker อยู่ในงานข้อ 8 Local embedding เป็น character n-gram hashing จึงไม่มีค่า API แต่ความแม่นยำด้านความหมายมีข้อจำกัด ควรตรวจคำถามตัวอย่างของร้านก่อนใช้งานจริง
+ตั้ง `BUDDYSHARE_API_KEY` ใน `.env` บนเครื่องเพื่อใช้ Gemini ผ่าน BuddyShare Responses API เป็น AI หลัก (`BUDDYSHARE_MODEL=gemini-3.1-flash-lite`) คีย์ BuddyShare ใช้กับ Google endpoint โดยตรงไม่ได้ หากมี Google Gemini API key แท้จึงใช้ `GEMINI_API_KEY` และ `GEMINI_MODEL` แทนได้ เมื่อมี `OPENAI_API_KEY` ระบบใช้ OpenAI เป็น AI สำรอง รุ่นเริ่มต้น `gpt-5.6-luna`; เปลี่ยนได้ด้วย `OPENAI_MODEL` หลังตรวจสิทธิ์และราคาแล้ว ข้อมูลคำถามและหลักฐานของร้านที่เลือกจะส่งผ่าน BuddyShare ซึ่งเป็นบริการตัวกลางภายนอก
+
+แต่ละบริการลองซ้ำได้หนึ่งครั้งเฉพาะ timeout/network/429/5xx โดยเว้น 150 ms และจำกัดเวลารวม 8.5 วินาที หากบริการล้มซ้ำสองคำขอจะพัก 30 วินาทีแล้วลองใหม่หนึ่งครั้ง สถานะนี้อยู่ใน process เดียว ไม่แชร์ระหว่างหลาย instance คำตอบที่ไม่ตรงหลักฐานจะถูกปฏิเสธแล้วลองสำรอง หากทั้งคู่ใช้ไม่ได้ ระบบตอบด้วยข้อความจากหลักฐานในเครื่องหรือแจ้งว่าไม่มีข้อมูลยืนยัน ไม่ส่งข้อมูลจากร้านอื่น
+
+หากมีบริการ AI ของตนเองและไม่ได้ตั้งคีย์สองรายข้างต้น ยังใช้ `RAG_GENERATOR_URL`/`RAG_GENERATOR_TOKEN` แบบเดิมได้ worker ส่ง `POST` JSON `{ shopId, query, context, instruction, prompt }` โดย `context` มีเฉพาะ chunk ของร้านที่เกี่ยวข้อง บริการตอบ `{ "text": "จัดส่งภายในเมือง ค่าจัดส่ง 50 บาท", "sourceChunkIds": ["shop-flower-kb-3:0"] }` หรือ `{ "insufficient": true }` คำตอบต้องคัดตรงจาก chunk ที่อ้างอิง Local embedding เป็น character n-gram hashing ซึ่งความแม่นยำเชิงความหมายมีข้อจำกัด ควรตรวจคำถามของร้านก่อนใช้งานจริง
 
 การเปลี่ยน `bot_mode` จะถูกตรวจอีกครั้งหลังเตรียมคำตอบและก่อนส่ง LINE Endpoint บันทึกข้อความไม่ใช่หลักฐานว่าส่งถึง LINE แล้ว
 
-ดู [รีวิวระยะ G](PLAN/phase-g-review.md), [คู่มือ Render staging](docs/render-staging.md) และ [วิธีดูแลคิว LINE](docs/line-jobs.md) ต้องผ่าน staging จริงก่อน cutover H ส่วนการตั้งค่าและ deploy Render ผู้ใช้ดำเนินการเอง
+ดู [รีวิวระยะ G](PLAN/phase-g-review.md) และ [วิธีดูแลคิว LINE](docs/line-jobs.md) สำหรับงานระบบ การรัน local ครั้งนี้ใช้ LINE Simulator จึงยังไม่มี webhook จาก LINE จริง
+
+ก่อนสาธิตให้ทำตาม [คู่มือสาธิตและตรวจความพร้อม](docs/demo-runbook.md) รวมผลตรวจ PostgreSQL, AI failover, LINE, Handover และรายงานที่ยังต้องวัดจากบริการจริง
 
 ## นำเข้า SQLite snapshot (ระยะ E)
 
@@ -246,7 +250,7 @@ Batch เริ่มต้น 200 แถว (`SQLITE_IMPORT_BATCH_SIZE`, สู
 
 เครื่องมือตรวจ snapshot checksum, baseline SQLite migrations, timestamps/NUL, lower(email) ตาม PostgreSQL, FK/owner memberships และ counts/checksums ทั้ง 9 ตารางเรียง PK รายงานไม่เก็บ email, message text, password/token hashes หรือ LINE credential values คีย์ของแถวที่ผิดใช้ SHA-256 fingerprint เพื่อให้เทียบได้โดยไม่เผย token_hash ของ sessions
 
-Imported LINE events คง raw history และรายงาน received/processing เป็น unresolved ไม่สร้าง jobs หรือส่ง LINE reply เก่า Snapshot ยังคงมีข้อมูลลับทั้งหมด ต้องเก็บในพื้นที่จำกัดสิทธิ์ การนำเข้าจริง/ตั้งค่าฐาน Render ให้ผู้ใช้ดำเนินการตามขั้นตอนที่เตรียมไว้
+Imported LINE events คง raw history และรายงาน received/processing เป็น unresolved ไม่สร้าง jobs หรือส่ง LINE reply เก่า Snapshot ยังคงมีข้อมูลลับทั้งหมด ต้องเก็บในพื้นที่จำกัดสิทธิ์ ปัจจุบันไม่มีไฟล์ SQLite เดิม จึงเริ่มฐาน PostgreSQL ใหม่บนเครื่อง
 
 หาก connection ขาดระหว่าง COMMIT รายงานจะระบุ `commit-uncertain` ให้รัน verify กับ target เดิมก่อนตัดสินใจ ห้ามล้างฐานหรือ import ทับ ถ้า commit สำเร็จแต่เขียนรายงานสุดท้ายไม่สำเร็จ อาจเหลือ receipt `verified-before-commit`; ใช้ verify เพื่อยืนยันผล
 
@@ -264,4 +268,4 @@ Imported LINE events คง raw history และรายงาน received/pro
 
 ## Repository
 
-โปรเจกต์มี Git repository และ origin แล้ว การเปลี่ยนแปลงระยะ G ในรอบนี้ยังไม่ได้ commit/push ให้เลือก commit ที่ผ่าน CI เมื่อนำขึ้น staging ดูขั้นตอน release ใน `CONTRIBUTING.md` และ `docs/render-staging.md`
+โปรเจกต์มี Git repository และ origin แล้ว วิธีเปิดระบบปัจจุบันอยู่ใน `docs/local-run.md` และลำดับสาธิตอยู่ใน `docs/demo-runbook.md`

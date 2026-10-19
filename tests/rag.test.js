@@ -7,6 +7,7 @@ import { createService } from '../src/services/service.js';
 import { createLineWorker } from '../src/services/worker.js';
 import { answerQuestion, rebuildKnowledgeIndex, retrieve, UNKNOWN_ANSWER } from '../src/services/rag.js';
 import { createHttpRagGenerator } from '../src/services/ragGenerator.js';
+import { createConfiguredRagGenerator } from '../src/services/aiGateway.js';
 
 async function withDemo(run) {
   return withTestSchema(async ({db,config}) => {
@@ -113,6 +114,52 @@ test('HTTP AI boundary sends scoped context and accepts only a quoted supported 
   assert.ok(request.body.context.every(row => row.knowledgeEntryId.startsWith('shop-flower')));
   assert.deepEqual(answer.sources.map(source => source.knowledge_entry_id), ['shop-flower-kb-3']);
   assert.throws(() => createHttpRagGenerator({ url: 'http://ai.example.test/generate' }), /HTTPS/);
+}));
+
+test('RAG uses OpenAI after Gemini fails and keeps the verified source', () => withDemo(async db => {
+  const requests = [];
+  const generator = createConfiguredRagGenerator({ env: { GEMINI_API_KEY: 'test-gemini', OPENAI_API_KEY: 'test-openai' },
+    fetchImpl: async (url, options) => {
+      requests.push(String(url));
+      if (String(url).includes('googleapis')) return new Response('{}', { status: 503 });
+      const evidence = JSON.parse(JSON.parse(options.body).input[1].content).evidence[0];
+      return new Response(JSON.stringify({ status: 'completed', output: [{ type: 'message', content: [{ type: 'output_text',
+        text: JSON.stringify({ text: evidence.content, sourceChunkIds: [evidence.chunkId], insufficient: false }),
+      }] }] }), { status: 200 });
+    } });
+  const result = await answerQuestion(db, { shopId: 'shop-flower', query: 'ค่าจัดส่งเท่าไร', generator });
+  assert.equal(result.method, 'generator');
+  assert.equal(result.sources[0].knowledge_entry_id, 'shop-flower-kb-3');
+  assert.equal(requests.length, 3);
+}));
+
+test('RAG falls back to local evidence when both AI providers fail', () => withDemo(async db => {
+  const generator = createConfiguredRagGenerator({ env: { GEMINI_API_KEY: 'test-gemini', OPENAI_API_KEY: 'test-openai' },
+    fetchImpl: async () => new Response('{}', { status: 503 }) });
+  const result = await answerQuestion(db, { shopId: 'shop-flower', query: 'ค่าจัดส่งเท่าไร', generator });
+  assert.equal(result.method, 'extractive');
+  assert.match(result.text, /ค่าจัดส่ง 50 บาท/);
+  assert.equal(result.sources[0].knowledge_entry_id, 'shop-flower-kb-3');
+}));
+
+test('LINE simulator records a backup AI answer with the right shop source', () => withDemo(async db => {
+  const generator = createConfiguredRagGenerator({ env: { GEMINI_API_KEY: 'test-gemini', OPENAI_API_KEY: 'test-openai' },
+    fetchImpl: async (url, options) => {
+      if (String(url).includes('googleapis')) return new Response('{}', { status: 503 });
+      const evidence = JSON.parse(JSON.parse(options.body).input[1].content).evidence[0];
+      return new Response(JSON.stringify({ status: 'completed', output: [{ type: 'message', content: [{ type: 'output_text',
+        text: JSON.stringify({ text: evidence.content, sourceChunkIds: [evidence.chunkId], insufficient: false }),
+      }] }] }), { status: 200 });
+    } });
+  const worker = createLineWorker(db, { generator, logErrors: false });
+  const result = await worker.handleMessageEvent({ shopId: 'shop-flower', simulated: true,
+    event: { source: { userId: 'backup-ai-test' }, message: { text: 'ค่าจัดส่งเท่าไร' } } });
+  assert.equal(result.replied, true);
+  assert.equal(result.replyMethod, 'generator');
+  assert.deepEqual(result.sourceKnowledgeIds, ['shop-flower-kb-3']);
+  const saved = (await db.query('SELECT source_excerpt FROM message_sources WHERE shop_id=$1 AND message_id=$2',
+    ['shop-flower', result.replyMsgId])).rows[0];
+  assert.match(saved.source_excerpt, /ค่าจัดส่ง 50 บาท/);
 }));
 
 test('worker saves source IDs after delivery, retains audit after deletion, and rechecks bot_mode', () => withDemo(async db => {
