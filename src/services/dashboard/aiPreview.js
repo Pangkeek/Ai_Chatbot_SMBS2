@@ -9,7 +9,7 @@ function addBusinessLine(container, label, value) {
 
 function renderPreview(result) {
   document.querySelector("#ai-preview-connection").textContent = result.aiConfigured
-    ? "เชื่อมต่อบริการ AI ภายนอกแล้ว และระบบจะตรวจคำตอบกับหลักฐานก่อนส่ง"
+    ? "ตั้งค่าบริการ AI ภายนอกแล้ว ระบบจะตรวจคำตอบกับหลักฐานก่อนส่ง (หน้านี้ยังไม่ได้ทดสอบการเชื่อมต่อ)"
     : "ยังไม่ได้เชื่อมต่อบริการ AI ภายนอก ระบบตอบโดยคัดข้อความจากหลักฐานในเครื่อง";
   const business = document.querySelector("#ai-preview-business");
   const sources = document.querySelector("#ai-preview-sources");

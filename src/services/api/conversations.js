@@ -4,15 +4,20 @@ import { ApiError } from '../../utils/validation.js';
 
 import { now, wrap } from './common.js';
 
+const publicConversation = ({ handover_job_id, ...conversation }) => conversation;
+
 export function createConversationsOperations(db, { get, page, patch }) {
   return {
-    async listConversations({ params, query }) { return page('conversations', 'shop_id = ?', [params.shopId], query); },
+    async listConversations({ params, query }) {
+      const result = await page('conversations', 'shop_id = ?', [params.shopId], query);
+      return { ...result, data: result.data.map(publicConversation) };
+    },
     async createConversation({ params, body }) {
       const id = randomUUID(), time = now();
       await db.query('INSERT INTO conversations (id,shop_id,channel,customer_external_id,customer_name,status,bot_mode,created_at,updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)', [id, params.shopId, body.channel, body.customer_external_id, body.customer_name, 'open', 'active', time, time]);
-      return wrap(await get('conversations', params.shopId, id));
+      return wrap(publicConversation(await get('conversations', params.shopId, id)));
     },
-    async getConversation({ params }) { return wrap(await get('conversations', params.shopId, params.conversationId)); },
+    async getConversation({ params }) { return wrap(publicConversation(await get('conversations', params.shopId, params.conversationId))); },
     async updateConversation({ params, body }) {
       await get('conversations', params.shopId, params.conversationId);
       await patch('conversations', body, 'shop_id = ? AND id = ?', [params.shopId, params.conversationId]);

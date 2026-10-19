@@ -212,6 +212,21 @@
               "human"
             ]
           },
+          "handover_reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "AI_UNAVAILABLE",
+                  "AI_SAFETY_REFUSAL"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "readOnly": true
+          },
           "created_at": {
             "type": "string",
             "format": "date-time"
@@ -229,6 +244,7 @@
           "customer_name",
           "status",
           "bot_mode",
+          "handover_reason",
           "created_at",
           "updated_at"
         ]
@@ -979,7 +995,8 @@
                   "faq",
                   "generator",
                   "extractive",
-                  "no_evidence"
+                  "no_evidence",
+                  "handover"
                 ]
               },
               {

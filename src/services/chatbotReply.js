@@ -10,7 +10,7 @@ const openings = {
 
 export function formatChatbotReply(answer, personaText) {
   // คำตอบเมื่อไม่มีหลักฐานต้องคงเดิม และไม่เติมข้อความที่ทำให้ดูเหมือนยืนยันข้อมูลได้
-  if (answer.method === "no_evidence") return answer.text;
+  if (answer.method === "no_evidence" || answer.method === "handover") return answer.text;
   const { style } = parseChatbotPersona(personaText);
   return `${openings[style] || ""}${answer.text}`;
 }

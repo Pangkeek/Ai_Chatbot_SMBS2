@@ -2,11 +2,14 @@ import { prepareReply, saveReplySources } from './replyEvidence.js';
 import { randomUUID } from 'node:crypto';
 import { sendLineReply } from './line.js';
 import { transaction } from '../lib/db.js';
+import { withConfiguredGenerator } from './ai/config.js';
+import { claimHandover, maySendReply } from './ai/handover.js';
 
 const now = () => new Date().toISOString();
 
 // Development-only synchronous simulator; real webhooks use durable jobs.
 export function createLineSimulator(db, options = {}) {
+  options = withConfiguredGenerator(options);
   const replySender = options.sendReply || sendLineReply;
   const updateEvent = (executor, shopId, eventId, status) => executor.query(
     'UPDATE line_events SET status=$1 WHERE shop_id=$2 AND event_id=$3', [status, shopId, eventId || null]);
@@ -39,10 +42,18 @@ export function createLineSimulator(db, options = {}) {
     }
     const shop = (await db.query('SELECT * FROM shops WHERE id=$1', [shopId])).rows[0];
     // No checked-out transaction client is held during generation or HTTP delivery.
-    const answer = await prepareReply(db, { shop, conversation, messageText }, options);
+    const answer = await prepareReply(db, { shop, conversation, messageText }, { ...options, jobId: `simulator:${customerMsgId}` });
     const replyText = answer.text;
-    const latest = (await db.query('SELECT status,bot_mode FROM conversations WHERE shop_id=$1 AND id=$2', [shopId, conversation.id])).rows[0];
-    if (!latest || latest.status !== 'open' || latest.bot_mode !== 'active') {
+    const ownerId = `simulator:${customerMsgId}`;
+    const allowed = await transaction(db, async tx => {
+      const latest = (await tx.query('SELECT * FROM conversations WHERE shop_id=$1 AND id=$2 FOR UPDATE', [shopId, conversation.id])).rows[0];
+      if (!maySendReply(latest, { method: 'generator' })) return false;
+      if (answer.method === 'handover') return claimHandover(tx, { shopId, conversationId: conversation.id,
+        ownerId, reason: answer.handoverReason });
+      return true;
+    });
+    const latest = (await db.query('SELECT * FROM conversations WHERE shop_id=$1 AND id=$2', [shopId, conversation.id])).rows[0];
+    if (!allowed || !maySendReply(latest, { method: answer.method, ownerId })) {
       await updateEvent(db, shopId, event.webhookEventId, 'completed');
       return { ...base, reason: latest?.bot_mode || 'closed' };
     }

@@ -8,6 +8,7 @@ const systemInstruction = [
   "ห้ามแต่งราคา เวลา นโยบาย สินค้า หรือข้อมูลที่ไม่มีหลักฐาน",
   "หากหลักฐานไม่พอ ให้ตอบว่า insufficient=true โดยไม่เดาคำตอบ",
   "ส่งผลเป็น JSON ที่มี text, sourceChunkIds หรือ insufficient เท่านั้น",
+  'ส่งทั้งสามฟิลด์ทุกครั้ง: หากหลักฐานไม่พอใช้ text="", sourceChunkIds=[], insufficient=true มิฉะนั้น insufficient=false',
 ].join("\n");
 
 export function buildAnswerPrompt({ shop, query, context }) {

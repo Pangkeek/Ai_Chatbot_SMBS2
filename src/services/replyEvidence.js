@@ -1,11 +1,12 @@
 import { answerQuestion } from './rag.js';
-import { createHttpRagGenerator } from './ragGenerator.js';
+import { getRuntimeGenerator } from './ai/config.js';
 import { formatChatbotReply } from './chatbotReply.js';
 
-export async function prepareReply(db, { shop, conversation, messageText }, options) {
+export async function prepareReply(db, { shop, conversation, messageText }, options = {}) {
   if (options.generateReply) return { text: await options.generateReply({ shop, conversation, messageText }), sources: [], method: 'custom' };
   const answer = await answerQuestion(db, { shopId: shop.id, query: messageText,
-    generator: options.generator || createHttpRagGenerator({ url: process.env.RAG_GENERATOR_URL, token: process.env.RAG_GENERATOR_TOKEN }) });
+    generator: Object.hasOwn(options, 'generator') ? options.generator : getRuntimeGenerator(),
+    signal: options.signal, deadlineAt: options.deadlineAt, jobId: options.jobId });
   return { ...answer, text: formatChatbotReply(answer, shop.persona) };
 }
 

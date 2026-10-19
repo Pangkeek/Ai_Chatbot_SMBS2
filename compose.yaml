@@ -10,6 +10,11 @@ services:
       APP_MAINTENANCE_MODE: ${APP_MAINTENANCE_MODE:-false}
       RAG_GENERATOR_URL: ${RAG_GENERATOR_URL:-}
       RAG_GENERATOR_TOKEN: ${RAG_GENERATOR_TOKEN:-}
+      AI_MODE: ${AI_MODE:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-}
     depends_on:
       postgres:
         condition: service_healthy

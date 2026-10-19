@@ -4,13 +4,16 @@ import { transaction } from '../lib/db.js';
 import { sendLineReply } from './line.js';
 import { createLineSimulator } from './simulator.js';
 import { messageId, recordLineEvents } from './lineJobs.js';
+import { withConfiguredGenerator } from './ai/config.js';
+import { claimHandover, maySendReply } from './ai/handover.js';
 
 class LeaseLost extends Error {}
 const transient = error => ['08000','08003','08006','57P01','57P02','57P03','40001','40P01','ECONNRESET','ECONNREFUSED','ETIMEDOUT'].includes(error?.code);
 
 export function createLineWorker(db, options = {}) {
+  options = withConfiguredGenerator(options);
   const workerId = options.workerId || randomUUID();
-  // เผื่อเวลากู้ lease สร้างคำตอบ (10s) และส่ง (10s) ภายใน cutoff 45s
+  // Generation uses at most 28s and reserves 12s for checkpoint/delivery within the 45s cutoff.
   const leaseMs = options.leaseMs ?? 15000;
   const heartbeatMs = options.heartbeatMs ?? 3000;
   const pollMs = options.pollMs ?? 1000;
@@ -92,7 +95,7 @@ export function createLineWorker(db, options = {}) {
   }
   async function canReply(tx, job) {
     const conversation = (await tx.query('SELECT * FROM conversations WHERE shop_id=$1 AND id=$2 FOR UPDATE', [job.shop_id, job.conversation_id])).rows[0];
-    if (!conversation || conversation.status !== 'open' || conversation.bot_mode !== 'active') {
+    if (!maySendReply(conversation, { method: job.reply_method, ownerId: job.job_id })) {
       await terminal(tx, job, 'completed', 'BOT_INACTIVE'); return false;
     }
     const expired = (await tx.query("SELECT clock_timestamp()>$1::timestamptz+$2*interval '1 millisecond' AS expired", [job.received_at, cutoffMs])).rows[0].expired;
@@ -116,12 +119,27 @@ export function createLineWorker(db, options = {}) {
       if (!job.reply_text) {
         const shop = (await db.query('SELECT * FROM shops WHERE id=$1', [job.shop_id])).rows[0];
         const conversation = (await db.query('SELECT * FROM conversations WHERE shop_id=$1 AND id=$2', [job.shop_id, job.conversation_id])).rows[0];
-        const answer = await prepareReply(db, { shop, conversation, messageText: job.payload.message.text }, options);
-        const reply = answer.text;
-        await transaction(db, async tx => {
-          await owned(tx, job);
-          await tx.query('UPDATE line_jobs SET reply_text=$2,reply_sources=$3,reply_method=$4,updated_at=clock_timestamp() WHERE job_id=$1', [job.job_id, reply, JSON.stringify(answer.sources), answer.method]);
+        const { budget } = (await db.query(`SELECT GREATEST(0, EXTRACT(EPOCH FROM
+          (received_at+$2*interval '1 millisecond'-clock_timestamp()))*1000-12000) AS budget
+          FROM line_jobs WHERE job_id=$1`, [job.job_id, cutoffMs])).rows[0];
+        const answer = await prepareReply(db, { shop, conversation, messageText: job.payload.message.text }, {
+          ...options, jobId: job.job_id, signal: abort.signal, deadlineAt: Date.now() + Math.min(28000, Number(budget)),
         });
+        abort.signal.throwIfAborted();
+        if (lost || stopped) throw new LeaseLost();
+        const reply = answer.text;
+        const saved = await transaction(db, async tx => {
+          await owned(tx, job);
+          const latest = (await tx.query('SELECT * FROM conversations WHERE shop_id=$1 AND id=$2 FOR UPDATE', [job.shop_id, job.conversation_id])).rows[0];
+          if (!maySendReply(latest, { method: 'generator' })) {
+            await terminal(tx, job, 'completed', 'BOT_INACTIVE'); return false;
+          }
+          if (answer.method === 'handover') await claimHandover(tx, { shopId: job.shop_id,
+            conversationId: job.conversation_id, ownerId: job.job_id, reason: answer.handoverReason });
+          await tx.query('UPDATE line_jobs SET reply_text=$2,reply_sources=$3,reply_method=$4,updated_at=clock_timestamp() WHERE job_id=$1', [job.job_id, reply, JSON.stringify(answer.sources), answer.method]);
+          return true;
+        });
+        if (!saved) return job;
         job.reply_text = reply;
         job.reply_sources = answer.sources;
         job.reply_method = answer.method;

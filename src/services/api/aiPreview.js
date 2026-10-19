@@ -1,5 +1,6 @@
 import { prepareAnswerContext } from "../rag.js";
 import { missing, wrap } from "./common.js";
+import { readAiConfig } from "../ai/config.js";
 
 export function createAiPreviewOperations(db) {
   return {
@@ -11,7 +12,7 @@ export function createAiPreviewOperations(db) {
       const { shop, context, prompt } = prepared;
 
       return wrap({
-        aiConfigured: Boolean(process.env.RAG_GENERATOR_URL),
+        aiConfigured: readAiConfig().mode !== 'offline',
         shop: {
           name: shop.name,
           description: shop.description,

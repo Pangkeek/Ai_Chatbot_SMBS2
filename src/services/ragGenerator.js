@@ -7,7 +7,7 @@ export function createHttpRagGenerator({ url, token, fetchImpl = fetch }) {
     throw new Error('RAG_GENERATOR_URL must use HTTPS outside localhost');
   }
   return {
-    async generate({ shopId, query, context, instruction, prompt }) {
+    async generate({ shopId, query, context, instruction, prompt, signal, deadlineAt }) {
       const response = await fetchImpl(endpoint, {
         method: 'POST',
         headers: {
@@ -15,7 +15,8 @@ export function createHttpRagGenerator({ url, token, fetchImpl = fetch }) {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({ shopId, query, context, instruction, prompt }),
-        signal: AbortSignal.timeout(10000),
+        signal: AbortSignal.any([...(signal ? [signal] : []),
+          AbortSignal.timeout(Math.max(1, Math.min(10000, (deadlineAt ?? Infinity) - Date.now())))]),
       });
       if (!response.ok) throw new Error(`RAG generator returned ${response.status}`);
       return response.json();
