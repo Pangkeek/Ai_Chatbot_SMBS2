@@ -33,6 +33,8 @@ npm exec --yes --package=npm@11.19.0 -- npm run demo:preflight -- http://127.0.0
 
 การทดสอบใช้ `TEST_DATABASE_URL` ที่ชี้ `chatbot_test` แยกจาก `chatbot_local`
 
+หลังคัดลอกคีย์ BuddyShare จากหน้าเว็บลง `.env` โดยตรง ให้รัน `npm run ai:check` ด้วย Node/npm รุ่นเดียวกัน คำสั่งนี้ส่งเฉพาะข้อความสมมติ `BLUE` ไปตรวจว่าคีย์และรูปแบบ Responses API ใช้งานได้ หากได้ `AI_HTTP_401` แปลว่าบริการยังไม่ยอมรับคีย์ที่ส่ง อย่าใช้สถานะ `aiConfigured` ในหน้าเว็บเป็นหลักฐานว่า API ผ่าน
+
 ## สำรองและกู้ข้อมูล
 
 สร้างไฟล์สำรองใน `data/backups/` ซึ่ง Git ไม่ติดตาม:

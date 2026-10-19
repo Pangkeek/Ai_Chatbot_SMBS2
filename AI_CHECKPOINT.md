@@ -8,6 +8,7 @@
 - ทดลองเรียก BuddyShare จริงจากเครื่องด้วย Bearer และ x-api-key: `/v1/models`, `/v1/responses`, `/v1/chat/completions` ได้ HTTP 401 `API key required for remote API access` แม้ผู้ใช้ยืนยันว่า key active จึงยังไม่อ้างว่า live AI สำเร็จ ขอให้คัดลอก key จากหน้าเว็บลง `.env` โดยตรงแล้วตรวจซ้ำ; ไม่มี OpenAI key จริง
 - เปิด local app หลังแก้แล้ว AI preview แสดง configured; LINE Simulator ตอบ `extractive` พร้อม source 1 เมื่อ provider 401 โดยไม่ส่งคำตอบที่ไม่มีหลักฐาน
 - ปรับข้อความ AI preview ให้สื่อว่า configured ยังไม่เท่ากับทดสอบคีย์ผ่าน เพื่อไม่ให้หน้าเว็บบอกว่าเชื่อมต่อสำเร็จทั้งที่บริการตอบ 401; build หลังแก้ผ่าน
+- เพิ่ม `npm run ai:check` ส่งเพียงข้อมูลสมมติ BLUE ไปตรวจ provider และพิมพ์รหัสข้อผิดพลาดแบบไม่เผยคีย์; รอบนี้ได้ `AI_HTTP_401` ผู้ใช้ต้องคัดลอก key จากปุ่มหน้า BuddyShare ลง `.env` แล้วรันซ้ำ
 
 ## 20 ตุลาคม 2026 — เปลี่ยนเป็นรัน local ถาวร
 

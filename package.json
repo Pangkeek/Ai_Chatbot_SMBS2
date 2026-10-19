@@ -34,7 +34,8 @@
     "api:generate": "node scripts/openapi.js",
     "api:check": "node scripts/openapi.js --check",
     "rag:reindex": "node --env-file-if-exists=.env scripts/reindex-knowledge.js",
-    "demo:preflight": "node scripts/demo-preflight.js"
+    "demo:preflight": "node scripts/demo-preflight.js",
+    "ai:check": "node --env-file-if-exists=.env scripts/check-ai-provider.js"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",
