@@ -1,5 +1,17 @@
 # จุดพักงานล่าสุด
 
+## 20 ตุลาคม 2026 — AI หลัก/สำรอง และความพร้อมสาธิต
+
+- ผู้ใช้ให้ทำตาม PLAN และ `.agent/skills/myskill` โดยทำงานให้เสร็จเท่าที่ไม่ต้องใช้บริการภายนอก ผู้ใช้ยืนยันว่าไม่มี Render/LINE test channel และไม่มีไฟล์ SQLite ต้นทาง จึงเลือก PostgreSQL ใหม่สำหรับสาธิต ไม่อ้างว่าย้ายข้อมูล SQLite เดิมแล้ว
+- เพิ่ม `aiProviders.js` เรียก Gemini GenerateContent และ OpenAI Responses แบบ structured JSON โดยรับคีย์จาก environment, ส่งเฉพาะ prompt/หลักฐานของร้าน, ปิดการเก็บ response ในคำขอ OpenAI และปฏิเสธข้อความที่ไม่เป็น substring ของหลักฐานเดียวกัน
+- เพิ่ม `aiGateway.js` ให้ Gemini เป็นหลัก/OpenAI สำรอง จำกัดเวลารวม 8.5 วินาทีและครั้งละ 2 วินาที ลองซ้ำหนึ่งครั้งเฉพาะ transient error โดยเว้น 150 ms พัก provider ที่ล้มสองคำขอเป็นเวลา 30 วินาทีและลอง half-open อีกครั้ง; หากทั้งคู่ล้ม RAG เดิมตอบแบบคัดหลักฐาน/ไม่มีข้อมูล
+- คง HTTP generator เดิมเมื่อไม่ได้ตั้งคีย์สองราย เพิ่มสถานะ AI ใน preview และ env/Compose/docs; `test:runtime` รวมชุด `ai-gateway` ใหม่
+- ตรวจด้วย Node 24.19.0/npm 11.19.0 และ PostgreSQL 18 แยกจากแอปเดิม: runtime 107/107, SQLite 3/3, import 8/8, PostgreSQL 2/2, schema 3/3, LINE lifecycle 1/1, production 2/2, browser 11 ขั้นตอน, evaluation 28/28 + failover 7/7 + handover 7/7, build, api:check, audit 0 vulnerabilities ผ่าน หลังแก้ schema/prompt ขั้นสุดท้าย targeted AI+RAG 15/15 และ evaluation/build ผ่านซ้ำ
+- สร้างฐาน `chatbot_demo` ในคอนเทนเนอร์ PostgreSQL ทดสอบแยก รัน migrations 001–005 และ seed สองร้านสำเร็จ เปิด Next ที่ port 3131 เพื่อตรวจ preflight 4 URL และ login/preview ผ่าน แล้วหยุด server; คอนเทนเนอร์นี้ใช้ `--rm` ไม่มี volume ถาวร
+- เพิ่ม `scripts/demo-preflight.js`, `docs/demo-runbook.md` และ `reports/task12/readiness.md` สำหรับตรวจ release/สาธิตและแยกผลจำลองจากผลจริง
+- สิ่งที่ยังต้องทำเมื่อมีบริการ: ตั้ง Render/LINE test channel และ secret store, ทดสอบ API จริงทั้งสองรายและ LINE ถึงอุปกรณ์, ให้คนให้คะแนน `human-review.csv`, วัด tokens/ค่าใช้จ่าย/latency จริง, ซ้อม backup/restore และตรวจ staging/cutover ห้ามนับผล fixture เป็น production ผ่าน
+
+
 ## ข้อ 11 — ชุดทดสอบอัตโนมัติ/รายงานเสร็จ และข้อจำกัดที่ต้องตรวจจริง
 
 - ทำต่อบน branch task11-integration-testing จาก task10-human-handover; ข้อ 10 มี commits 89e1ab8 (API) และ 34bbe04 (UI) ส่วนข้อ 11 แยกแก้ RAG 55a3983 และ UI 69822c7 แล้ว หน่วยเครื่องมือ/รายงาน/patch dependencies บันทึกต่อใน commit นี้ ไม่มี push/merge

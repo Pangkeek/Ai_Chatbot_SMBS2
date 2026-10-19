@@ -11,7 +11,7 @@ export function createAiPreviewOperations(db) {
       const { shop, context, prompt } = prepared;
 
       return wrap({
-        aiConfigured: Boolean(process.env.RAG_GENERATOR_URL),
+        aiConfigured: Boolean(process.env.GEMINI_API_KEY || process.env.OPENAI_API_KEY || process.env.RAG_GENERATOR_URL),
         shop: {
           name: shop.name,
           description: shop.description,
