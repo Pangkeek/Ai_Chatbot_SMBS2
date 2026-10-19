@@ -63,7 +63,7 @@ export function createGeminiProvider({ apiKey, model = 'gemini-3.6-flash', fetch
 }
 
 export function createOpenAiProvider({ apiKey, model = 'gpt-5.6-luna', fetchImpl = fetch,
-  endpoint = 'https://api.openai.com/v1/responses', name = 'openai' }) {
+  endpoint = 'https://api.openai.com/v1/responses', name = 'openai', acceptChatCompletions = false }) {
   if (!apiKey) return null;
   return {
     name, model,
@@ -79,10 +79,23 @@ export function createOpenAiProvider({ apiKey, model = 'gpt-5.6-luna', fetchImpl
         }),
       });
       const data = await readResponse(response);
-      if (data.status !== 'completed') throw new AiProviderError('AI_INCOMPLETE_ANSWER');
-      const output = data.output?.filter(item => item.type === 'message')
-        .flatMap(item => item.content || []).filter(item => item.type === 'output_text')
-        .map(item => item.text).join('');
+      let output;
+      if (data.status === 'completed') {
+        output = data.output?.filter(item => item.type === 'message')
+          .flatMap(item => item.content || []).filter(item => item.type === 'output_text')
+          .map(item => item.text).join('');
+      } else if (acceptChatCompletions && Array.isArray(data.choices)) {
+        // BuddyShare อาจคืน Chat Completions แม้เรียกเส้นทาง Responses
+        const choice = data.choices[0];
+        if (choice?.finish_reason !== 'stop') throw new AiProviderError('AI_INCOMPLETE_ANSWER');
+        output = choice.message?.content;
+        if (typeof output === 'string') {
+          const fenced = /^\x60{3}(?:json)?\s*\n([\s\S]*?)\n\x60{3}$/i.exec(output.trim());
+          if (fenced) output = fenced[1];
+        }
+      } else {
+        throw new AiProviderError('AI_INCOMPLETE_ANSWER');
+      }
       if (!output) throw new AiProviderError('AI_EMPTY_ANSWER');
       try { return checkedAnswer(JSON.parse(output), context); }
       catch (error) { if (error instanceof AiProviderError) throw error; throw new AiProviderError('AI_INVALID_ANSWER'); }
@@ -94,5 +107,6 @@ export function createBuddyShareGeminiProvider({ apiKey, model = 'gemini-3.1-fla
   fetchImpl = fetch }) {
   // BuddyShare ใช้ Responses API แต่คีย์นี้ไม่ใช่ Google Gemini API key
   return createOpenAiProvider({ apiKey, model, fetchImpl,
-    endpoint: 'https://router.buddyshare.cloud/v1/responses', name: 'buddyshare-gemini' });
+    endpoint: 'https://router.buddyshare.cloud/v1/responses', name: 'buddyshare-gemini',
+    acceptChatCompletions: true });
 }

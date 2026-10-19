@@ -49,7 +49,12 @@ export function createConfiguredRagGenerator({ env = process.env, fetchImpl = fe
       model: env.BUDDYSHARE_MODEL || undefined, fetchImpl })
     : createGeminiProvider({ apiKey: env.GEMINI_API_KEY, model: env.GEMINI_MODEL || undefined, fetchImpl });
   const fallback = createOpenAiProvider({ apiKey: env.OPENAI_API_KEY, model: env.OPENAI_MODEL || undefined, fetchImpl });
-  if (primary || fallback) return createAiGateway({ primary, fallback });
+  if (primary || fallback) {
+    // BuddyShare ใช้เวลาตอบจริงนานกว่าเพดานต่อครั้งปกติ จึงเผื่อเวลาสำหรับคำถามจากร้าน
+    if (env.BUDDYSHARE_API_KEY) return createAiGateway({ primary, fallback,
+      timeoutMs: 15000, attemptTimeoutMs: 9500, retries: fallback ? 0 : 1 });
+    return createAiGateway({ primary, fallback });
+  }
   return createHttpRagGenerator({ url: env.RAG_GENERATOR_URL, token: env.RAG_GENERATOR_TOKEN, fetchImpl });
 }
 

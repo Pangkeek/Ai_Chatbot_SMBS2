@@ -1,5 +1,13 @@
 # จุดพักงานล่าสุด
 
+## 20 ตุลาคม 2026 — ตรวจ Gemini หลักกับบริการจริงสำเร็จ
+
+- ผู้ใช้คัดลอกคีย์ BuddyShare จากต้นทางลง `.env` เอง; ไฟล์นี้ถูก Git ignore และไม่มีคีย์ใน commit หรือผลทดสอบ
+- แก้ตัวอ่านผล BuddyShare ที่คืน `choices` และ JSON code fence จาก `/v1/responses` พร้อมคงการตรวจว่าคำตอบตรงกับหลักฐานของร้าน
+- เพิ่มเวลารอเฉพาะ BuddyShare และกำชับ prompt ให้ `text` เท่ากับข้อความหลักฐานทุกตัวอักษร
+- `npm run ai:check` ผ่านกับ Gemini จริง; RAG บนฐาน local ตอบคำถามช่อกุหลาบด้วย `generator` และแหล่งอ้างอิงหนึ่งรายการในเวลาประมาณ 4.7 วินาที
+- ยังค้าง OpenAI key สำหรับทดสอบบริการสำรองจริงและ LINE channel/HTTPS webhook สำหรับ LINE จริง; ผู้ใช้เลือกสาธิตแบบ local
+
 ## 20 ตุลาคม 2026 — รองรับ BuddyShare Gemini
 
 - ผู้ใช้ส่งภาพการตั้งค่า BuddyShare Responses API รุ่น `gemini-3.1-flash-lite` ซึ่งเป็นคีย์ของบริการตัวกลาง ไม่ใช่ `GEMINI_API_KEY` ของ Google จึงเพิ่ม `BUDDYSHARE_API_KEY`/`BUDDYSHARE_MODEL` เป็น Gemini หลัก โดยยังคง OpenAI สำรองและ extractive fallback

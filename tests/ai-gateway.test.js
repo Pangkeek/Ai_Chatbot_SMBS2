@@ -79,6 +79,25 @@ test('BuddyShare authorization failure uses OpenAI backup without retrying', asy
   assert.equal(requests[1].url, 'https://api.openai.com/v1/responses');
 });
 
+test('BuddyShare chat-completion shaped response accepts only grounded fenced JSON', async () => {
+  const body = value => new Response(JSON.stringify({ choices: [{
+    finish_reason: 'stop', message: { role: 'assistant', content: `\x60\x60\x60json\n${JSON.stringify(value)}\n\x60\x60\x60` },
+  }] }), { status: 200 });
+  const valid = createConfiguredRagGenerator({ env: { BUDDYSHARE_API_KEY: 'buddy-test' },
+    fetchImpl: async () => body(answer) });
+  assert.equal((await valid.generate(input)).text, source.content);
+
+  const unsupported = createConfiguredRagGenerator({ env: { BUDDYSHARE_API_KEY: 'buddy-test' },
+    fetchImpl: async () => body({ ...answer, text: 'ข้อมูลที่ไม่มีในหลักฐาน' }) });
+  await assert.rejects(unsupported.generate(input), { code: 'AI_ALL_PROVIDERS_UNAVAILABLE' });
+
+  const incomplete = createConfiguredRagGenerator({ env: { BUDDYSHARE_API_KEY: 'buddy-test' },
+    fetchImpl: async () => new Response(JSON.stringify({ choices: [{
+      finish_reason: 'length', message: { content: JSON.stringify(answer) },
+    }] }), { status: 200 }) });
+  await assert.rejects(incomplete.generate(input), { code: 'AI_ALL_PROVIDERS_UNAVAILABLE' });
+});
+
 test('unsupported or foreign evidence from primary uses backup without a retry', async () => {
   let primaryCalls = 0, backupCalls = 0;
   const generator = createConfiguredRagGenerator({ env: { GEMINI_API_KEY: 'gemini-test', OPENAI_API_KEY: 'openai-test' },

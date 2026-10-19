@@ -15,16 +15,17 @@
 - `scripts/local-start.ps1` เปิดระบบซ้ำได้: toolchain Node 24.19.0/npm 11.19.0 ผ่าน, PostgreSQL healthy, migration ซ้ำ applied 0/unchanged 5, index 6 entries/6 chunks, Next พร้อมที่ `http://127.0.0.1:3131`; preflight 4/4 HTTP 200, login, เห็นร้านเดียว, Simulator processed/`extractive`/source 1 ผ่าน
 - ทดสอบซ้ำบนฐาน local ถาวร: runtime 108/108, PostgreSQL 2/2 และ schema 3/3 ผ่าน
 - เพิ่ม BuddyShare Responses API เป็นทางเลือกของ Gemini หลักจากคีย์ที่ผู้ใช้ส่งในภาพ โดยเก็บคีย์เฉพาะ `.env` ที่ Git ไม่ติดตาม; mock endpoint/schema/การส่งหลักฐานและการสลับไป OpenAI เมื่อ 401 ผ่าน; runtime รอบล่าสุด 110/110, build และ api:check ผ่าน
-- การตรวจ BuddyShare จริงจากเครื่องนี้ยังตอบ HTTP 401 ทั้ง `/v1/models` และคำขอขนาดเล็กที่ `/v1/responses`/`/v1/chat/completions` จึงยังยืนยันการสร้างคำตอบจริงไม่ได้ ผู้ใช้ตรวจว่าคีย์ยังเปิดใช้งานแล้ว แต่การอ่านค่าจากภาพอาจคลาดเคลื่อน ต้องคัดลอกคีย์จริงลง `.env` แล้วทดสอบซ้ำ
-- หลังเปิด Next ใหม่ด้วยค่า `.env` ล่าสุด AI preview แสดง `aiConfigured=true`; LINE Simulator ประมวลผลสำเร็จ ตอบ `extractive` พร้อมหลักฐาน 1 แหล่งเมื่อ BuddyShare ใช้ไม่ได้ จึงไม่ตอบข้อความที่โมเดลแต่งขึ้น
-- เพิ่ม `npm run ai:check` ตรวจ provider ด้วยข้อมูลสมมติและไม่แสดงคีย์; รอบปัจจุบันจบด้วย `AI_HTTP_401` ตามการเรียกตรง ต้องทดสอบซ้ำเมื่อคัดลอกคีย์จากหน้าเว็บลง `.env`
+- ผู้ใช้คัดลอกคีย์จริงจาก BuddyShare ลง `.env` แล้ว `npm run ai:check` ผ่านกับ Gemini `gemini-3.1-flash-lite` โดยส่งเฉพาะข้อมูลสมมติ ไม่แสดงคีย์
+- BuddyShare ส่งผล Chat Completions ที่มี JSON code fence กลับจาก `/v1/responses`; เพิ่มตัวอ่านเฉพาะ provider นี้ และยังตรวจข้อความกับหลักฐานทุกตัวอักษร
+- เรียก RAG กับข้อมูลร้านดอกไม้ในฐาน local จริงได้ `generator` พร้อมหลักฐาน 1 แหล่ง คำถาม “ช่อกุหลาบราคาเท่าไหร่” ตอบตามข้อความฐานข้อมูล ใช้เวลาประมาณ 4.7 วินาที; หากโมเดลเติมข้อความที่ไม่มีในหลักฐาน ระบบยังตอบ `extractive`
+- หลังแก้รอบนี้ `test:runtime` 111/111, `build`, `api:check`, `demo:preflight` 4/4 และ `ai:check` ผ่าน
 
 ## ขอบเขตที่ยังต้องมีคนหรือบริการจริง
 
 1. ผู้ใช้เลือกรัน local เท่านั้น ไม่ต้องมี Render URL; ยังไม่มี LINE test channel/HTTPS webhook จึงไม่มีผลส่งถึงอุปกรณ์จริง
-2. มี BuddyShare key สำหรับ Gemini หลัก แต่ HTTP 401 จึงยังไม่ผ่านการเรียกจริง; ยังไม่มี OpenAI key สำหรับสำรอง และต้องบันทึก tokens, ราคา และเวลาเครือข่ายหลังตั้งค่าที่ใช้ได้
+2. BuddyShare Gemini หลักผ่านการเรียกจริงแล้ว; ยังไม่มี OpenAI key สำหรับสำรอง จึงทดสอบการสลับด้วย HTTP doubles เท่านั้น และยังไม่ได้วัดค่าใช้จ่ายจริง
 3. `reports/task11/human-review.csv` ยังต้องให้คนให้คะแนนคำตอบจริง; ผลอัตโนมัติไม่แทนคะแนนมนุษย์
 4. หากจะเปิด LINE จริงในอนาคต ต้องตั้ง channel, HTTPS webhook ที่ LINE เข้าถึงได้ และทดสอบ flow/backup โดยเจ้าของบัญชี; ส่วนนี้ไม่ใช่เงื่อนไขของการสาธิต local
-5. ผล AI และ LINE ปัจจุบันเป็น simulator/HTTP doubles ไม่มีการเรียกบัญชีภายนอกจริงหรือค่าใช้จ่ายจริง
+5. การเรียก Gemini ผ่าน BuddyShare เป็นจริง ส่วน LINE และ OpenAI สำรองยังเป็น simulator/HTTP doubles
 
 วิธีเปิด/หยุด/สำรองข้อมูลอยู่ใน `docs/local-run.md` ลำดับสาธิตอยู่ใน `docs/demo-runbook.md` คำตอบและภาพจากการทดสอบอัตโนมัติอยู่ใน `reports/task11/`
