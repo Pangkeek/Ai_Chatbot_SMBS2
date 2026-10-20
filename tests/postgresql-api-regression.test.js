@@ -8,6 +8,7 @@ import { migratePostgresql } from '../scripts/postgresql/migrations.js';
 import { seedDemo, demoPassword } from '../src/lib/seed.js';
 import { createService } from '../src/services/service.js';
 import { createLineWorker } from '../src/services/worker.js';
+import { createLineSimulator } from '../src/services/simulator.js';
 import { createApp } from '../src/lib/app.js';
 import { handleApiRequest, closeApiRuntime } from '../src/lib/apiRuntime.js';
 
@@ -17,7 +18,8 @@ before(async () => {
   await migratePostgresql({ config: fixture.config });
   await seedDemo(db);
   service = createService(db, { workerOptions: { logErrors: false } });
-  server = createApp(db, { logErrors: false });
+  server = createApp(db, { logErrors: false, serviceOptions: { workerOptions: { generator: null,
+    sendReply: async () => assert.fail('Simulator must not send to LINE') } } });
   server.listen(0, '127.0.0.1'); await once(server, 'listening');
   url = `http://127.0.0.1:${server.address().port}`;
 });
@@ -92,16 +94,35 @@ test('async generation has no held transaction and respects bot-mode changes bef
   assert.equal((await db.query('SELECT * FROM messages WHERE conversation_id=$1', [result.conversationId])).rowCount, 1);
 });
 
-test('production simulator returns 404 before auth/body processing and seed refuses without writes', async () => {
+test('production simulator requires shop ownership, answers greetings and never delivers to LINE; seed stays disabled', async () => {
   const old = process.env.NODE_ENV;
+  const login = await service.login({ body: { email: 'coffee@example.test', password: demoPassword } });
+  const token = login.data.access_token;
   const before = await count('line_events');
+  const jobsBefore = await count('line_jobs');
   process.env.NODE_ENV = 'production';
   try {
-    assert.equal((await post('/api/v1/shops/shop-coffee/line/simulate', { user_id: 'blocked', text: 'blocked' })).status, 404);
+    const path = '/api/v1/shops/shop-coffee/line/simulate';
+    const body = { user_id: 'production-simulator', text: 'สวัสดี' };
+    assert.equal((await post(path, body)).status, 401);
+    assert.equal((await post('/api/v1/shops/shop-flower/line/simulate', body, token)).status, 404);
+    await db.query("INSERT INTO shop_memberships(shop_id,user_id,role,created_at) VALUES('shop-flower','user-coffee','agent',clock_timestamp())");
+    try { assert.equal((await post('/api/v1/shops/shop-flower/line/simulate', body, token)).status, 403); }
+    finally { await db.query("DELETE FROM shop_memberships WHERE shop_id='shop-flower' AND user_id='user-coffee'"); }
+    assert.equal(await count('line_events'), before);
+    const result = await post(path, body, token);
+    assert.equal(result.status, 200);
+    assert.equal(result.body.data.replied, true);
+    assert.match(result.body.data.reply_text, /สวัสดี/);
+    assert.equal(result.body.data.reply_method, 'conversation_fallback');
+    assert.deepEqual(result.body.data.reply_source_ids, []);
+    assert.equal((await db.query('SELECT * FROM messages WHERE conversation_id=$1', [result.body.data.conversation_id])).rowCount, 2);
+    assert.equal(await count('line_jobs'), jobsBefore);
+    const simulator = createLineSimulator(db, { generator: null, sendReply: async () => assert.fail('No direct production delivery') });
+    await assert.rejects(simulator.handleMessageEvent({ shopId: 'shop-coffee', event: { source: { userId: 'blocked' }, message: { text: 'สวัสดี' } } }), /durable jobs/);
     await assert.rejects(seedDemo(db), /disabled in production/);
-    await assert.rejects(service.simulateLineMessage({ params: { shopId: 'shop-coffee' }, body: {} }), { status: 404 });
   } finally { if (old === undefined) delete process.env.NODE_ENV; else process.env.NODE_ENV = old; }
-  assert.equal(await count('line_events'), before);
+  assert.equal(await count('line_events'), before + 1);
 });
 
 test('PostgreSQL errors stay generic, and a non-email unique violation is not EMAIL_EXISTS', async () => {

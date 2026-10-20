@@ -128,9 +128,6 @@ export function createRequestHandler(
         }
         throw new ApiError(404, "NOT_FOUND", "Route not found");
       }
-      if (route.operationId === 'simulateLineMessage' && process.env.NODE_ENV === 'production') {
-        throw new ApiError(404, 'NOT_FOUND', 'Route not found');
-      }
       const rawParams = route.regex.exec(url.pathname).slice(1);
       let params;
       try {

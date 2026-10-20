@@ -73,7 +73,6 @@ export function createLineChannelOperations(db, worker, options = {}) {
       return wrap({ status: 'ok', processed_count: processedCount });
     },
     async simulateLineMessage({ params, body }) {
-      if (process.env.NODE_ENV === 'production') missing();
       if (!(await db.query('SELECT 1 FROM shops WHERE id = $1', [params.shopId])).rows[0]) missing();
       const channel = (await db.query('SELECT * FROM line_channels WHERE shop_id = $1', [params.shopId])).rows[0];
       const eventId = body.event_id || randomUUID();

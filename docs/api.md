@@ -10,7 +10,7 @@ Runtime ใช้ PostgreSQL; timestamp ใน response ยังเป็น IS
 
 LINE webhook บันทึก event กับ text job ใน transaction เดียวและตอบสำเร็จหลัง commit `processed_count` คือจำนวน jobs ใหม่ ไม่ใช่จำนวนคำตอบที่ส่งแล้ว ทุก event ต้องมี webhookEventId หรือ message.id; text ต้องมี userId และข้อความที่ไม่ว่าง หาก event ID ชนกับร้านอื่นคืน 409 `LINE_EVENT_COLLISION` โดยไม่เปิดเผยร้านเดิม ประเภทที่ไม่รองรับเก็บ ignored ไม่มี job ดู [นโยบาย delivery/recovery](line-jobs.md)
 
-`POST /api/v1/shops/{shopId}/line/simulate` ใช้เฉพาะ development/staging; เมื่อ `NODE_ENV=production` คืน 404 ก่อนตรวจ auth/body และไม่สร้าง event/message บัญชี demo ต้อง seed เองใน local; seed ถูกปิดใน production
+`POST /api/v1/shops/{shopId}/line/simulate` ใช้ได้ทั้ง development และ production โดยต้องเข้าสู่ระบบเป็นเจ้าของร้าน ใช้ระบบเตรียมคำตอบเดียวกับ LINE จริง แต่บันทึก event/message ทดสอบและไม่ส่งข้อความออกไป LINE ไม่สร้างงานส่งใน `line_jobs` บัญชี demo ต้อง seed เองใน local; seed ยังถูกปิดใน production
 
 ## รูปแบบกลาง
 

@@ -94,15 +94,20 @@ test('production CLI uses PORT, preserves imported accounts and API writes acros
     assert.equal((await call('GET',base,undefined,token)).status,200);
     assert.equal((await call('GET',base+'/statistics',undefined,token)).status,200);
     assert.equal((await call('POST',base+'/knowledge',{kind:'faq',title:'blocked',content:'blocked',status:'published'},token)).status,403);
-    const before=(await db.query('SELECT count(*) FROM line_events')).rows[0].count;
-    assert.equal((await fetch(server.base+base+'/line/simulate',{method:'POST',headers:{'Content-Type':'application/json'},body:'{bad'})).status,404);
-    assert.equal((await db.query('SELECT count(*) FROM line_events')).rows[0].count,before);
+    const before=Number((await db.query('SELECT count(*) FROM line_events')).rows[0].count);
+    const jobsBefore=(await db.query('SELECT count(*) FROM line_jobs')).rows[0].count;
+    assert.equal((await call('POST',base+'/line/simulate',{user_id:'smoke-simulator',text:'สวัสดี'})).status,401);
+    const simulated=await call('POST',base+'/line/simulate',{user_id:'smoke-simulator',text:'สวัสดี'},owner);
+    assert.equal(simulated.status,200);assert.equal(simulated.body.data.replied,true);
+    assert.match(simulated.body.data.reply_text,/สวัสดี/);
+    assert.equal(Number((await db.query('SELECT count(*) FROM line_events')).rows[0].count),before+1);
+    assert.equal((await db.query('SELECT count(*) FROM line_jobs')).rows[0].count,jobsBefore);
     const logs=server.logs();await server.stop();server=null;
     // Start the production release again: existing data and sessions must persist.
     server=await start(config);
     assert.equal((await call('GET',base,undefined,owner)).status,200);
     const messages=await call('GET',conversationPath+'/messages',undefined,owner);assert.equal(messages.status,200);
-    assert.equal((await call('GET',base+'/statistics',undefined,owner)).body.data.total_messages,2);
+    assert.equal((await call('GET',base+'/statistics',undefined,owner)).body.data.total_messages,4);
     assert.deepEqual(messages.body.data.map(row=>row.content),['ทดสอบ 🌿','เจ้าหน้าที่ตอบ']);
     assert.equal((await call('GET',base+'/knowledge/'+knowledge.body.data.id,undefined,owner)).body.data.content,'10:00-18:00');
     assert.equal((await call('DELETE',base+'/knowledge/'+knowledge.body.data.id,undefined,owner)).status,204);

@@ -6606,7 +6606,7 @@
     "/api/v1/shops/{shopId}/line/simulate": {
       "post": {
         "operationId": "simulateLineMessage",
-        "summary": "Simulate an incoming LINE message event for testing (owner; returns 404 in production)",
+        "summary": "Simulate an incoming LINE message for the shop owner without external LINE delivery",
         "security": [
           {
             "bearerAuth": []

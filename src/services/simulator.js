@@ -7,7 +7,7 @@ import { claimHandover, maySendReply } from './ai/handover.js';
 
 const now = () => new Date().toISOString();
 
-// Development-only synchronous simulator; real webhooks use durable jobs.
+// Authenticated dashboard simulation is available in all environments; real webhooks use durable jobs.
 export function createLineSimulator(db, options = {}) {
   options = withConfiguredGenerator(options);
   const replySender = options.sendReply || sendLineReply;
@@ -15,7 +15,7 @@ export function createLineSimulator(db, options = {}) {
     'UPDATE line_events SET status=$1 WHERE shop_id=$2 AND event_id=$3', [status, shopId, eventId || null]);
 
   async function handleMessageEvent({ shopId, event, channelConfig, simulated = false }) {
-    if (process.env.NODE_ENV === 'production') throw new Error('LINE simulator is disabled in production');
+    if (process.env.NODE_ENV === 'production' && !simulated) throw new Error('Production LINE delivery must use durable jobs');
     const userId = event.source?.userId || 'unknown-line-user';
     const messageText = event.message?.text || '';
     const customerMsgId = randomUUID();

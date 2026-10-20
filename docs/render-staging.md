@@ -93,7 +93,7 @@ render.yaml ที่ root เป็น reference production configuration: paid
 - [ ] Imported users login ด้วย password เดิม หรือบัญชีทดสอบที่สร้างใหม่ใช้งานได้
 - [ ] สร้างร้าน/ความรู้/บทสนทนา/ข้อความ เปลี่ยน bot mode ได้ตามสิทธิ์
 - [ ] สองร้านแยกข้อมูล; agent แก้ข้อมูล owner-only ไม่ได้; expired token คืน 401
-- [ ] Production simulator คืน 404 และ production seed ถูกปฏิเสธ
+- [ ] Production simulator ตอบได้สำหรับเจ้าของร้าน ไม่ส่งข้อความออก LINE และปฏิเสธผู้ไม่มีสิทธิ์; production seed ถูกปฏิเสธ
 - [ ] Restart และ manual redeploy commit เดิมแล้วข้อมูล/session ที่ยังไม่หมดอายุยังอยู่
 - [ ] Counts/checksums ของ import ตรงทุกตาราง ก่อนเริ่มสร้างข้อมูลใหม่บน staging
 

@@ -16,4 +16,4 @@ notepad .env
 หาก PowerShell ไม่ยอมรันสคริปต์ ให้รัน Set-ExecutionPolicy -Scope Process Bypass ในหน้าต่างนั้น แล้วลองคำสั่งเปิดระบบอีกครั้ง
 5. ครั้งต่อไป
 เปิด Docker Desktop แล้วรัน .\scripts\local-start.ps1 อีกครั้ง หยุดเว็บด้วย Ctrl+C อย่าใช้ docker compose down --volumes หากต้องการเก็บข้อมูลร้าน
-ข้อสำคัญ: วิธีนี้ใช้เว็บและ LINE Simulator ได้บนเครื่องใหม่ แต่การรับข้อความจาก LINE จริงยังต้องตั้ง LINE channel, HTTPS tunnel และเปิด LINE worker เพิ่ม ส่วน docker compose up --build -d เป็นอีกวิธีที่เปิดแอปทั้งชุดที่พอร์ต 3000 แต่รันแบบ production ซึ่ง ไม่มี LINE Simulator ครับ
+ข้อสำคัญ: วิธีนี้ใช้เว็บและ LINE Simulator ได้บนเครื่องใหม่ แต่การรับข้อความจาก LINE จริงยังต้องตั้ง LINE channel, HTTPS tunnel และเปิด LINE worker เพิ่ม ส่วน docker compose up --build -d เป็นอีกวิธีที่เปิดแอปทั้งชุดที่พอร์ต 3000 แบบ production โดยเจ้าของร้านยังใช้ LINE Simulator ได้ และการทดสอบจะไม่ส่งข้อความออกไป LINE จริงครับ

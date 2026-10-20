@@ -474,7 +474,7 @@ export const routes = [
     "POST",
     `${base}/line/simulate`,
     "simulateLineMessage",
-    "Simulate an incoming LINE message event for testing (owner; returns 404 in production)",
+    "Simulate an incoming LINE message for the shop owner without external LINE delivery",
     data(schemas.LineSimulateResult),
     { body: schemas.LineSimulate, owner: true }
   ),
