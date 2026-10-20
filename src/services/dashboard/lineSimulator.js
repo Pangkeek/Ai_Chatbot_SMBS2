@@ -91,6 +91,9 @@ export function createLineSimulator({ elements, listen, apiRequest, getSelectedS
           extractive: "คัดคำตอบจากข้อมูลร้านหรือคลังความรู้",
           no_evidence: "ไม่พบหลักฐานเพียงพอ",
           handover: "ส่งต่อให้เจ้าหน้าที่ดูแล",
+          conversation: "AI สนทนาตามบริบท",
+          clarification: "AI ถามรายละเอียดเพิ่มเติม",
+          conversation_fallback: "ข้อความสนทนาสำรอง",
         };
         const sourceIds = Array.isArray(result.reply_source_ids) ? result.reply_source_ids : [];
         appendSimulatorMessage("system", [

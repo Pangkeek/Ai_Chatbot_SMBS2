@@ -1,6 +1,7 @@
 import { setTimeout as delay } from 'node:timers/promises';
 import { validateGeneratedAnswer } from './answerValidation.js';
 import { AiError } from './providers.js';
+import { validateConversation } from './conversation.js';
 
 export { AiError } from './providers.js';
 
@@ -30,6 +31,10 @@ export function createAiGateway({ providers, attemptTimeoutMs = 4000, providerBu
   const writeLog = event => { try { log(event); } catch { /* Logging cannot interrupt delivery. */ } };
   return {
     failurePolicy: 'handover',
+    async analyzeConversation(input) {
+      const { intent, replyText, resolvedQuestion } = await this.generate({ ...input, task: 'conversation' });
+      return { intent, replyText, resolvedQuestion };
+    },
     async generate(input) {
       const emit = event => writeLog({ ...event, ...(input.jobId ? { jobId: input.jobId } : {}) });
       input.signal?.throwIfAborted();
@@ -58,7 +63,8 @@ export function createAiGateway({ providers, attemptTimeoutMs = 4000, providerBu
               });
               input.signal?.throwIfAborted();
               if (now() >= providerDeadline) throw new AiError('AI_TIMEOUT', { retryable: true });
-              const answer = validateGeneratedAnswer(result, input.context, { strict: true });
+              const answer = input.task === 'conversation' ? validateConversation(result)
+                : validateGeneratedAnswer(result, input.context, { strict: true });
               if (!answer) throw new AiError('AI_INVALID_ANSWER');
               // A request admitted before the circuit opened cannot close a newer open circuit.
               if (generation === circuit.generation) { circuit.failures = 0; circuit.openUntil = 0; }

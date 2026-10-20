@@ -42,7 +42,7 @@ export function createLineSimulator(db, options = {}) {
     }
     const shop = (await db.query('SELECT * FROM shops WHERE id=$1', [shopId])).rows[0];
     // No checked-out transaction client is held during generation or HTTP delivery.
-    const answer = await prepareReply(db, { shop, conversation, messageText }, { ...options, jobId: `simulator:${customerMsgId}` });
+    const answer = await prepareReply(db, { shop, conversation, messageText, currentMessageId: customerMsgId }, { ...options, jobId: `simulator:${customerMsgId}` });
     const replyText = answer.text;
     const ownerId = `simulator:${customerMsgId}`;
     const allowed = await transaction(db, async tx => {

@@ -187,7 +187,7 @@ export const schemas = {
     replied: { type: "boolean" },
     reply_message_id: { anyOf: [id, { type: "null" }] },
     reply_text: { anyOf: [str(10000), { type: "null" }] },
-    reply_method: { anyOf: [choice("faq", "generator", "extractive", "no_evidence", "handover"), { type: "null" }] },
+    reply_method: { anyOf: [choice("faq", "generator", "extractive", "no_evidence", "handover", "conversation", "clarification", "conversation_fallback"), { type: "null" }] },
     reply_source_ids: { type: "array", items: id },
   }),
   AiPreviewRequest: object({ question: str(500) }),

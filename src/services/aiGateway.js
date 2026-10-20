@@ -7,6 +7,7 @@ const legacyResult = result => result.insufficient ? { insufficient: true }
 function legacyFacade(generator) {
   if (!generator) return null;
   return { failurePolicy: generator.failurePolicy,
+    ...(generator.analyzeConversation ? { analyzeConversation: input => generator.analyzeConversation(input) } : {}),
     async generate(input) { return legacyResult(await generator.generate(input)); } };
 }
 

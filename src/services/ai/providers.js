@@ -1,4 +1,5 @@
 import { answerSchema } from './answerValidation.js';
+import { conversationSchema } from './conversation.js';
 
 export class AiError extends Error {
   constructor(code, { retryable = false, retryAfterMs = 0 } = {}) {
@@ -39,7 +40,7 @@ function parseAnswer(text) {
 export function createGeminiProvider({ key, model, fetchImpl = fetch }) {
   return {
     name: 'gemini', model,
-    async generate({ prompt, signal }) {
+    async generate({ prompt, signal, task }) {
       const result = await requestJson(fetchImpl,
         `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
           method: 'POST', signal,
@@ -47,7 +48,7 @@ export function createGeminiProvider({ key, model, fetchImpl = fetch }) {
           body: JSON.stringify({
             systemInstruction: { parts: [{ text: prompt.messages[0].content }] },
             contents: [{ role: 'user', parts: [{ text: prompt.messages[1].content }] }],
-            generationConfig: { responseMimeType: 'application/json', responseJsonSchema: answerSchema, maxOutputTokens: 8192 },
+            generationConfig: { responseMimeType: 'application/json', responseJsonSchema: task === 'conversation' ? conversationSchema : answerSchema, maxOutputTokens: 8192 },
           }),
         });
       const candidate = result.candidates?.[0];
@@ -66,13 +67,14 @@ export function createOpenAiProvider({ key, model, fetchImpl = fetch,
   endpoint = 'https://api.openai.com/v1/responses', name = 'openai', acceptChatCompletions = false }) {
   return {
     name, model,
-    async generate({ prompt, signal }) {
+    async generate({ prompt, signal, task }) {
       const result = await requestJson(fetchImpl, endpoint, {
         method: 'POST', signal,
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
         body: JSON.stringify({ model, store: false, input: acceptChatCompletions
           ? [{ role: 'developer', content: prompt.messages[0].content }, prompt.messages[1]] : prompt.messages,
-          text: { format: { type: 'json_schema', name: 'grounded_answer', strict: true, schema: answerSchema } },
+          text: { format: { type: 'json_schema', name: task === 'conversation' ? 'conversation' : 'grounded_answer', strict: true,
+            schema: task === 'conversation' ? conversationSchema : answerSchema } },
           max_output_tokens: 8192,
         }),
       });

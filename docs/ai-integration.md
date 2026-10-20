@@ -42,7 +42,39 @@ the current shop. Gemini uses `generateContent`; OpenAI uses the Responses API
 with `store:false`. Both use structured JSON containing `text`, `sourceChunkIds`
 and `insufficient`. The server still verifies that the answer is a verbatim excerpt
 from exactly one supplied chunk, at most 5,000 characters. Structured JSON alone
-does not establish grounding. There is no streaming or conversation history upload.
+does not establish grounding. There is no streaming.
+
+## Contextual conversation
+
+`prepareReply` handles conversation for both the LINE worker and simulator. Direct
+AI providers support a separate conversation task with validated JSON fields
+`intent`, `replyText`, and `resolvedQuestion`. The model receives at most ten recent
+messages from the same shop and conversation, in chronological order, excluding
+the current message and messages with later timestamps. Each history message is
+limited to 1,000 characters. History, persona, and customer input are serialized
+as user data, never system instructions or evidence.
+
+Greetings, thanks, and clarification use short conversational replies without
+sources. Clarification asks one question and uses details already supplied by the
+customer. Off-topic requests are redirected toward the shop. The model must not
+invent products, prices, policies, or order confirmations. Schema validation and
+additional output guards reject malformed responses and common factual assertions.
+Factual questions (including mixed greetings and questions) go through existing
+evidence retrieval and excerpt validation. Contextual follow-ups use the resolved
+question to retrieve fresh evidence; earlier assistant messages never count as
+evidence. Clear first-turn factual questions bypass conversation analysis.
+
+Conversation analysis shares the configured providers, timeout, retry, failover,
+and circuit breaker, with a maximum six-second budget within the existing overall
+generation deadline. Invalid output or an outage uses local greeting, thanks, or
+clarification fallback where recognized. Other questions retain the evidence path
+and its existing failure policy. The legacy HTTP RAG transport has no conversation
+task and keeps its request/response contract. It uses the local social fallbacks.
+
+Simulator/API methods include `conversation`, `clarification`, and
+`conversation_fallback`. These replies have no `message_sources`. Existing human
+takeover, pause, delivery checkpoint, and deduplication guards still apply. No
+database migration is needed.
 
 The gateway tries Gemini, then OpenAI. Invalid JSON, incomplete responses, unsupported
 quotes, and nontransient HTTP errors immediately move to the backup. Network errors,

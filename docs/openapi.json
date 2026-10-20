@@ -1112,7 +1112,10 @@
                   "generator",
                   "extractive",
                   "no_evidence",
-                  "handover"
+                  "handover",
+                  "conversation",
+                  "clarification",
+                  "conversation_fallback"
                 ]
               },
               {

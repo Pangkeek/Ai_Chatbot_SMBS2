@@ -127,7 +127,8 @@ export function createLineWorker(db, options = {}) {
         const { budget } = (await db.query(`SELECT GREATEST(0, EXTRACT(EPOCH FROM
           (received_at+$2*interval '1 millisecond'-clock_timestamp()))*1000-12000) AS budget
           FROM line_jobs WHERE job_id=$1`, [job.job_id, cutoffMs])).rows[0];
-        const answer = await prepareReply(db, { shop, conversation, messageText: job.payload.message.text }, {
+        const answer = await prepareReply(db, { shop, conversation, messageText: job.payload.message.text,
+          currentMessageId: job.customer_message_id }, {
           ...options, jobId: job.job_id, signal: abort.signal, deadlineAt: Date.now() + Math.min(28000, Number(budget)),
         });
         abort.signal.throwIfAborted();
