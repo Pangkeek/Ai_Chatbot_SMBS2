@@ -19,7 +19,8 @@ function canonicalQuestion(value) {
   return normalize(value)
     .replace(/(ครับ|ค่ะ|คะ|หน่อย|หรือไม่|ไหม|มั้ย)/g, '')
     .replace(/ร้านเปิดกี่โมง|เปิดกี่โมง|เวลาเปิดปิด|เวลาทำการ/g, 'เวลาเปิดร้าน')
-    .replace(/\s+/g, ' ').trim();
+    // ภาษาไทยอาจเว้นวรรคทุกคำหรือพิมพ์ติดกัน จึงเทียบ FAQ โดยไม่ใช้ช่องว่าง
+    .replace(/\s+/g, '');
 }
 
 function terms(value) {

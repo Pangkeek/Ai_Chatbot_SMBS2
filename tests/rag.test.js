@@ -5,7 +5,7 @@ import { migratePostgresql } from '../scripts/postgresql/migrations.js';
 import { seedDemo } from '../src/lib/seed.js';
 import { createService } from '../src/services/service.js';
 import { createLineWorker } from '../src/services/worker.js';
-import { answerQuestion, rebuildKnowledgeIndex, retrieve, UNKNOWN_ANSWER } from '../src/services/rag.js';
+import { answerQuestion, embed, rebuildKnowledgeIndex, retrieve, UNKNOWN_ANSWER } from '../src/services/rag.js';
 import { createHttpRagGenerator } from '../src/services/ragGenerator.js';
 import { createConfiguredRagGenerator } from '../src/services/aiGateway.js';
 
@@ -16,6 +16,24 @@ async function withDemo(run) {
     return run(db);
   });
 }
+
+test('FAQ matches Thai questions regardless of spaces between words', async () => {
+  const title = 'ร้าน ค้า มี ไว ไฟ ไหม';
+  const content = 'ร้านค้ามีไวไฟฟรีสำหรับลูกค้า';
+  const faq = { chunk_id: 'wifi:0', knowledge_entry_id: 'wifi', kind: 'faq', title,
+    content, full_content: content, embedding_json: JSON.stringify(embed(`${title} ${content}`)) };
+  const shop = { id: 'shop-coffee', name: 'บ้านกาแฟ' };
+  const db = { async query(sql) {
+    return { rows: sql.includes('FROM knowledge_chunks') ? [faq] : [shop] };
+  } };
+  for (const query of ['ร้าน ค้า มี ไว ไฟ ไหม', 'ร้านค้ามีไวไฟไหม']) {
+    const answer = await answerQuestion(db, { shopId: shop.id, query,
+      generator: { async generate() { return { insufficient: true }; } } });
+    assert.equal(answer.method, 'faq');
+    assert.equal(answer.text, content);
+    assert.deepEqual(answer.sources.map(source => source.knowledge_entry_id), ['wifi']);
+  }
+});
 
 test('published chunks and embeddings are scoped to the shop; FAQ and unknown answers are grounded', () => withDemo(async db => {
   assert.equal((await db.query('SELECT count(*)::int AS n FROM knowledge_chunks', [])).rows[0].n, 6);
